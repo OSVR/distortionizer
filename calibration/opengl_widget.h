@@ -19,6 +19,7 @@ protected:
     void resizeGL(int width, int height);
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+    void keyPressEvent(QKeyEvent *event);
 
 private:
     int d_width, d_height;  //< Size of the window we're rendering into

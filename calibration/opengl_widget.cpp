@@ -110,8 +110,34 @@ void OpenGL_Widget::resizeGL(int width, int height)
     d_cop.setY(d_height / 2.0);
 }
 
+
+void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
+{
+    switch (event->key()) {
+    case Qt::Key_Left:
+        d_cop.setX(d_cop.x()-1);
+        break;
+    case Qt::Key_Right:
+        d_cop.setX(d_cop.x()+1);
+        break;
+    case Qt::Key_Down:
+        d_cop.setY(d_cop.y()-1);
+        break;
+    case Qt::Key_Up:
+        d_cop.setY(d_cop.y()+1);
+        break;
+    }
+    printf("XXX Key pressed: %d\n", event->key());
+    updateGL();
+}
+
 void OpenGL_Widget::mousePressEvent(QMouseEvent *event)
 {
+    if (event->pos().x() < d_width/2) {
+        d_cop = event->pos();
+        d_cop.setY(d_height - d_cop.y());
+    }
+    updateGL();
 //    lastPos = event->pos();
 }
 
