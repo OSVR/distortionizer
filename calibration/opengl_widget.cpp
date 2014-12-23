@@ -1,0 +1,107 @@
+#include <QtGui>
+#include <QtOpenGL>
+#include <QColor>
+#include <math.h>
+
+#include "opengl_widget.h"
+
+#ifndef GL_MULTISAMPLE
+#define GL_MULTISAMPLE  0x809D
+#endif
+
+//----------------------------------------------------------------------
+// Helper functions
+
+OpenGL_Widget::OpenGL_Widget(QWidget *parent)
+    : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+{
+}
+
+OpenGL_Widget::~OpenGL_Widget()
+{
+}
+
+void OpenGL_Widget::initializeGL()
+{
+    qglClearColor(Qt::black);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_MULTISAMPLE);
+    static GLfloat lightPosition[4] = { 0.5, 5.0, 7.0, 1.0 };
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+
+    // Makes the colors for the primitives be what we want.
+    glDisable(GL_LIGHTING);
+
+    // Tell the version number.  If we do this in the constructor, it doesn't
+    // get displayed.
+//    emit newVersionLabel(tr("Version 1.0.0"));
+}
+
+void OpenGL_Widget::paintGL()
+{
+    int i;
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+    glTranslatef(0.0, 0.0, -10.0);
+
+    // Set up rendering state.
+    glPointSize(5.0);
+    glDisable(GL_TEXTURE_2D);
+
+/*
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_STRIP);
+        glVertex2f(0, 0);
+        glVertex2f(1, 0);
+        glVertex2f(1, 1);
+        glVertex2f(0, 1);
+        glVertex2f(0, 0);
+    glEnd();
+*/
+}
+
+void OpenGL_Widget::resizeGL(int width, int height)
+{
+//    int side = qMin(width, height);
+//    glViewport((width - side) / 2, (height - side) / 2, side, side);
+    glViewport(0, 0, width, height);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    // Make the window one unit high (-0.5 to 0.5) and have an aspect ratio that matches
+    // the aspect ratio of the window.  We also make the left side of the window be at
+    // the origin.
+    float aspect;
+    if ((height <= 0) || (width < 0)) {
+        aspect = 1.0;
+    } else {
+        aspect = static_cast<float>(width)/height;
+    }
+    glOrtho(0, aspect, -0.5, 0.5, 5.0, 15.0);
+    glMatrixMode(GL_MODELVIEW);
+    printf("XXX New size %dx%d\n", width, height);
+}
+
+void OpenGL_Widget::mousePressEvent(QMouseEvent *event)
+{
+//    lastPos = event->pos();
+}
+
+void OpenGL_Widget::mouseMoveEvent(QMouseEvent *event)
+{
+    int dx = event->x();// - lastPos.x();
+    int dy = event->y();// - lastPos.y();
+
+    if (event->buttons() & Qt::LeftButton) {
+        // XXX
+    } else if (event->buttons() & Qt::RightButton) {
+        // XXX
+    }
+//    lastPos = event->pos();
+}
