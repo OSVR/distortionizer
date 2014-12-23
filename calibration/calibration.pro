@@ -10,6 +10,11 @@ CONFIG += console
 TARGET = calibration
 TEMPLATE = app
 
+INCLUDEPATH += /usr/local/include
+INCLUDEPATH += C:/usr/local/include
+
+LIBS += -LC:/usr/local/lib
+LIBS += -lglew32s
 
 SOURCES += main.cpp\
         mainwindow.cpp \

@@ -22,5 +22,6 @@ protected:
 
 private:
     int d_width, d_height;  //< Size of the window we're rendering into
+    QPoint  d_cop;          //< Center of projection
 };
 

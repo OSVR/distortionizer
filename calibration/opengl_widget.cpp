@@ -14,6 +14,7 @@
 
 OpenGL_Widget::OpenGL_Widget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+    , d_cop(QPoint(0,0))
 {
 }
 
@@ -44,8 +45,6 @@ void OpenGL_Widget::initializeGL()
 
 void OpenGL_Widget::paintGL()
 {
-    int i;
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
     glTranslatef(0.0, 0.0, -10.0);
@@ -53,6 +52,25 @@ void OpenGL_Widget::paintGL()
     // Set up rendering state.
     glPointSize(5.0);
     glDisable(GL_TEXTURE_2D);
+
+    // Draw two perpendicular lines through the center of
+    // projection on the left eye, and the mirror of that
+    // center of projection about the middle of the screen
+    // in the right eye.
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINES);
+        glVertex2f(0, d_cop.y());
+        glVertex2f(d_width/2, d_cop.y());
+        glVertex2f(d_cop.x(), 0);
+        glVertex2f(d_cop.x(), d_height);
+
+        QPoint cop_r = QPoint(d_width - d_cop.x(), d_cop.y());
+
+        glVertex2f(d_width/2, cop_r.y());
+        glVertex2f(d_width, cop_r.y());
+        glVertex2f(cop_r.x(), 0);
+        glVertex2f(cop_r.x(), d_height);
+    glEnd();
 
     /*Draw a line around the border of the screen.
     glColor3f(1.0, 1.0, 1.0);
@@ -85,6 +103,11 @@ void OpenGL_Widget::resizeGL(int width, int height)
     }
     glOrtho(0, d_width-1, 0, d_height-1, 5.0, 15.0);
     glMatrixMode(GL_MODELVIEW);
+
+    // Default center of projection is the center of the left half
+    // of the screen.
+    d_cop.setX(d_width / 4.0);
+    d_cop.setY(d_height / 2.0);
 }
 
 void OpenGL_Widget::mousePressEvent(QMouseEvent *event)
@@ -94,8 +117,8 @@ void OpenGL_Widget::mousePressEvent(QMouseEvent *event)
 
 void OpenGL_Widget::mouseMoveEvent(QMouseEvent *event)
 {
-    int dx = event->x();// - lastPos.x();
-    int dy = event->y();// - lastPos.y();
+    //int dx = event->x() - lastPos.x();
+    //int dy = event->y() - lastPos.y();
 
     if (event->buttons() & Qt::LeftButton) {
         // XXX
