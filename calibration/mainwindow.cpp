@@ -11,8 +11,11 @@ MainWindow::MainWindow(QWidget *parent) :
     // Make the central widget have no margins, so we fill the whole region.
     QMainWindow::centralWidget()->layout()->setContentsMargins(0, 0, 0, 0);
 
-    // Display full resolution on the second screen.
-    QRect screenres = QApplication::desktop()->screenGeometry(1/*screenNumber*/);
+    // Find out where the last screen lives.
+    int last_screen = QApplication::desktop()->numScreens() - 1;
+    QRect screenres = QApplication::desktop()->screenGeometry(last_screen);
+
+    // Display full resolution on the last screen.
     this->move(QPoint(screenres.x(), screenres.y()));
     this->resize(screenres.width(), screenres.height());
     this->showFullScreen();

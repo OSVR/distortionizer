@@ -54,22 +54,22 @@ void OpenGL_Widget::paintGL()
     glPointSize(5.0);
     glDisable(GL_TEXTURE_2D);
 
-/*
+    /*Draw a line around the border of the screen.
     glColor3f(1.0, 1.0, 1.0);
     glBegin(GL_LINE_STRIP);
-        glVertex2f(0, 0);
-        glVertex2f(1, 0);
-        glVertex2f(1, 1);
-        glVertex2f(0, 1);
-        glVertex2f(0, 0);
+        glVertex2f( 0,         0);
+        glVertex2f( d_width-1, 0);
+        glVertex2f( d_width-1, d_height-1);
+        glVertex2f( 0,         d_height-1);
+        glVertex2f( 0,         0);
     glEnd();
-*/
+    */
 }
 
 void OpenGL_Widget::resizeGL(int width, int height)
 {
-//    int side = qMin(width, height);
-//    glViewport((width - side) / 2, (height - side) / 2, side, side);
+    d_width = width;
+    d_height = height;
     glViewport(0, 0, width, height);
 
     glMatrixMode(GL_PROJECTION);
@@ -83,9 +83,8 @@ void OpenGL_Widget::resizeGL(int width, int height)
     } else {
         aspect = static_cast<float>(width)/height;
     }
-    glOrtho(0, aspect, -0.5, 0.5, 5.0, 15.0);
+    glOrtho(0, d_width-1, 0, d_height-1, 5.0, 15.0);
     glMatrixMode(GL_MODELVIEW);
-    printf("XXX New size %dx%d\n", width, height);
 }
 
 void OpenGL_Widget::mousePressEvent(QMouseEvent *event)

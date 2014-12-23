@@ -21,5 +21,6 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
 
 private:
+    int d_width, d_height;  //< Size of the window we're rendering into
 };
 
