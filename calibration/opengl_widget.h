@@ -20,9 +20,13 @@ protected:
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void keyPressEvent(QKeyEvent *event);
+    void drawCircle(QPoint center, float radius);
 
 private:
     int d_width, d_height;  //< Size of the window we're rendering into
     QPoint  d_cop;          //< Center of projection
+    float  k1_red;          //< Quadratic term for distortio of red
+    float  dk_green;        //< Multiplicative factor from red to green
+    float  dk_blue;         //< Multiplicative factor from red to blue
 };
 
