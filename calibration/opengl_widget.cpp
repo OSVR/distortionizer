@@ -16,7 +16,8 @@
 
 OpenGL_Widget::OpenGL_Widget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
-    , d_cop(QPoint(0,0))
+    , d_cop_l(QPoint(0,0))
+    , d_cop_r(QPoint(0,0))
     , k1_red(1)
     , dk_green(1)
     , dk_blue(1)
@@ -76,23 +77,19 @@ void OpenGL_Widget::paintGL()
     glBlendFunc(GL_ONE, GL_ONE);
     glDisable(GL_DEPTH_TEST);
 
-    // Find the mirror of the left-eye's center of projection
-    // around the screen center to find the right eye's COP.
-    QPoint cop_r = QPoint(d_width - d_cop.x(), d_cop.y());
-
     // Draw two perpendicular lines through the center of
     // projection on the left eye, and the right eye.
     glColor3f(1.0, 1.0, 1.0);
     glBegin(GL_LINES);
-        glVertex2f(0, d_cop.y());
-        glVertex2f(d_width/2, d_cop.y());
-        glVertex2f(d_cop.x(), 0);
-        glVertex2f(d_cop.x(), d_height);
+        glVertex2f(0, d_cop_l.y());
+        glVertex2f(d_width/2, d_cop_l.y());
+        glVertex2f(d_cop_l.x(), 0);
+        glVertex2f(d_cop_l.x(), d_height);
 
-        glVertex2f(d_width/2, cop_r.y());
-        glVertex2f(d_width, cop_r.y());
-        glVertex2f(cop_r.x(), 0);
-        glVertex2f(cop_r.x(), d_height);
+        glVertex2f(d_width/2, d_cop_r.y());
+        glVertex2f(d_width, d_cop_r.y());
+        glVertex2f(d_cop_r.x(), 0);
+        glVertex2f(d_cop_r.x(), d_height);
     glEnd();
 
     // Draw three colored circles around the center of projection
@@ -105,16 +102,16 @@ void OpenGL_Widget::paintGL()
     float r_green = r_red * dk_green;
     float r_blue = r_red * dk_blue;
     glColor3f(1.0, 0.0, 0.0);
-    drawCircle(d_cop, r_red);
-    drawCircle(cop_r, r_red);
+    drawCircle(d_cop_l, r_red);
+    drawCircle(d_cop_r, r_red);
 
     glColor3f(0.0, 1.0, 0.0);
-    drawCircle(d_cop, r_green);
-    drawCircle(cop_r, r_green);
+    drawCircle(d_cop_l, r_green);
+    drawCircle(d_cop_r, r_green);
 
     glColor3f(0.0, 0.0, 1.0);
-    drawCircle(d_cop, r_blue);
-    drawCircle(cop_r, r_blue);
+    drawCircle(d_cop_l, r_blue);
+    drawCircle(d_cop_r, r_blue);
 }
 
 void OpenGL_Widget::resizeGL(int width, int height)
@@ -139,8 +136,12 @@ void OpenGL_Widget::resizeGL(int width, int height)
 
     // Default center of projection is the center of the left half
     // of the screen.
-    d_cop.setX(d_width / 4);
-    d_cop.setY(d_height / 2);
+    d_cop_l.setX(d_width / 4);
+    d_cop_l.setY(d_height / 2);
+
+    // Find the mirror of the left-eye's center of projection
+    // around the screen center to find the right eye's COP.
+    d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
 }
 
 
@@ -151,19 +152,35 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
     case Qt::Key_S: // Save the state to an output file.
         // XXX Would like to throw a dialog box, but it shows in HMD
         // and cannot be moved.
-        saveConfigToJson("config.json");
+        saveConfigToJson("OSVR_HMD_config.json");
         break;
     case Qt::Key_Left:
-        d_cop.setX(d_cop.x()-1);
+        d_cop_l.setX(d_cop_l.x()-1);
+
+        // Find the mirror of the left-eye's center of projection
+        // around the screen center to find the right eye's COP.
+        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
         break;
     case Qt::Key_Right:
-        d_cop.setX(d_cop.x()+1);
+        d_cop_l.setX(d_cop_l.x()+1);
+
+        // Find the mirror of the left-eye's center of projection
+        // around the screen center to find the right eye's COP.
+        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
         break;
     case Qt::Key_Down:
-        d_cop.setY(d_cop.y()-1);
+        d_cop_l.setY(d_cop_l.y()-1);
+
+        // Find the mirror of the left-eye's center of projection
+        // around the screen center to find the right eye's COP.
+        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
         break;
     case Qt::Key_Up:
-        d_cop.setY(d_cop.y()+1);
+        d_cop_l.setY(d_cop_l.y()+1);
+
+        // Find the mirror of the left-eye's center of projection
+        // around the screen center to find the right eye's COP.
+        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
         break;
     case Qt::Key_G:
         if(event->modifiers() & Qt::ShiftModifier) {
@@ -186,8 +203,12 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
 void OpenGL_Widget::mousePressEvent(QMouseEvent *event)
 {
     if (event->pos().x() < d_width/2) {
-        d_cop = event->pos();
-        d_cop.setY(d_height - d_cop.y());
+        d_cop_l = event->pos();
+        d_cop_l.setY(d_height - d_cop_l.y());
+
+        // Find the mirror of the left-eye's center of projection
+        // around the screen center to find the right eye's COP.
+        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
     }
     updateGL();
 //    lastPos = event->pos();
@@ -215,12 +236,30 @@ bool OpenGL_Widget::saveConfigToJson(QString filename)
         return false;
     }
     fprintf(f, "{\n");
-    fprintf(f, " \"Center_of_projection_pixels_x\": %d,\n", d_cop.x());
-    fprintf(f, " \"Center_of_projection_pixels_x\": %d,\n", d_cop.y());
-    fprintf(f, " \"k1_squared_term_for_red\": %f,\n", k1_red);
-    fprintf(f, " \"k1_squared_term_for_green\": %f,\n", k1_red * dk_green);
-    fprintf(f, " \"k1_squared_term_for_blue\": %f,\n", k1_red * dk_blue);
+    fprintf(f, " \"hmd\": {\n");
+    fprintf(f, "  \"eyes\": [\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "     \"distortion\": {\n");
+    fprintf(f, "      \"Center_of_projection_pixels_x\": %d,\n", d_cop_l.x());
+    fprintf(f, "      \"Center_of_projection_pixels_y\": %d,\n", d_cop_l.y());
+    fprintf(f, "      \"k1_squared_term_for_red\": %f,\n", k1_red);
+    fprintf(f, "      \"k1_squared_term_for_green\": %f,\n", k1_red * dk_green);
+    fprintf(f, "      \"k1_squared_term_for_blue\": %f\n", k1_red * dk_blue);
+    fprintf(f, "     }\n");
+    fprintf(f, "    },\n");
+    fprintf(f, "    {\n");
+    fprintf(f, "     \"distortion\": {\n");
+    fprintf(f, "      \"Center_of_projection_pixels_x\": %d,\n", d_cop_r.x());
+    fprintf(f, "      \"Center_of_projection_pixels_y\": %d,\n", d_cop_r.y());
+    fprintf(f, "      \"k1_squared_term_for_red\": %f,\n", k1_red);
+    fprintf(f, "      \"k1_squared_term_for_green\": %f,\n", k1_red * dk_green);
+    fprintf(f, "      \"k1_squared_term_for_blue\": %f\n", k1_red * dk_blue);
+    fprintf(f, "     }\n");
+    fprintf(f, "    }\n");
+    fprintf(f, "   ]\n");
+    fprintf(f, " }\n");
     fprintf(f, "}\n");
 
     fclose(f);
+    return true;
 }

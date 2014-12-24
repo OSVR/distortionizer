@@ -25,7 +25,8 @@ protected:
 
 private:
     int d_width, d_height;  //< Size of the window we're rendering into
-    QPoint  d_cop;          //< Center of projection
+    QPoint d_cop_l;         //< Center of projection for the left eye
+    QPoint d_cop_r;         //< Center of projection for the right eye
     float  k1_red;          //< Quadratic term for distortio of red
     float  dk_green;        //< Multiplicative factor from red to green
     float  dk_blue;         //< Multiplicative factor from red to blue
