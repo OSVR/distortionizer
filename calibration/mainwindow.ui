@@ -19,7 +19,11 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
-     <widget class="OpenGL_Widget" name="widget" native="true"/>
+     <widget class="OpenGL_Widget" name="widget" native="true">
+      <property name="focusPolicy">
+       <enum>Qt::StrongFocus</enum>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
