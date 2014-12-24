@@ -1,7 +1,9 @@
 #include <QtGui>
 #include <QtOpenGL>
 #include <QColor>
+#include <QFileDialog>
 #include <math.h>
+#include <stdio.h>
 
 #include "opengl_widget.h"
 
@@ -146,6 +148,11 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
 {
     float color_shift_scale = 1 + 1.0 / (d_width/2);
     switch (event->key()) {
+    case Qt::Key_S: // Save the state to an output file.
+        // XXX Would like to throw a dialog box, but it shows in HMD
+        // and cannot be moved.
+        saveConfigToJson("config.json");
+        break;
     case Qt::Key_Left:
         d_cop.setX(d_cop.x()-1);
         break;
@@ -197,4 +204,23 @@ void OpenGL_Widget::mouseMoveEvent(QMouseEvent *event)
         // XXX
     }
 //    lastPos = event->pos();
+}
+
+bool OpenGL_Widget::saveConfigToJson(QString filename)
+{
+    FILE *f = fopen(filename.toStdString().c_str(), "w");
+    if (f == NULL) {
+        fprintf(stderr, "OpenGL_Widget::saveConfigToJson(): Can't save to %s",
+                filename.toStdString().c_str());
+        return false;
+    }
+    fprintf(f, "{\n");
+    fprintf(f, " \"Center_of_projection_pixels_x\": %d,\n", d_cop.x());
+    fprintf(f, " \"Center_of_projection_pixels_x\": %d,\n", d_cop.y());
+    fprintf(f, " \"k1_squared_term_for_red\": %f,\n", k1_red);
+    fprintf(f, " \"k1_squared_term_for_green\": %f,\n", k1_red * dk_green);
+    fprintf(f, " \"k1_squared_term_for_blue\": %f,\n", k1_red * dk_blue);
+    fprintf(f, "}\n");
+
+    fclose(f);
 }

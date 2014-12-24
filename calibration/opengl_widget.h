@@ -21,6 +21,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void drawCircle(QPoint center, float radius);
+    bool saveConfigToJson(QString filename);
 
 private:
     int d_width, d_height;  //< Size of the window we're rendering into
