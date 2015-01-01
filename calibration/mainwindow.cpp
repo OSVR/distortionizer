@@ -16,9 +16,11 @@ MainWindow::MainWindow(QWidget *parent) :
     QRect screenres = QApplication::desktop()->screenGeometry(last_screen);
 
     // Display full resolution on the last screen.
+    // On Qt4, the showFullScreen() should come after the move/resize.
+    // On Qt5, it comes before.
+    this->showFullScreen();
     this->move(QPoint(screenres.x(), screenres.y()));
     this->resize(screenres.width(), screenres.height());
-    this->showFullScreen();
 }
 
 MainWindow::~MainWindow()

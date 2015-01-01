@@ -4,7 +4,9 @@
 #
 #-------------------------------------------------
 
-QT       += core gui opengl
+# Modified to work with Qt5.
+
+QT       += core gui opengl widgets
 CONFIG += console
 
 TARGET = calibration
