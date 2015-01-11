@@ -16,14 +16,16 @@
 // (Final version intended to be licensed under
 // the Apache License, Version 2.0)
 
+#include "opengl_widget.h"
+
+#include "undistort_shader.h"
+
 #include <QtGui>
 #include <QtOpenGL>
 #include <QColor>
 #include <QFileDialog>
 #include <math.h>
 #include <stdio.h>
-
-#include "opengl_widget.h"
 
 #ifndef GL_MULTISAMPLE
 #define GL_MULTISAMPLE  0x809D
@@ -278,7 +280,7 @@ void OpenGL_Widget::paintGL()
     // lines when we draw three different-colored lines
     // in the same location.  Also turn off Z-buffer
     // test so we get all of the lines drawn.  Also,
-    // turn of texture-mapping.
+    // turn off texture-mapping.
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
     glDisable(GL_DEPTH_TEST);

@@ -17,6 +17,7 @@
 // the Apache License, Version 2.0)
 
 #pragma once
+#include "opengl_widget.h"
 #include <QGLWidget>
 
 // There are three different indices of refraction for the three
