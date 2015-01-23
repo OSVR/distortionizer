@@ -24,6 +24,7 @@
 #include <QtOpenGL>
 #include <QColor>
 #include <QFileDialog>
+#include <iostream>
 #include <math.h>
 #include <stdio.h>
 
@@ -42,6 +43,18 @@ OpenGL_Widget::OpenGL_Widget(QWidget *parent)
     , d_k1_green(0)
     , d_k1_blue(0)
 {
+    using namespace std;
+    cout << "Distortion estimation for HMD using K1 (quadratic) term" << endl
+         << "The program always runs on the last screen, full screen" << endl
+         << "Click with the mouse in the left eye to locate center" << endl
+         << "Keyboard controls:" << endl
+         << "  r/R: Increase/Decrease distortion in R+G+B" << endl
+         << "  g/G: Increase/Decrease distortion in G+B" << endl
+         << "  b/B: Increase/Decrease distortion in B only" << endl
+         << "  S/L: Save/Load state from file OSVR_HMD_config.json" << endl
+         << "  Left,Right,Up,Down: Move the center of projection by one pixel" << endl
+         << "  ESC/Q: Quit the application" << endl
+         << endl;
 }
 
 OpenGL_Widget::~OpenGL_Widget()
@@ -329,6 +342,10 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
     // middle of the screen.
     float color_shift = 1.0 / ((d_width/4.0)*(d_width/4.0));
     switch (event->key()) {
+    case Qt::Key_Escape:
+    case Qt::Key_Q:
+        QApplication::quit();
+        break;
     case Qt::Key_S: // Save the state to an output file.
         // XXX Would like to throw a dialog box, but it shows in HMD
         // and cannot be moved.
