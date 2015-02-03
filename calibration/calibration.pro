@@ -22,6 +22,7 @@ DEFINES += _CRT_SECURE_NO_WARNINGS=1
 
 LIBS += -LC:/usr/local/lib
 LIBS += -lglew32s
+DEFINES += GLEW_STATIC
 
 SOURCES += main.cpp\
         mainwindow.cpp \

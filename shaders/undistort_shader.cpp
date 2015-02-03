@@ -19,7 +19,6 @@
 #include "undistort_shader.h"
 #include <stdio.h>
 #include <stdlib.h>
-#define GLEW_STATIC
 #include <GL/glew.h>
 #include <GL/gl.h>
 
