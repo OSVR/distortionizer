@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(distortionizer)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 ###
 # Configuration Options
 ###
@@ -8,14 +9,14 @@ project(distortionizer)
 ###
 # CMake Modules
 ###
-#include(EnableExtraCompilerWarnings)
+include(EnableExtraCompilerWarnings)
 
-#include(SetDefaultBuildType)
-#set_default_build_type(RelWithDebInfo)
+include(SetDefaultBuildType)
+set_default_build_type(RelWithDebInfo)
 
-#include(MSVCMultipleProcessCompile)
+include(MSVCMultipleProcessCompile)
 
-#include(InstallRequiredSystemLibraries)
+include(InstallRequiredSystemLibraries)
 
 ###
 # Dependencies
@@ -26,6 +27,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5Widgets REQUIRED)
 find_package(Qt5OpenGL REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
 
 ###
 # Building
