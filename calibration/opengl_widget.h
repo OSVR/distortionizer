@@ -19,6 +19,7 @@
 #pragma once
 #include "opengl_widget.h"
 #include <QGLWidget>
+#include "undistort_shader.h"
 
 // There are three different indices of refraction for the three
 // different wavelengths in the head-mounted display (R, G, B).
@@ -43,16 +44,15 @@
 //    RcorrB = Rinit + K1B * (Rinit * Rinit)
 //    0 <= K1R <= K1G <= K1B
 //
-// We can solve for a pre-distorted position that would produce
-// a desired end location after passing through the optical system
-// by solving for Rinit in the above equations (here done for a
-// single color):
-//    K1 * Rinit^2 + Rinit - Rcorr = 0
-//    Solving for the positive root of the quadratic equation
-//       A = K1, B = 1, C = -Rcorr
-//    Rinit = (-B + sqrt(B^2 - 4AC)) / 2A
-//          = (-1 + sqrt(1 + 4*K1*Rcorr)) / (2*K1)
-//    K1 > 0
+// We will calculate the transformed point
+// by calculating the new location using the 
+// following formula
+// x_d = distorted x; y_d = distorted y
+// x_u = undistorted x; y_u = undistorted y
+// x_c = center x; y_c = center y
+// r = sqrt( (x_u - x_c)^2 +  (y_u - y_c)^2 )
+// x_d = x_u [(1 + k1*r^2) * (x_u - x_c) / r]
+// y_d = y_u [(1 + k1*r^2) * (y_u - y_c) / r]
 //
 // When there are nonzero coefficients for higher-order terms
 // (K2 and above), the result is a fourth-order polynomial that
@@ -116,11 +116,21 @@ protected:
     // It uses the specified center of projection.
     QPointF transformPoint(QPointF p, QPoint cop, unsigned color);
 
+	// Set default values for center of projection
+	// Also used to reset center during execution to default values
+	void setDeftCOPVals();
+
+	//Convert point from pixels to relative
+	QPointF OpenGL_Widget::pixelToRelative(QPointF cop);
+	QPoint OpenGL_Widget::relativeToPixel(QPointF cop);
+
 private:
     int d_width, d_height;  //< Size of the window we're rendering into
     QPoint d_cop_l;         //< Center of projection for the left eye
     QPoint d_cop_r;         //< Center of projection for the right eye
+	QPoint d_cop;			//< Center of projection for the fullscreen
     float  d_k1_red;        //< Quadratic term for distortion of red
     float  d_k1_green;      //< Quadratic term for distortion of green
     float  d_k1_blue;       //< Quadratic term for distortion of blue
+	bool fullscreen;
 };
