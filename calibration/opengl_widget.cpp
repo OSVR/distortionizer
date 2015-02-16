@@ -18,7 +18,7 @@
 
 #include "opengl_widget.h"
 
-#include "undistort_shader.h"
+
 
 #include <QtGui>
 #include <QtOpenGL>
@@ -32,6 +32,8 @@
 #define GL_MULTISAMPLE  0x809D
 #endif
 
+#define CONFIG_FILE "HMD_Config.json"
+
 //----------------------------------------------------------------------
 // Helper functions
 
@@ -39,9 +41,11 @@ OpenGL_Widget::OpenGL_Widget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
     , d_cop_l(QPoint(0,0))
     , d_cop_r(QPoint(0,0))
+	, d_cop(QPoint(0,0))
     , d_k1_red(0)
     , d_k1_green(0)
     , d_k1_blue(0)
+	, fullscreen(false)
 {
     using namespace std;
     cout << "Distortion estimation for HMD using K1 (quadratic) term" << endl
@@ -51,8 +55,11 @@ OpenGL_Widget::OpenGL_Widget(QWidget *parent)
          << "  r/R: Increase/Decrease distortion in R+G+B" << endl
          << "  g/G: Increase/Decrease distortion in G+B" << endl
          << "  b/B: Increase/Decrease distortion in B only" << endl
-         << "  S/L: Save/Load state from file OSVR_HMD_config.json" << endl
+		 << "  S/L: Save/Load state from JSON config file (" << CONFIG_FILE << " by default)" << endl
          << "  Left,Right,Up,Down: Move the center of projection by one pixel" << endl
+		 << "  f/F:	Toggle fullscreen on/off" << endl
+		 << "  c/C:	Reset center of projection" << endl
+		 << "  v/V:	Reset distortion values to 0" << endl
          << "  ESC/Q: Quit the application" << endl
          << endl;
 }
@@ -77,9 +84,6 @@ void OpenGL_Widget::initializeGL()
     // Makes the colors for the primitives be what we want.
     glDisable(GL_LIGHTING);
 
-    // Tell the version number.  If we do this in the constructor, it doesn't
-    // get displayed.
-//    emit newVersionLabel(tr("Version 1.0.0"));
 }
 
 // The distortion is with respect to a center of projection, which
@@ -122,20 +126,17 @@ QPointF OpenGL_Widget::transformPoint(QPointF p, QPoint cop, unsigned color)
         break;
     }
 
-    // If K1 <= 0, we don't do anything.
-    // Otherwise, we solve the quadratic equation to determine
-    // the initial offset that would put the point at the
-    // requested (corrected) location.  We the apply this offset
-    // to the center of projection to determine the point to plot
-    // that will result in the point landing where we want after
-    // passing through the lens system.
-    if (k1 > 0) {
-        float Rinit = (-1 + sqrt(1 + 4 * k1 * r))/(2*k1);
-        QPointF offset_dir = offset / r;
-        ret = cop + Rinit * offset_dir;
-    }
-
-    return ret;
+    //We will calculate the transformed point
+	//by calculating the new location using the 
+	//following formula
+	//x_d = distorted x; y_d = distorted y
+	//x_u = undistorted x; y_u = undistorted y
+	//x_c = center x; y_c = center y
+	//r = sqrt( (x_u - x_c)^2 +  (y_u - y_c)^2 )
+	//x_d = x_u [(1 + k1*r^2) * (x_u - x_c) / r]
+	//y_d = y_u [(1 + k1*r^2) * (y_u - y_c) / r]
+	ret = cop + (1 + k1 * r*r) * offset;
+	return ret;
 }
 
 void OpenGL_Widget::drawCorrectedLine(QPoint begin, QPoint end,
@@ -198,17 +199,28 @@ void OpenGL_Widget::drawCrossHairs()
     // Draw two perpendicular lines through the center of
     // projection on the left eye, and the right eye.
     glColor3f(1.0, 1.0, 1.0);
-    glBegin(GL_LINES);
-        glVertex2f(0, d_cop_l.y());
-        glVertex2f(d_width/2, d_cop_l.y());
-        glVertex2f(d_cop_l.x(), 0);
-        glVertex2f(d_cop_l.x(), d_height);
+	
+	if (fullscreen){
+		glBegin(GL_LINES);
+		glVertex2f(0, d_cop.y());
+		glVertex2f(d_width, d_cop.y());
+		glVertex2f(d_cop.x(), 0);
+		glVertex2f(d_cop.x(), d_height);
+		glEnd();
+	}
+	else{
+		glBegin(GL_LINES);
+		glVertex2f(0, d_cop_l.y());
+		glVertex2f(d_width / 2, d_cop_l.y());
+		glVertex2f(d_cop_l.x(), 0);
+		glVertex2f(d_cop_l.x(), d_height);
 
-        glVertex2f(d_width/2, d_cop_r.y());
-        glVertex2f(d_width, d_cop_r.y());
-        glVertex2f(d_cop_r.x(), 0);
-        glVertex2f(d_cop_r.x(), d_height);
-    glEnd();
+		glVertex2f(d_width / 2, d_cop_r.y());
+		glVertex2f(d_width, d_cop_r.y());
+		glVertex2f(d_cop_r.x(), 0);
+		glVertex2f(d_cop_r.x(), d_height);
+		glEnd();
+	}
 }
 
 void OpenGL_Widget::drawGrid()
@@ -219,67 +231,110 @@ void OpenGL_Widget::drawGrid()
     // full brightness.  Draw from the top of the screen to
     // the bottom.
     int spacing = 40;
-    // Vertical lines
-    for (int r = spacing; r < d_width/2; r += spacing) {
-        // Vertical lines, left eye
-        if (d_cop_l.x() + r < d_width/2) {
-            QPoint begin(d_cop_l.x() + r, 0);
-            QPoint end(d_cop_l.x() + r, d_height);
-            drawCorrectedLines(begin, end, d_cop_l);
-        }
-        if (d_cop_l.x() - r >= 0) {
-            QPoint begin(d_cop_l.x() - r, 0);
-            QPoint end(d_cop_l.x() - r, d_height);
-            drawCorrectedLines(begin, end, d_cop_l);
-        }
 
-        // Vertical lines, right eye
-        if (d_cop_r.x() + r < d_width) {
-            QPoint begin(d_cop_r.x() + r, 0);
-            QPoint end(d_cop_r.x() + r, d_height - 1);
-            drawCorrectedLines(begin, end, d_cop_r);
-        }
-        if (d_cop_r.x() - r >= d_width/2) {
-            QPoint begin(d_cop_r.x() - r, 0);
-            QPoint end(d_cop_r.x() - r, d_height - 1);
-            drawCorrectedLines(begin, end, d_cop_r);
-        }
-    }
+	
+	if (fullscreen){
+		// Vertical lines
+		for (int r = spacing; r < d_width; r += spacing) {
+			// Vertical lines, left eye
+			if (d_cop.x() + r < d_width) {
+				QPoint begin(d_cop.x() + r, 0);
+				QPoint end(d_cop.x() + r, d_height);
+				drawCorrectedLines(begin, end, d_cop);
+			}
+			if (d_cop.x() - r >= 0) {
+				QPoint begin(d_cop.x() - r, 0);
+				QPoint end(d_cop.x() - r, d_height);
+				drawCorrectedLines(begin, end, d_cop);
+			}
+		}
 
-    // Horizontal lines
-    for (int r = spacing; r < d_height; r += spacing) {
-        // Horizontal lines, left eye
-        if (d_cop_l.y() + r < d_height) {
-            QPoint begin(0, d_cop_l.y() + r);
-            QPoint end(d_width/2 - 1, d_cop_l.y() + r);
-            drawCorrectedLines(begin, end, d_cop_l);
-        }
-        if (d_cop_l.y() - r >= 0) {
-            QPoint begin(0, d_cop_l.y() - r);
-            QPoint end(d_width/2-1, d_cop_l.y() - r);
-            drawCorrectedLines(begin, end, d_cop_l);
-        }
+		// Horizontal lines
+		for (int r = spacing; r < d_height; r += spacing) {
+			// Horizontal lines, left eye
+			if (d_cop.y() + r < d_height) {
+				QPoint begin(0, d_cop.y() + r);
+				QPoint end(d_width, d_cop.y() + r);
+				drawCorrectedLines(begin, end, d_cop);
+			}
+			if (d_cop.y() - r >= 0) {
+				QPoint begin(0, d_cop.y() - r);
+				QPoint end(d_width, d_cop.y() - r);
+				drawCorrectedLines(begin, end, d_cop);
+			}
+		}
+	}
 
-        // Horizontal lines, right eye
-        if (d_cop_r.y() + r < d_height) {
-            QPoint begin(d_width/2, d_cop_r.y() + r);
-            QPoint end(d_width - 1, d_cop_r.y() + r);
-            drawCorrectedLines(begin, end, d_cop_r);
-        }
-        if (d_cop_r.y() - r >= 0) {
-            QPoint begin(d_width/2, d_cop_r.y() - r);
-            QPoint end(d_width-1, d_cop_r.y() - r);
-            drawCorrectedLines(begin, end, d_cop_r);
-        }
-    }
+	else{
+		// Vertical lines
+		for (int r = spacing; r < d_width / 2; r += spacing) {
+			// Vertical lines, left eye
+			if (d_cop_l.x() + r < d_width / 2) {
+				QPoint begin(d_cop_l.x() + r, 0);
+				QPoint end(d_cop_l.x() + r, d_height);
+				drawCorrectedLines(begin, end, d_cop_l);
+			}
+			if (d_cop_l.x() - r >= 0) {
+				QPoint begin(d_cop_l.x() - r, 0);
+				QPoint end(d_cop_l.x() - r, d_height);
+				drawCorrectedLines(begin, end, d_cop_l);
+			}
+
+			// Vertical lines, right eye
+			if (d_cop_r.x() + r < d_width) {
+				QPoint begin(d_cop_r.x() + r, 0);
+				QPoint end(d_cop_r.x() + r, d_height - 1);
+				drawCorrectedLines(begin, end, d_cop_r);
+			}
+			if (d_cop_r.x() - r >= d_width / 2) {
+				QPoint begin(d_cop_r.x() - r, 0);
+				QPoint end(d_cop_r.x() - r, d_height - 1);
+				drawCorrectedLines(begin, end, d_cop_r);
+			}
+		}
+
+		// Horizontal lines
+		for (int r = spacing; r < d_height; r += spacing) {
+			// Horizontal lines, left eye
+			if (d_cop_l.y() + r < d_height) {
+				QPoint begin(0, d_cop_l.y() + r);
+				QPoint end(d_width / 2 - 1, d_cop_l.y() + r);
+				drawCorrectedLines(begin, end, d_cop_l);
+			}
+			if (d_cop_l.y() - r >= 0) {
+				QPoint begin(0, d_cop_l.y() - r);
+				QPoint end(d_width / 2 - 1, d_cop_l.y() - r);
+				drawCorrectedLines(begin, end, d_cop_l);
+			}
+
+			// Horizontal lines, right eye
+			if (d_cop_r.y() + r < d_height) {
+				QPoint begin(d_width / 2, d_cop_r.y() + r);
+				QPoint end(d_width - 1, d_cop_r.y() + r);
+				drawCorrectedLines(begin, end, d_cop_r);
+			}
+			if (d_cop_r.y() - r >= 0) {
+				QPoint begin(d_width / 2, d_cop_r.y() - r);
+				QPoint end(d_width - 1, d_cop_r.y() - r);
+				drawCorrectedLines(begin, end, d_cop_r);
+			}
+		}
+	}
+
 }
 
 void OpenGL_Widget::drawCircles()
 {
-    drawCorrectedCircles(d_cop_l, 0.1 * d_width/4, d_cop_l);
-    drawCorrectedCircles(d_cop_r, 0.1 * d_width/4, d_cop_r);
-    drawCorrectedCircles(d_cop_l, 0.7 * d_width/4, d_cop_l);
-    drawCorrectedCircles(d_cop_r, 0.7 * d_width/4, d_cop_r);
+	if (fullscreen){
+		drawCorrectedCircles(d_cop, 0.1 * d_width / 4, d_cop);
+		drawCorrectedCircles(d_cop, 0.7 * d_width / 4, d_cop);
+	}
+	else{
+		drawCorrectedCircles(d_cop_l, 0.1 * d_width / 4, d_cop_l);
+		drawCorrectedCircles(d_cop_r, 0.1 * d_width / 4, d_cop_r);
+		drawCorrectedCircles(d_cop_l, 0.7 * d_width / 4, d_cop_l);
+		drawCorrectedCircles(d_cop_r, 0.7 * d_width / 4, d_cop_r);
+	}
 }
 
 void OpenGL_Widget::paintGL()
@@ -302,7 +357,9 @@ void OpenGL_Widget::paintGL()
     drawCrossHairs();
     drawGrid();
     drawCircles();
+	
 }
+
 
 void OpenGL_Widget::resizeGL(int width, int height)
 {
@@ -324,23 +381,39 @@ void OpenGL_Widget::resizeGL(int width, int height)
     glOrtho(0, d_width-1, 0, d_height-1, 5.0, 15.0);
     glMatrixMode(GL_MODELVIEW);
 
-    // Default center of projection is the center of the left half
-    // of the screen.
-    d_cop_l.setX(d_width / 4);
-    d_cop_l.setY(d_height / 2);
-
-    // Find the mirror of the left-eye's center of projection
-    // around the screen center to find the right eye's COP.
-    d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+	setDeftCOPVals();
 }
 
+void OpenGL_Widget::setDeftCOPVals(){
+
+	// Default center of projection is the center of the left half
+	// of the screen.
+	d_cop_l.setX(d_width / 4);
+	d_cop_l.setY(d_height / 2);
+
+	// Find the mirror of the left-eye's center of projection
+	// around the screen center to find the right eye's COP.
+	d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+
+	//Default center of projection for fullscreen mode is center of the screen
+	d_cop.setX(d_width / 2);
+	d_cop.setY(d_height / 2);
+
+}
 
 void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
 {
     // Color shift equivalent to one pixel at the edge of
     // the screen if the center of projection is in the
     // middle of the screen.
-    float color_shift = 1.0 / ((d_width/4.0)*(d_width/4.0));
+    float color_shift = 0.001 / ((d_width/4.0)*(d_width/4.0));
+	//std::string fileName;
+	//QStringList arguments = qApp->arguments();
+	//if (arguments.size() > 1){
+	//	fileName = qPrintable(arguments.at(1));
+	//	//printf("Supplied file name as %s", fileName);
+	//	std::cout << "file name is " << fileName << endl;
+	//}
     switch (event->key()) {
     case Qt::Key_Escape:
     case Qt::Key_Q:
@@ -349,40 +422,64 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
     case Qt::Key_S: // Save the state to an output file.
         // XXX Would like to throw a dialog box, but it shows in HMD
         // and cannot be moved.
-        saveConfigToJson("OSVR_HMD_config.json");
+        saveConfigToJson(CONFIG_FILE);
         break;
     case Qt::Key_L: // Load the state from an output file.
         // XXX Would like to throw a dialog box, but it shows in HMD
         // and cannot be moved.
-        loadConfigFromJson("OSVR_HMD_config.json");
+        loadConfigFromJson(CONFIG_FILE);
         break;
     case Qt::Key_Left:
-        d_cop_l.setX(d_cop_l.x()-1);
 
-        // Find the mirror of the left-eye's center of projection
-        // around the screen center to find the right eye's COP.
-        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
-        break;
+		if (fullscreen){
+			d_cop.setX(d_cop.x() - 1);
+		}
+		else{
+			d_cop_l.setX(d_cop_l.x() - 1);
+
+			// Find the mirror of the left-eye's center of projection
+			// around the screen center to find the right eye's COP.
+			d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+		}
+		break;
     case Qt::Key_Right:
-        d_cop_l.setX(d_cop_l.x()+1);
 
-        // Find the mirror of the left-eye's center of projection
-        // around the screen center to find the right eye's COP.
-        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+		if (fullscreen){
+			d_cop.setX(d_cop.x() + 1);
+		}
+		else{
+			d_cop_l.setX(d_cop_l.x() + 1);
+
+			// Find the mirror of the left-eye's center of projection
+			// around the screen center to find the right eye's COP.
+			d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+		}
         break;
     case Qt::Key_Down:
-        d_cop_l.setY(d_cop_l.y()-1);
 
-        // Find the mirror of the left-eye's center of projection
-        // around the screen center to find the right eye's COP.
-        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+		if (fullscreen){
+			d_cop.setY(d_cop.y() - 1);
+		}
+		else{
+			d_cop_l.setY(d_cop_l.y() - 1);
+
+			// Find the mirror of the left-eye's center of projection
+			// around the screen center to find the right eye's COP.
+			d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+		}
         break;
     case Qt::Key_Up:
-        d_cop_l.setY(d_cop_l.y()+1);
 
-        // Find the mirror of the left-eye's center of projection
-        // around the screen center to find the right eye's COP.
-        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+		if (fullscreen){
+			d_cop.setY(d_cop.y() + 1);
+		}
+		else{
+			d_cop_l.setY(d_cop_l.y() + 1);
+
+			// Find the mirror of the left-eye's center of projection
+			// around the screen center to find the right eye's COP.
+			d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+		}
         break;
     case Qt::Key_R:
         if(event->modifiers() & Qt::ShiftModifier) {
@@ -407,43 +504,92 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
             d_k1_blue += color_shift;
         }
         break;
+	case Qt::Key_F:
+		if (fullscreen){
+			fullscreen = false;
+		}
+		else{
+			fullscreen = true;
+		}
+		break;
+	case Qt::Key_C:
+		//reset center to default values
+		setDeftCOPVals();
+		break;
+	case Qt::Key_V:
+		//reset distortion values to original
+		d_k1_red = 0.0;
+		d_k1_green = 0.0;
+		d_k1_blue = 0.0;
+		
+		break;
     }
 
-    // Enforce color-shift constraints.
-    if (d_k1_red < 0) { d_k1_red = 0; }
-    if (d_k1_green < d_k1_red) { d_k1_green = d_k1_red; }
-    if (d_k1_blue < d_k1_green) { d_k1_blue = d_k1_green; }
-    printf("XXX R = %g, G = %g, B = %g\n", d_k1_red, d_k1_green, d_k1_blue);
-
+	printf("R = %g, G = %g, B = %g;\n", d_k1_red, d_k1_green, d_k1_blue);
+	if (fullscreen){
+		printf("Center coords: x: %d, y: %d\n", d_cop.x(), d_cop.y());
+	}
+	else{
+		printf("Left eye coords: x: %d, y: %d; ", d_cop_l.x(), d_cop_l.y());
+		printf("Right eye coords: x: %d, y: %d;\n", d_cop_r.x(), d_cop_r.y());
+	}
     updateGL();
 }
 
 void OpenGL_Widget::mousePressEvent(QMouseEvent *event)
 {
-    if (event->pos().x() < d_width/2) {
-        d_cop_l = event->pos();
-        d_cop_l.setY(d_height - d_cop_l.y());
+	if (fullscreen){
+		d_cop = event->pos();
+		d_cop.setY(d_height - d_cop.y());
+	}
+	else{
+		if (event->pos().x() < d_width / 2) {
+			d_cop_l = event->pos();
+			d_cop_l.setY(d_height - d_cop_l.y());
 
-        // Find the mirror of the left-eye's center of projection
-        // around the screen center to find the right eye's COP.
-        d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
-    }
+			// Find the mirror of the left-eye's center of projection
+			// around the screen center to find the right eye's COP.
+			d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+		}
+	}
     updateGL();
 //    d_last_pos = event->pos();
 }
 
 void OpenGL_Widget::mouseMoveEvent(QMouseEvent *event)
 {
-    //int dx = event->x() - d_last_pos.x();
-    //int dy = event->y() - d_last_pos.y();
 
     if (event->buttons() & Qt::LeftButton) {
         // XXX
     } else if (event->buttons() & Qt::RightButton) {
         // XXX
     }
-//    last_pos = event->pos();
+
 }
+
+QPointF OpenGL_Widget::pixelToRelative(QPointF cop){
+	QPointF relative_cop;
+	float cop_x, cop_y;
+	cop_x = (float)cop.x() / (float)d_width;
+	cop_y = (float)cop.y() / (float)d_height;
+	relative_cop.setX(cop_x);
+	relative_cop.setY(cop_y);
+
+	return relative_cop;
+}
+
+QPoint OpenGL_Widget::relativeToPixel(QPointF cop){
+	
+	QPoint pixel_cop;
+	int cop_x, cop_y;
+	cop_x = cop.x() * d_width;
+	cop_y = cop.y() * d_height;
+	pixel_cop.setX(cop_x);
+	pixel_cop.setY(cop_y);
+
+	return pixel_cop;
+}
+
 
 bool OpenGL_Widget::saveConfigToJson(QString filename)
 {
@@ -453,24 +599,44 @@ bool OpenGL_Widget::saveConfigToJson(QString filename)
                 filename.toStdString().c_str());
         return false;
     }
+	//convert from pixels to Relative screen size to use by shader
+	QPointF relative_cop;
+	if (fullscreen){
+		relative_cop = pixelToRelative(d_cop);
+	}
+	else{
+		relative_cop = pixelToRelative(d_cop_l);
+	}
+
     fprintf(f, "{\n");
     fprintf(f, " \"hmd\": {\n");
     fprintf(f, "  \"distortion\": {\n");
-    fprintf(f, "   \"k1_squared_pixels_term_for_red\": %g,\n", d_k1_red);
-    fprintf(f, "   \"k1_squared_pixels_term_for_green\": %g,\n", d_k1_green);
-    fprintf(f, "   \"k1_squared_pixels_term_for_blue\": %g\n", d_k1_blue);
+    fprintf(f, "   \"k1_red\": %g,\n", d_k1_red);
+    fprintf(f, "   \"k1_green\": %g,\n", d_k1_green);
+    fprintf(f, "   \"k1_blue\": %g\n", d_k1_blue);
     fprintf(f, "  },\n");
     fprintf(f, "  \"eyes\": [\n");
-    fprintf(f, "    {\n");
-    fprintf(f, "      \"Center_of_projection_pixels_x\": %d,\n", d_cop_l.x());
-    fprintf(f, "      \"Center_of_projection_pixels_y\": %d\n", d_cop_l.y());
-    fprintf(f, "    },\n");
-    fprintf(f, "    {\n");
-    // Center of projection with respect to the lower-left corner of the frame.
-    fprintf(f, "      \"Center_of_projection_pixels_x\": %d,\n", d_cop_r.x() - d_width/2);
-    fprintf(f, "      \"Center_of_projection_pixels_y\": %d\n", d_cop_r.y());
-    fprintf(f, "    }\n");
-    fprintf(f, "   ]\n");
+	fprintf(f, "    {\n");
+	fprintf(f, "      \"center_proj_x\": %f,\n", relative_cop.x());
+	fprintf(f, "      \"center_proj_y\": %f\n",  relative_cop.y());
+	fprintf(f, "    }\n");
+	fprintf(f, "   ],\n");
+	fprintf(f, "  \"fullscreen\": %d\n", (int)fullscreen);
+	/*
+	else{
+		fprintf(f, "    {\n");
+		fprintf(f, "      \"Center_of_projection_pixels_x\": %d,\n", d_cop_l.x() / d_width);
+		fprintf(f, "      \"Center_of_projection_pixels_y\": %d\n",  d_cop_l.y() / d_height);
+		fprintf(f, "    },\n");
+		fprintf(f, "    {\n");
+		// Center of projection with respect to the lower-left corner of the frame.
+		fprintf(f, "      \"Center_of_projection_pixels_x\": %d,\n", d_cop_r.x() - d_width / 2);
+		fprintf(f, "      \"Center_of_projection_pixels_y\": %d\n", d_cop_r.y());
+		fprintf(f, "    }\n");
+		
+	}
+	*/
+    
     fprintf(f, " }\n");
     fprintf(f, "}\n");
 
@@ -480,93 +646,104 @@ bool OpenGL_Widget::saveConfigToJson(QString filename)
 
 bool OpenGL_Widget::loadConfigFromJson(QString filename)
 {
-    FILE *f = fopen(filename.toStdString().c_str(), "r");
-    if (f == NULL) {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't load from to %s",
-                filename.toStdString().c_str());
-        return false;
-    }
+	FILE *f = fopen(filename.toStdString().c_str(), "r");
+	if (f == NULL) {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't load from to %s",
+			filename.toStdString().c_str());
+		return false;
+	}
 
-    // Lines and parameters to read
-    char line[1024];
-    char param[1024];
-    float val;
-    int ival;
+	// Lines and parameters to read
+	char line[1024];
+	char param[1024];
+	float val;
+	int ival;
+	QPointF cop;
 
-    // Skip the first three lines.
-    fgets(line, sizeof(line), f);
-    fgets(line, sizeof(line), f);
-    fgets(line, sizeof(line), f);
+	// Skip the first three lines.
+	fgets(line, sizeof(line), f);
+	fgets(line, sizeof(line), f);
+	fgets(line, sizeof(line), f);
 
-    // Try and read the red term
-    if (fgets(line, sizeof(line), f) == NULL) {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read red line");
-        return false;
-    }
-    if (sscanf(line, "%s %g", param, &val) != 2)  {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad red line: %s",
-                line);
-        return false;
-    }
-    d_k1_red = val;
+	// Try and read the red term
+	if (fgets(line, sizeof(line), f) == NULL) {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read red line");
+		return false;
+	}
+	if (sscanf(line, "%s %g", param, &val) != 2)  {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad red line: %s",
+			line);
+		return false;
+	}
+	d_k1_red = val;
 
-    // Try and read the green term
-    if (fgets(line, sizeof(line), f) == NULL) {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read green line");
-        return false;
-    }
-    if (sscanf(line, "%s %g", param, &val) != 2)  {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad green line: %s",
-                line);
-        return false;
-    }
-    d_k1_green = val;
+	// Try and read the green term
+	if (fgets(line, sizeof(line), f) == NULL) {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read green line");
+		return false;
+	}
+	if (sscanf(line, "%s %g", param, &val) != 2)  {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad green line: %s",
+			line);
+		return false;
+	}
+	d_k1_green = val;
 
-    // Try and read the blue term
-    if (fgets(line, sizeof(line), f) == NULL) {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read blue line");
-        return false;
-    }
-    if (sscanf(line, "%s %g", param, &val) != 2)  {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad blue line: %s",
-                line);
-        return false;
-    }
-    d_k1_blue = val;
+	// Try and read the blue term
+	if (fgets(line, sizeof(line), f) == NULL) {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read blue line");
+		return false;
+	}
+	if (sscanf(line, "%s %g", param, &val) != 2)  {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad blue line: %s",
+			line);
+		return false;
+	}
+	d_k1_blue = val;
 
-    // Skip the next three lines
-    fgets(line, sizeof(line), f);
-    fgets(line, sizeof(line), f);
-    fgets(line, sizeof(line), f);
+	// Skip the next three lines
+	fgets(line, sizeof(line), f);
+	fgets(line, sizeof(line), f);
+	fgets(line, sizeof(line), f);
 
-    // Try and read the left-eye X COP term
-    if (fgets(line, sizeof(line), f) == NULL) {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read left COP x line");
-        return false;
-    }
-    if (sscanf(line, "%s %d", param, &ival) != 2)  {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad left COP x line: %s",
-                line);
-        return false;
-    }
-    d_cop_l.setX(ival);
 
-    // Try and read the left-eye Y COP term
-    if (fgets(line, sizeof(line), f) == NULL) {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read left COP y line");
-        return false;
-    }
-    if (sscanf(line, "%s %d", param, &ival) != 2)  {
-        fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad left COP y line: %s",
-                line);
-        return false;
-    }
-    d_cop_l.setY(ival);
+	// Try and read the eye X COP term
+	if (fgets(line, sizeof(line), f) == NULL) {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read COP x line");
+		return false;
+	}
+	if (sscanf(line, "%s %f", param, &val) != 2)  {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad COP x line: %s",
+			line);
+		return false;
+	}
+	cop.setX(val);
 
-    // Find the mirror of the left-eye's center of projection
-    // around the screen center to find the right eye's COP.
-    d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+	// Try and read the eye Y COP term
+	if (fgets(line, sizeof(line), f) == NULL) {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read COP y line");
+		return false;
+	}
+	if (sscanf(line, "%s %f", param, &val) != 2)  {
+		fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Bad COP y line: %s",
+			line);
+		return false;
+	}
+	cop.setY(val);
 
+
+	if (fullscreen){
+		d_cop = relativeToPixel(cop);
+	}
+	else{
+		d_cop_l = relativeToPixel(cop);
+		// Find the mirror of the left-eye's center of projection
+		// around the screen center to find the right eye's COP.
+		d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
+	}
+
+	
+	
     fclose(f);
     return true;
 }
