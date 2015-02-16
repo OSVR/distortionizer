@@ -40,14 +40,14 @@ public:
     GLint   d_k1RedParam;       //< The location of the K1 param for Red
     GLint   d_k1GreenParam;     //< The location of the K1 param for Green
     GLint   d_k1BlueParam;      //< The location of the K1 param for Blue
-	GLint	d_centerParam;
-	GLint	d_radiusParam;
+    GLint    d_centerParam;
+    GLint    d_radiusParam;
 
     GLfloat d_k1Red;        // K1 red value to use in shader
     GLfloat d_k1Green;      // K1 green value to use in shader
     GLfloat d_k1Blue;       // K1 blue value to use in shader
-	GLfloat d_center[2];	// Center value to use in shader
-	GLfloat d_radius;		// Center value to use in shader
+    GLfloat d_center[2];    // Center value to use in shader
+    GLfloat d_radius;        // Center value to use in shader
 };
 
 // XXX List of shader attributes
@@ -94,8 +94,8 @@ std::string Undistort_Shader::readShaderFromFile(std::string filename)
     // TODO: Convert this to using only standard library calls.
     FILE *f = fopen(filename.c_str(), "r");
     if (f == NULL) { 
-		printf("No shader file found exiting;");
-		return ret; }
+        printf("No shader file with name %s found;", filename);
+        return ret; }
 
     // Read each line of the file and append it to the string.
     char line[4096];
@@ -162,11 +162,11 @@ int Undistort_Shader::loadShaders(const char *vertexShader, const char *fragment
 
 // Undistort_Shader Constructor
 Undistort_Shader::Undistort_Shader(
-	std::string vert_shader_file_name
-	, std::string frag_shader_file_name)
+    std::string vert_shader_file_name
+    , std::string frag_shader_file_name)
   : d_p(new Undistort_Shader_Private)
 {
-	
+    
     // Read the vertex shader and the fragment shader from the specified
     // files.  Bail if we can't get them.
     std::string vertexProgram = readShaderFromFile(vert_shader_file_name);
@@ -174,21 +174,21 @@ Undistort_Shader::Undistort_Shader(
     if ( (vertexProgram.size() == 0) || (fragmentProgram.size() == 0) ) {
         return;
     }
-	glewInit();
+    glewInit();
     // Load, compile, and link the shaders
     if ((d_p->d_shader_id = loadShaders(vertexProgram.c_str(), fragmentProgram.c_str())) == NO_SHADER) {
         return;
     }
 
-	/*
+    
     // Get the uniform variable locations
     d_p->d_k1RedParam = glGetUniformLocation(d_p->d_shader_id, "k1Red");
     d_p->d_k1GreenParam = glGetUniformLocation(d_p->d_shader_id, "k1Green");
     d_p->d_k1BlueParam = glGetUniformLocation(d_p->d_shader_id, "k1Blue");
-	
+    
     // Set the default values
     SetDefaultValues();
-	*/
+    
 }
 
 // Set the Default Values for the Color Processing
@@ -238,11 +238,9 @@ void Undistort_Shader::setK1Blue(float val)
 // Use the shader for rendering (set up the program)
 void Undistort_Shader::useShader()
 {
-	printf("d_p->d_shader_id is %d\n", d_p->d_shader_id);
+    
     glUseProgram(d_p->d_shader_id);
-	
-	glDrawArrays(GL_POINTS, 0, 1);
-	glPointSize(40.0f);
+
 
 /* TODO Uniform parameters
     glUniform1i(locCM, 0);

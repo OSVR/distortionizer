@@ -116,21 +116,21 @@ protected:
     // It uses the specified center of projection.
     QPointF transformPoint(QPointF p, QPoint cop, unsigned color);
 
-	// Set default values for center of projection
-	// Also used to reset center during execution to default values
-	void setDeftCOPVals();
+    // Set default values for center of projection
+    // Also used to reset center during execution to default values
+    void setDeftCOPVals();
 
-	//Convert point from pixels to relative
-	QPointF OpenGL_Widget::pixelToRelative(QPointF cop);
-	QPoint OpenGL_Widget::relativeToPixel(QPointF cop);
+    //Convert point from pixels to relative
+    QPointF OpenGL_Widget::pixelToRelative(QPointF cop);
+    QPoint OpenGL_Widget::relativeToPixel(QPointF cop);
 
 private:
     int d_width, d_height;  //< Size of the window we're rendering into
     QPoint d_cop_l;         //< Center of projection for the left eye
     QPoint d_cop_r;         //< Center of projection for the right eye
-	QPoint d_cop;			//< Center of projection for the fullscreen
+    QPoint d_cop;            //< Center of projection for the fullscreen
     float  d_k1_red;        //< Quadratic term for distortion of red
     float  d_k1_green;      //< Quadratic term for distortion of green
     float  d_k1_blue;       //< Quadratic term for distortion of blue
-	bool fullscreen;
+    bool fullscreen;
 };
