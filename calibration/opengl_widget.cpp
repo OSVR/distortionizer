@@ -125,6 +125,7 @@ QPointF OpenGL_Widget::transformPoint(QPointF p, QPoint cop, unsigned color)
         k1 = d_k1_blue;
         break;
     }
+    k1 = k1 / ((d_width / 4.0)*(d_width / 4.0) * 16);
 
     //We will calculate the transformed point
     //by calculating the new location using the 
@@ -135,7 +136,7 @@ QPointF OpenGL_Widget::transformPoint(QPointF p, QPoint cop, unsigned color)
     //r = sqrt( (x_u - x_c)^2 +  (y_u - y_c)^2 )
     //x_d = x_u [(1 + k1*r^2) * (x_u - x_c) / r]
     //y_d = y_u [(1 + k1*r^2) * (y_u - y_c) / r]
-    ret = cop + (1 + k1 * r*r) * offset;
+    ret = cop + (1 - k1 * r*r) * offset;
     return ret;
 }
 
@@ -406,7 +407,8 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
     // Color shift equivalent to one pixel at the edge of
     // the screen if the center of projection is in the
     // middle of the screen.
-    float color_shift = 0.001 / ((d_width/4.0)*(d_width/4.0));
+    //float color_shift = 0.001 / ((d_width/4.0)*(d_width/4.0));
+    float color_shift = 0.001;
     //std::string fileName;
     //QStringList arguments = qApp->arguments();
     //if (arguments.size() > 1){
