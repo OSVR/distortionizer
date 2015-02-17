@@ -8,7 +8,6 @@ in INFO {
     vec2 fullscr_center;
     vec2 left_center;
     vec2 right_center;
-    // flat int fullscreen;
 } fs_in;
 
 out vec4 color;

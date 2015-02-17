@@ -10,7 +10,6 @@ out INFO {
     vec2 fullscr_center;
     vec2 left_center;
     vec2 right_center;
-    // flat int fullscreen;
 
 } vs_out;
 
@@ -20,7 +19,6 @@ uniform float k1_blue;
 uniform vec2 fullscr_center;
 uniform vec2 left_center;
 uniform vec2 right_center;
-// uniform int fullscreen;
 
 void main() {
     
@@ -39,5 +37,4 @@ void main() {
     vs_out.fullscr_center = fullscr_center;
     vs_out.left_center = left_center;
     vs_out.right_center = right_center;
-    // vs_out.fullscreen = fullscreen;
 }
