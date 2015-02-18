@@ -1,16 +1,16 @@
 {
- "hmd": {
-  "distortion": {
-   "k1_red": 0,
-   "k1_green": 0,
-   "k1_blue": 0
-  },
-  "eyes": [
-    {
-      "center_proj_x": 0.50000,
-      "center_proj_y": 0.500000
+    "hmd": {
+        "distortion": {
+            "k1_red": 0,
+            "k1_green": 0,
+            "k1_blue": 0
+        },
+        "eyes": [
+            {
+                "center_proj_x": 0.5,
+                "center_proj_y": 0.5
+            }
+        ],
+        "fullscreen": 1
     }
-   ],
-  "fullscreen": 0
- }
 }
