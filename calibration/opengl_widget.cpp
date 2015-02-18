@@ -611,19 +611,19 @@ bool OpenGL_Widget::saveConfigToJson(QString filename)
     }
 
     fprintf(f, "{\n");
-    fprintf(f, " \"hmd\": {\n");
-    fprintf(f, "  \"distortion\": {\n");
-    fprintf(f, "   \"k1_red\": %g,\n", d_k1_red);
-    fprintf(f, "   \"k1_green\": %g,\n", d_k1_green);
-    fprintf(f, "   \"k1_blue\": %g\n", d_k1_blue);
-    fprintf(f, "  },\n");
-    fprintf(f, "  \"eyes\": [\n");
-    fprintf(f, "    {\n");
-    fprintf(f, "      \"center_proj_x\": %f,\n", relative_cop.x());
-    fprintf(f, "      \"center_proj_y\": %f\n",  relative_cop.y());
-    fprintf(f, "    }\n");
-    fprintf(f, "   ],\n");
-    fprintf(f, "  \"fullscreen\": %d\n", (int)fullscreen);
+    fprintf(f, "    \"hmd\": {\n");
+    fprintf(f, "        \"distortion\": {\n");
+    fprintf(f, "            \"k1_red\": %g,\n", d_k1_red);
+    fprintf(f, "            \"k1_green\": %g,\n", d_k1_green);
+    fprintf(f, "            \"k1_blue\": %g\n", d_k1_blue);
+    fprintf(f, "        },\n");
+    fprintf(f, "        \"eyes\": [\n");
+    fprintf(f, "            {\n");
+    fprintf(f, "                \"center_proj_x\": %f,\n", relative_cop.x());
+    fprintf(f, "                \"center_proj_y\": %f\n",  relative_cop.y());
+    fprintf(f, "            }\n");
+    fprintf(f, "        ],\n");
+    fprintf(f, "        \"fullscreen\": %d\n", (int)fullscreen);
     /*
     else{
         fprintf(f, "    {\n");
@@ -639,7 +639,7 @@ bool OpenGL_Widget::saveConfigToJson(QString filename)
     }
     */
     
-    fprintf(f, " }\n");
+    fprintf(f, "    }\n");
     fprintf(f, "}\n");
 
     fclose(f);

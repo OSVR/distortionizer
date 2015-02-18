@@ -2,38 +2,30 @@ import viz
 import vizconnect
 
 viz.setMultiSample(4) 
-#vizconnect.go('vizconnect_zSight.py') 
-#vizconnect.go('vizconnect_config.py') 
 
 import vizact
 import vizshape
-import sensics
 import vizfx.postprocess
-import socket
-import SocketServer
 import sys
 import time
 import threading
 import json
 from pprint import pprint
 
+from vizhmd import HMD
 
-post_gaze = []
-pre_gaze = []
-recording = False
-json_config = open("HMD_Config.json")
+class CustomHMD(HMD):
+	def __init__(self,*args,**kw):
+		HMD.__init__(self,*args,**kw)
+
+json_config = open("HMD.json")
 data = json.load(json_config)
-"""
-" Function to update textures based
-" off block and trial. 
-"""
-
                 
 """
-" BubbleZoom effect to be applied postprocess
+" Shader to be applied postprocess
 "
 """
-class BubbleEffect(vizfx.postprocess.BaseShaderEffect):
+class DistortionEffect(vizfx.postprocess.BaseShaderEffect):
 
     def _getFragmentCode(self):
         frag_shader = ""
@@ -57,25 +49,34 @@ class BubbleEffect(vizfx.postprocess.BaseShaderEffect):
         json_config.close()
         
 global effect
-effect = BubbleEffect()
+effect = DistortionEffect()
 vizfx.postprocess.addEffect(effect)
 
-
 viz.setMultiSample(4)
-viz.fov(60)
 
-#viz.window.setFullscreenMonitor(2)
-viz.window.setSize(1280, 1024)
+screenMode=viz.FULLSCREEN
+
+if data["hmd"]["resolutions"][0]["display_mode"] != "full_screen":
+    if data["hmd"]["resolutions"][0]["display_mode"]== "vert_side_by_side":
+        screenMode=viz.FULLSCREEN | viz.STEREO_VERT
+    else:
+        screenMode=viz.FULLSCREEN | viz.STEREO_HORZ
+
+hmd=CustomHMD(data["hmd"]["field_of_view"]["monocular_horizontal"],
+    data["hmd"]["field_of_view"]["monocular_vertical"],
+    overlap=data["hmd"]["field_of_view"]["overlap_percent"],
+    leftRollShift=data["hmd"]["rendering"]["left_roll"],
+    rightRollShift=data["hmd"]["rendering"]["right_roll"],
+    verticalShift=data["hmd"]["field_of_view"]["pitch_tilt"],
+    stereo=screenMode);
+    
+
+
+
+viz.window.setFullscreenMonitor(1)
 viz.enable(viz.AUTO_COMPUTE)
-#viz.window.setPosition(1920,0) # Fullscreen wouldn't work without manually setting the position. Could be TeamViewer
 
-
-if data["hmd"]["fullscreen"] == 1:
-    viz.go()
-else:
-    viz.go(viz.STEREO_HORZ)
-viz.MainView.move([0,0,0])
-
+viz.go(screenMode)
 
 #Create skylight
 sky_light = viz.addLight(euler=(0,0,0))
@@ -85,4 +86,3 @@ sky_light.ambient([5,5,5]) # necessary to light up images in Vizard 5
 
 #Add the gallery mode
 gallery = viz.addChild('gallery.osgb')
-
