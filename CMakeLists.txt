@@ -17,6 +17,7 @@ set_default_build_type(RelWithDebInfo)
 include(MSVCMultipleProcessCompile)
 
 include(InstallRequiredSystemLibraries)
+include(GNUInstallDirs)
 
 ###
 # Dependencies

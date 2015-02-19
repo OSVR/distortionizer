@@ -24,3 +24,6 @@ if(TARGET GLEW::GLEW_static)
 elseif(TARGET GLEW::GLEW)
     target_link_libraries(distortionizer-calibration GLEW::GLEW)
 endif()
+
+install(TARGETS distortionizer-calibration
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
