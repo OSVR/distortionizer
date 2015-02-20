@@ -19,7 +19,8 @@ qt5_wrap_ui(UI_HEADERS mainwindow.ui)
 add_executable(distortionizer-calibration ${SOURCES} ${SHADERS_SOURCES} ${UI_HEADERS})
 
 target_link_libraries(distortionizer-calibration Qt5::Widgets Qt5::OpenGL ${OPENGL_LIBRARIES})
-
+install(TARGETS distortionizer-calibration
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 set(deps Qt5::Core Qt5::Gui Qt5::Widgets Qt5::OpenGL)
 
