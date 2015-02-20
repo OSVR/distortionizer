@@ -1,0 +1,3 @@
+[submodule "third-party/discount-windows-bins"]
+	path = third-party/discount-windows-bins
+	url = https://github.com/OSVR/discount.git
