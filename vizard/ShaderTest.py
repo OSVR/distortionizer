@@ -64,14 +64,12 @@ if data["hmd"]["resolutions"][0]["display_mode"] != "full_screen":
 
 hmd=CustomHMD(data["hmd"]["field_of_view"]["monocular_horizontal"],
     data["hmd"]["field_of_view"]["monocular_vertical"],
-    overlap=data["hmd"]["field_of_view"]["overlap_percent"],
+    overlap=1.0*data["hmd"]["field_of_view"]["overlap_percent"]*data["hmd"]["field_of_view"]["monocular_horizontal"]/100,
     leftRollShift=data["hmd"]["rendering"]["left_roll"],
     rightRollShift=data["hmd"]["rendering"]["right_roll"],
     verticalShift=data["hmd"]["field_of_view"]["pitch_tilt"],
     stereo=screenMode);
     
-
-
 
 viz.window.setFullscreenMonitor(1)
 viz.enable(viz.AUTO_COMPUTE)

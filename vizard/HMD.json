@@ -1,8 +1,8 @@
 {
     "hmd": {
         "field_of_view": {
-            "monocular_horizontal": 95,
-            "monocular_vertical": 57,
+            "monocular_horizontal": 90,
+            "monocular_vertical": 101.25,
             "overlap_percent": 100,
             "pitch_tilt": 0
         },
@@ -11,7 +11,7 @@
 				"width": 1920,
 				"height": 1080,
 				"video_inputs": 1,
-				"display_mode": "vert_side_by_side"
+				"display_mode": "horz_side_by_side"
 			}
 		],
 		"distortion": {
