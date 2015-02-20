@@ -15,6 +15,7 @@ include(SetDefaultBuildType)
 set_default_build_type(RelWithDebInfo)
 
 include(MSVCMultipleProcessCompile)
+include(CopyImportedTarget)
 
 include(InstallRequiredSystemLibraries)
 include(GNUInstallDirs)
