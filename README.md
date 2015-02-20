@@ -15,3 +15,21 @@
 8. Once you've gotten it to successfully configure, click "Generate" to make the VS solution in the build directory.
 9. After you open solution, right click on `distortionizer-calibration` in VS in Solution Explorer widget and select "Set as Startup Project"
 10. In menu header, click on Project -> Properties (or Alt+F7) and in "Configuration Properties" -> Debugging set "Environment" to something like `PATH=$(PATH);C:\Qt\Qt5.4.0-gl\5.4\msvc2013_opengl\bin` otherwise it will complain about missing `Qt5OpenGL.dll` file
+
+
+##Instructions on how to use Distortionizer
+Distortion estimation for HMD using K1 (quadratic) term
+The program always runs on the last screen, full screen
+Click with the mouse in the left eye to locate center
+Keyboard controls:
+  - r/R: Increase/Decrease distortion in R+G+B
+  - g/G: Increase/Decrease distortion in G+B
+  - b/B: Increase/Decrease distortion in B only
+  - S/L: Save/Load state from JSON config file (HMD_Config.json by default)
+  - Left,Right,Up,Down: Move the center of projection by one pixel
+  - f/F:    Toggle fullscreen on/off
+  - c/C:    Reset center of projection
+  - v/V:    Reset distortion values to 0
+  - ESC/Q: Quit the application
+
+
