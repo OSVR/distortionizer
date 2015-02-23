@@ -33,7 +33,6 @@ endif()
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Instruct CMake to run moc automatically when needed.
-list(APPEND CMAKE_PREFIX_PATH "C:\\Qt\\5.4\\msvc2013_64_opengl\\")
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5Widgets REQUIRED)
 find_package(Qt5OpenGL REQUIRED)
