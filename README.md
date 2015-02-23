@@ -6,7 +6,7 @@
 2. Download and unpack latest version of GLEW
 3. Open CMake and navigate to `distortionizer` directory
 4. Add path for build directory like `/distortionizer/bin`
-5. Click "Add Entry", add `CMAKE_PREFIX_PATH` with the value containing the location of Qt OpenGL directory and Glew directory like `C:/Qt/Qt5.4.0-gl/5.4/msvc2013_opengl;C:/glew`
+5. Click "Add Entry", add `CMAKE_PREFIX_PATH` of type PATH with the value containing the location of Qt OpenGL directory and Glew directory like `C:/Qt/Qt5.4.0-gl/5.4/msvc2013_opengl;C:/glew`
 6. Click "Configure", and choose the right generator (probably Visual Studio 12 2013).
 7. If there is an error, the "Generate" button will not be available. **Just having red entries doesn't mean it failed - you'd see an error message down below.** If it did fail, you'll need to fill in more entries, depending on what it failed to find.  For example:
   - For `Qt5Widgets_DIR` specify like (adjust for your path) `C:/Qt/Qt5.4.0-gl/5.4/msvc2013_opengl/lib/cmake/Qt5Widgets`

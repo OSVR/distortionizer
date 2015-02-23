@@ -408,7 +408,7 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
     // the screen if the center of projection is in the
     // middle of the screen.
     //float color_shift = 0.001 / ((d_width/4.0)*(d_width/4.0));
-    float color_shift = 0.001;
+    float color_shift = 0.001f;
     //std::string fileName;
     //QStringList arguments = qApp->arguments();
     //if (arguments.size() > 1){
@@ -659,7 +659,6 @@ bool OpenGL_Widget::loadConfigFromJson(QString filename)
     char line[1024];
     char param[1024];
     float val;
-    int ival;
     QPointF cop;
 
     // Skip the first three lines.
@@ -708,7 +707,6 @@ bool OpenGL_Widget::loadConfigFromJson(QString filename)
     fgets(line, sizeof(line), f);
     fgets(line, sizeof(line), f);
 
-
     // Try and read the eye X COP term
     if (fgets(line, sizeof(line), f) == NULL) {
         fprintf(stderr, "OpenGL_Widget::loadConfigFromJson(): Can't read COP x line");
@@ -733,7 +731,6 @@ bool OpenGL_Widget::loadConfigFromJson(QString filename)
     }
     cop.setY(val);
 
-
     if (fullscreen){
         d_cop = relativeToPixel(cop);
     }
@@ -743,8 +740,6 @@ bool OpenGL_Widget::loadConfigFromJson(QString filename)
         // around the screen center to find the right eye's COP.
         d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
     }
-
-    
     
     fclose(f);
     return true;
