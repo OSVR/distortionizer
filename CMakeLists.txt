@@ -50,14 +50,17 @@ find_package(Markdown)
 # Docs
 ###
 # Convert the README to HTML if we can
+set(MARKDOWN_INPUT README.md CONTRIBUTING.md)
 if(MARKDOWN_FOUND)
     include(UseMarkdown)
-    add_markdown_target(markdown_docs "${CMAKE_CURRENT_BINARY_DIR}" README.md)
+    add_markdown_target(markdown_docs "${CMAKE_CURRENT_BINARY_DIR}" ${MARKDOWN_INPUT})
 
     install_markdown_target(markdown_docs DESTINATION ${CMAKE_INSTALL_DOCDIR})
 else()
-    install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
+    install(FILES ${MARKDOWN_INPUT} DESTINATION ${CMAKE_INSTALL_DOCDIR})
 endif()
+
+install(FILES LICENSE NOTICE DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
 # Install the fragment shaders as documentation.
 install(FILES vizard/ShaderTest.frag vizard/ShaderTest.vert DESTINATION ${CMAKE_INSTALL_DOCDIR})
