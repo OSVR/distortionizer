@@ -1,7 +1,21 @@
+# Copyright 2015 Sensics, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import viz
 import vizconnect
 
-viz.setMultiSample(4) 
+viz.setMultiSample(4)
 
 import vizact
 import vizshape
@@ -20,7 +34,7 @@ class CustomHMD(HMD):
 
 json_config = open("HMD.json")
 data = json.load(json_config)
-                
+
 """
 " Shader to be applied postprocess
 "
@@ -35,11 +49,11 @@ class DistortionEffect(vizfx.postprocess.BaseShaderEffect):
 
     def _getVertexCode(self):
         with open ("ShaderTest.vert", "r") as vert:
-           vert_shader=vert.read()        
+           vert_shader=vert.read()
         return vert_shader
 
     def _createUniforms(self):
-        
+
         self.uniforms.addFloat('k1_red', data["hmd"]["distortion"]["k1_red"])
         self.uniforms.addFloat('k1_green', data["hmd"]["distortion"]["k1_green"])
         self.uniforms.addFloat('k1_blue', data["hmd"]["distortion"]["k1_blue"])
@@ -47,7 +61,7 @@ class DistortionEffect(vizfx.postprocess.BaseShaderEffect):
         self.uniforms.addFloat('left_center', [.25, .5])
         self.uniforms.addFloat('right_center', [.75, .5])
         json_config.close()
-        
+
 global effect
 effect = DistortionEffect()
 vizfx.postprocess.addEffect(effect)
@@ -69,7 +83,7 @@ hmd=CustomHMD(data["hmd"]["field_of_view"]["monocular_horizontal"],
     rightRollShift=data["hmd"]["rendering"]["right_roll"],
     verticalShift=data["hmd"]["field_of_view"]["pitch_tilt"],
     stereo=screenMode);
-    
+
 
 viz.window.setFullscreenMonitor(1)
 viz.enable(viz.AUTO_COMPUTE)

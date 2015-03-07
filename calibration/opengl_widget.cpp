@@ -1,5 +1,5 @@
 /** @file
-    @brief Header
+    @brief Implementation
 
     @date 2014
 
@@ -11,10 +11,19 @@
 
 // Copyright 2014 Sensics, Inc.
 //
-// All rights reserved.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// (Final version intended to be licensed under
-// the Apache License, Version 2.0)
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 
 #include "opengl_widget.h"
 
@@ -128,7 +137,7 @@ QPointF OpenGL_Widget::transformPoint(QPointF p, QPoint cop, unsigned color)
     k1 = k1 / ((d_width / 4.0)*(d_width / 4.0) * 16);
 
     //We will calculate the transformed point
-    //by calculating the new location using the 
+    //by calculating the new location using the
     //following formula
     //x_d = distorted x; y_d = distorted y
     //x_u = undistorted x; y_u = undistorted y
@@ -200,7 +209,7 @@ void OpenGL_Widget::drawCrossHairs()
     // Draw two perpendicular lines through the center of
     // projection on the left eye, and the right eye.
     glColor3f(1.0, 1.0, 1.0);
-    
+
     if (fullscreen){
         glBegin(GL_LINES);
         glVertex2f(0, d_cop.y());
@@ -233,7 +242,7 @@ void OpenGL_Widget::drawGrid()
     // the bottom.
     int spacing = 40;
 
-    
+
     if (fullscreen){
         // Vertical lines
         for (int r = spacing; r < d_width; r += spacing) {
@@ -358,7 +367,7 @@ void OpenGL_Widget::paintGL()
     drawCrossHairs();
     drawGrid();
     drawCircles();
-    
+
 }
 
 
@@ -523,7 +532,7 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
         d_k1_red = 0.0;
         d_k1_green = 0.0;
         d_k1_blue = 0.0;
-        
+
         break;
     }
 
@@ -581,7 +590,7 @@ QPointF OpenGL_Widget::pixelToRelative(QPointF cop){
 }
 
 QPoint OpenGL_Widget::relativeToPixel(QPointF cop){
-    
+
     QPoint pixel_cop;
     int cop_x, cop_y;
     cop_x = cop.x() * d_width;
@@ -635,10 +644,10 @@ bool OpenGL_Widget::saveConfigToJson(QString filename)
         fprintf(f, "      \"Center_of_projection_pixels_x\": %d,\n", d_cop_r.x() - d_width / 2);
         fprintf(f, "      \"Center_of_projection_pixels_y\": %d\n", d_cop_r.y());
         fprintf(f, "    }\n");
-        
+
     }
     */
-    
+
     fprintf(f, "    }\n");
     fprintf(f, "}\n");
 
@@ -740,7 +749,7 @@ bool OpenGL_Widget::loadConfigFromJson(QString filename)
         // around the screen center to find the right eye's COP.
         d_cop_r = QPoint(d_width - d_cop_l.x(), d_cop_l.y());
     }
-    
+
     fclose(f);
     return true;
 }

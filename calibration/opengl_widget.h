@@ -11,10 +11,17 @@
 
 // Copyright 2014 Sensics, Inc.
 //
-// All rights reserved.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// (Final version intended to be licensed under
-// the Apache License, Version 2.0)
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #pragma once
 #include "opengl_widget.h"
@@ -45,7 +52,7 @@
 //    0 <= K1R <= K1G <= K1B
 //
 // We will calculate the transformed point
-// by calculating the new location using the 
+// by calculating the new location using the
 // following formula
 // x_d = distorted x; y_d = distorted y
 // x_u = undistorted x; y_u = undistorted y
