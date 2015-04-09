@@ -32,7 +32,7 @@
 class Undistort_Shader_Private
 {
 public:
-    Undistort_Shader_Private::Undistort_Shader_Private()
+    Undistort_Shader_Private()
         : d_shader_id(Undistort_Shader::NO_SHADER) {};
 
     // Read a shader string from a file into a string.  Returns an empty
@@ -101,7 +101,7 @@ std::string Undistort_Shader::readShaderFromFile(std::string filename)
     // TODO: Convert this to using only standard library calls.
     FILE *f = fopen(filename.c_str(), "r");
     if (f == NULL) { 
-        printf("No shader file with name %s found;", filename);
+        printf("No shader file with name %s found;", filename.c_str());
         return ret; }
 
     // Read each line of the file and append it to the string.
