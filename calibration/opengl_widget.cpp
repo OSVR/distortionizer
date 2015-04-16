@@ -671,9 +671,10 @@ bool OpenGL_Widget::loadConfigFromJson(QString filename)
     QPointF cop;
 
     // Skip the first three lines.
-    fgets(line, sizeof(line), f);
-    fgets(line, sizeof(line), f);
-    fgets(line, sizeof(line), f);
+    char* unused;
+    unused = fgets(line, sizeof(line), f);
+    unused = fgets(line, sizeof(line), f);
+    unused = fgets(line, sizeof(line), f);
 
     // Try and read the red term
     if (fgets(line, sizeof(line), f) == NULL) {
@@ -712,9 +713,9 @@ bool OpenGL_Widget::loadConfigFromJson(QString filename)
     d_k1_blue = val;
 
     // Skip the next three lines
-    fgets(line, sizeof(line), f);
-    fgets(line, sizeof(line), f);
-    fgets(line, sizeof(line), f);
+    unused = fgets(line, sizeof(line), f);
+    unused = fgets(line, sizeof(line), f);
+    unused = fgets(line, sizeof(line), f);
 
     // Try and read the eye X COP term
     if (fgets(line, sizeof(line), f) == NULL) {

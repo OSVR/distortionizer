@@ -128,8 +128,8 @@ protected:
     void setDeftCOPVals();
 
     //Convert point from pixels to relative
-    QPointF OpenGL_Widget::pixelToRelative(QPointF cop);
-    QPoint OpenGL_Widget::relativeToPixel(QPointF cop);
+    QPointF pixelToRelative(QPointF cop);
+    QPoint relativeToPixel(QPointF cop);
 
 private:
     int d_width, d_height;  //< Size of the window we're rendering into
