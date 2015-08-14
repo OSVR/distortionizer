@@ -57,9 +57,8 @@ class DistortionEffect(vizfx.postprocess.BaseShaderEffect):
         self.uniforms.addFloat('k1_red', data["hmd"]["distortion"]["k1_red"])
         self.uniforms.addFloat('k1_green', data["hmd"]["distortion"]["k1_green"])
         self.uniforms.addFloat('k1_blue', data["hmd"]["distortion"]["k1_blue"])
-        self.uniforms.addFloat('fullscr_center', [data["hmd"]["eyes"][0]["center_proj_x"], data["hmd"]["eyes"][0]["center_proj_y"]])
-        self.uniforms.addFloat('left_center', [.25, .5])
-        self.uniforms.addFloat('right_center', [.75, .5])
+        # Note that this might technically vary between the two eyes
+        self.uniforms.addFloat('center', [data["hmd"]["eyes"][0]["center_proj_x"], data["hmd"]["eyes"][0]["center_proj_y"]])
         json_config.close()
 
 global effect
