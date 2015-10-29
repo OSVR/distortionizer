@@ -131,13 +131,19 @@ protected:
     QPointF pixelToRelative(QPointF cop);
     QPoint relativeToPixel(QPointF cop);
 
-private:
-    int d_width, d_height;  //< Size of the window we're rendering into
-    QPoint d_cop_l;         //< Center of projection for the left eye
-    QPoint d_cop_r;         //< Center of projection for the right eye
-    QPoint d_cop;            //< Center of projection for the fullscreen
-    float  d_k1_red;        //< Quadratic term for distortion of red
-    float  d_k1_green;      //< Quadratic term for distortion of green
-    float  d_k1_blue;       //< Quadratic term for distortion of blue
+  private:
+    int d_width, d_height; //< Size of the window we're rendering into
+    QPoint d_cop_l;        //< Center of projection for the left eye
+    QPoint d_cop_r;        //< Center of projection for the right eye
+    QPoint d_cop;          //< Center of projection for the fullscreen
+    float d_k1_red;        //< Quadratic term for distortion of red
+    float d_k1_green;      //< Quadratic term for distortion of green
+    float d_k1_blue;       //< Quadratic term for distortion of blue
+    float d_a0;
+    float d_a1;
+    float d_a2;
+    float d_a3;
+    float d_a4;
+    float d_a5;
     bool fullscreen;
 };

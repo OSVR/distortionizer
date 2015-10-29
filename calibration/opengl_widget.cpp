@@ -47,15 +47,11 @@
 // Helper functions
 
 OpenGL_Widget::OpenGL_Widget(QWidget *parent)
-    : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
-    , d_cop_l(QPoint(0,0))
-    , d_cop_r(QPoint(0,0))
-    , d_cop(QPoint(0,0))
-    , d_k1_red(0)
-    , d_k1_green(0)
-    , d_k1_blue(0)
-    , fullscreen(false)
-{
+    : QGLWidget(QGLFormat(QGL::SampleBuffers), parent), d_cop_l(QPoint(0, 0)),
+      d_cop_r(QPoint(0, 0)), d_cop(QPoint(0, 0)), d_k1_red(0), d_k1_green(0),
+      d_k1_blue(0), d_a0(0.00145547124), d_a1(0.80521868878),
+      d_a2(4.9854118001010184), d_a3(-27.914670625175440),
+      d_a4(55.476076582028220), d_a5(-39.159162196998757), fullscreen(false) {
     using namespace std;
     cout << "Distortion estimation for HMD using K1 (quadratic) term" << endl
          << "The program always runs on the last screen, full screen" << endl
@@ -64,8 +60,12 @@ OpenGL_Widget::OpenGL_Widget(QWidget *parent)
          << "  r/R: Increase/Decrease distortion in R+G+B" << endl
          << "  g/G: Increase/Decrease distortion in G+B" << endl
          << "  b/B: Increase/Decrease distortion in B only" << endl
-         << "  S/L: Save/Load state from JSON config file (" << CONFIG_FILE << " by default)" << endl
-         << "  Left,Right,Up,Down: Move the center of projection by one pixel" << endl
+         << "  0-5: Increase A# coefficient value" << endl
+         << "  Shift + 0-5: Decrease A# coefficient value" << endl
+         << "  S/L: Save/Load state from JSON config file (" << CONFIG_FILE
+         << " by default)" << endl
+         << "  Left,Right,Up,Down: Move the center of projection by one pixel"
+         << endl
          << "  f/F:    Toggle fullscreen on/off" << endl
          << "  c/C:    Reset center of projection" << endl
          << "  v/V:    Reset distortion values to 0" << endl
@@ -122,30 +122,12 @@ QPointF OpenGL_Widget::transformPoint(QPointF p, QPoint cop, unsigned color)
     QPointF offset = p - cop;
     float r2 = offset.x() * offset.x() + offset.y() * offset.y();
     float r = sqrt(r2);
-    float k1;
-    switch (color) {
-    case 0:
-        k1 = d_k1_red;
-        break;
-    case 1:
-        k1 = d_k1_green;
-        break;
-    case 2:
-        k1 = d_k1_blue;
-        break;
-    }
-    k1 = k1 / ((d_width / 4.0)*(d_width / 4.0) * 16);
 
-    //We will calculate the transformed point
-    //by calculating the new location using the
-    //following formula
-    //x_d = distorted x; y_d = distorted y
-    //x_u = undistorted x; y_u = undistorted y
-    //x_c = center x; y_c = center y
-    //r = sqrt( (x_u - x_c)^2 +  (y_u - y_c)^2 )
-    //x_d = x_u [(1 + k1*r^2) * (x_u - x_c) / r]
-    //y_d = y_u [(1 + k1*r^2) * (y_u - y_c) / r]
-    ret = cop + (1 - k1 * r*r) * offset;
+    r = r / 1920.0;
+    float R = d_a0 + d_a1 * r + d_a2 * r * r + d_a3 * r * r * r +
+              d_a4 * r * r * r * r + d_a5 * r * r * r * r * r;
+
+    ret = cop + (R / r) * offset;
     return ret;
 }
 
@@ -416,11 +398,20 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
     // Color shift equivalent to one pixel at the edge of
     // the screen if the center of projection is in the
     // middle of the screen.
-    //float color_shift = 0.001 / ((d_width/4.0)*(d_width/4.0));
-    float color_shift = 0.001f;
-    //std::string fileName;
-    //QStringList arguments = qApp->arguments();
-    //if (arguments.size() > 1){
+    // float color_shift = 0.001 / ((d_width/4.0)*(d_width/4.0));
+    // float color_shift = 0.001f;
+    float color_shift = 1.0f;
+    float pcnt_shift = 0.01f;
+    float frac = 0.1f;
+    float a0_shift = 0.00145547124 * pcnt_shift;
+    float a1_shift = 0.80521868878 * pcnt_shift * frac / 2.0f;
+    float a2_shift = 4.9854118001010184 * pcnt_shift * frac / 2.0f;
+    float a3_shift = -27.914670625175440 * pcnt_shift * frac / 8.0f;
+    float a4_shift = 55.476076582028220 * pcnt_shift * frac / 4.0f;
+    float a5_shift = -39.159162196998757 * pcnt_shift * frac;
+    // std::string fileName;
+    // QStringList arguments = qApp->arguments();
+    // if (arguments.size() > 1){
     //    fileName = qPrintable(arguments.at(1));
     //    //printf("Supplied file name as %s", fileName);
     //    std::cout << "file name is " << fileName << endl;
@@ -532,7 +523,60 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
         d_k1_red = 0.0;
         d_k1_green = 0.0;
         d_k1_blue = 0.0;
-
+        d_a0 = 0.00145547124;
+        d_a1 = 0.80521868878;
+        d_a2 = 4.9854118001010184;
+        d_a3 = -27.914670625175440;
+        d_a4 = 55.476076582028220;
+        d_a5 = -39.159162196998757;
+        break;
+    case Qt::Key_0:
+        // increment A0
+        d_a0 += a0_shift;
+        break;
+    case Qt::Key_ParenRight:
+        // decrement A0
+        d_a0 -= a0_shift;
+        break;
+    case Qt::Key_1:
+        // increment A1
+        d_a1 += a1_shift;
+        break;
+    case Qt::Key_Exclam:
+        // decrement A1
+        d_a1 -= a1_shift;
+        break;
+    case Qt::Key_2:
+        // increment A2
+        d_a2 += a2_shift;
+        break;
+    case Qt::Key_At:
+        // decrement A2
+        d_a2 -= a2_shift;
+        break;
+    case Qt::Key_3:
+        // increment A3
+        d_a3 += a3_shift;
+        break;
+    case Qt::Key_NumberSign:
+        // decrement A3
+        d_a3 -= a3_shift;
+        break;
+    case Qt::Key_4:
+        // increment A4
+        d_a4 += a4_shift;
+        break;
+    case Qt::Key_Dollar:
+        // decrement A4
+        d_a4 -= a4_shift;
+        break;
+    case Qt::Key_5:
+        // increment A5
+        d_a5 += a5_shift;
+        break;
+    case Qt::Key_Percent:
+        // decrement A5
+        d_a5 -= a5_shift;
         break;
     }
 
@@ -544,6 +588,8 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
         printf("Left eye coords: x: %d, y: %d; ", d_cop_l.x(), d_cop_l.y());
         printf("Right eye coords: x: %d, y: %d;\n", d_cop_r.x(), d_cop_r.y());
     }
+    printf("A0 = %g, A1 = %g, A2 = %g, A3 = %g, A4 = %g, A5 = %g \n", d_a0,
+           d_a1, d_a2, d_a3, d_a4, d_a5);
     updateGL();
 }
 
