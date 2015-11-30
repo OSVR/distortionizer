@@ -530,6 +530,30 @@ void OpenGL_Widget::keyPressEvent(QKeyEvent *event)
         d_a4 = 55.476076582028220;
         d_a5 = -39.159162196998757;
         break;
+    case Qt::Key_Y:
+      //reset distortion values to original
+      d_k1_red = 0.0;
+      d_k1_green = 0.0;
+      d_k1_blue = 0.0;
+      d_a0 = 0;
+      d_a1 = 0.80521868878;
+      d_a2 = 0;
+      d_a3 = 0;
+      d_a4 = 0;
+      d_a5 = 0;
+      break;
+    case Qt::Key_Z:
+      //reset distortion values to unity
+      d_k1_red = 0.0;
+      d_k1_green = 0.0;
+      d_k1_blue = 0.0;
+      d_a0 = 0;
+      d_a1 = 1;
+      d_a2 = 0;
+      d_a3 = 0;
+      d_a4 = 0;
+      d_a5 = 0;
+      break;
     case Qt::Key_0:
         // increment A0
         d_a0 += a0_shift;
