@@ -32,8 +32,5 @@ include_directories(${OSVRRENDERMANAGER_INCLUDE_DIRS})
 #-----------------------------------------------------------------------------
 # OpenGL Example program, which should eventually be open source
 add_executable(DistortionCorrectRenderManager DistortionCorrectRenderManager.cpp)
-
-# This example uses the C++ wrapper, as suggested, so you'll need this line.
 # Surprisingly, this also lets it know where to find the header files.
-target_include_directories(DistortionCorrectRenderManager PRIVATE ${OPENGL_INCLUDE_DIRS})
-target_link_libraries(DistortionCorrectRenderManager PRIVATE osvr::osvrClientKitCpp osvr::osvrClient ${OSVRRENDERMANAGER_LIBRARIES} ${OPENGL_LIBRARY} GLEW::GLEW ${SDL2_LIBRARY} ${VRPN_LIBRARIES})
+target_link_libraries(DistortionCorrectRenderManager PRIVATE ${OSVRRENDERMANAGER_LIBRARIES} osvr::osvrClientKitCpp osvr::osvrClient ${OPENGL_LIBRARY} GLEW::GLEW SDL2::SDL2 jsoncpp_lib ${VRPN_LIBRARIES})
