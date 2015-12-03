@@ -26,6 +26,8 @@
 // Internal Includes
 #include <osvr/ClientKit/Context.h>
 #include <osvr/ClientKit/Interface.h>
+#include <osvr/ClientKit/InterfaceStateC.h>
+#include <osvr/Client/RenderManagerConfig.h>
 #include "osvr/RenderKit/RenderManager.h"
 
 // Library/third-party includes
@@ -39,6 +41,7 @@
 #include <iostream>
 #include <string>
 #include <stdlib.h> // For exit()
+#include <chrono>
 
 //This must come after we include <GL/GL.h> so its pointer types are defined.
 #include "osvr/RenderKit/GraphicsLibraryOpenGL.h"
@@ -52,6 +55,38 @@ void draw_cube(double radius);
 // any of a variety of events so that we shut down the system
 // cleanly.  This only works on Windows, but so does D3D...
 static bool quit = false;
+
+// Get an OSVR client context to use to access the devices
+// that we need.
+static osvr::clientkit::ClientContext context(
+  "com.osvr.renderManager.distortionCorrectRenderManager");
+
+static osvr::renderkit::RenderManager *render = nullptr;
+static double scalePower = 0.0;
+
+
+static std::string osvrRenderManagerGetString(OSVR_ClientContext context, const std::string& path) {
+  size_t len;
+  if (osvrClientGetStringParameterLength(context, path.c_str(), &len) == OSVR_RETURN_FAILURE) {
+    std::string msg = std::string("Couldn't get osvr string length for path ") + path;
+    std::cerr << msg << std::endl;
+    throw std::runtime_error(msg);
+  }
+
+  //struct TempBuffer {
+  //    char *buffer;
+  //    TempBuffer(size_t len) { buffer = new char[len + 1]; }
+  //    ~TempBuffer() { delete[] buffer; }
+  //} tempBuffer(len);
+  std::vector<char> tempBuffer(len + 1);
+
+  if (osvrClientGetStringParameter(context, path.c_str(), tempBuffer.data(), len + 1) == OSVR_RETURN_FAILURE) {
+    std::string msg = std::string("Couldn't get osvr string buffer for path ") + path;
+    std::cerr << msg << std::endl;
+    throw std::runtime_error(msg);
+  }
+  return std::string(tempBuffer.data(), len);
+}
 
 #ifdef _WIN32
 // Note: On Windows, this runs in a different thread from
@@ -75,14 +110,52 @@ static BOOL CtrlHandler(DWORD fdwCtrlType)
 }
 #endif
 
-// This callback sets a boolean value whose pointer is passed in to
-// the state of the button that was pressed.  This lets the callback
-// be used to handle any button press that just needs to update state.
-void myButtonCallback(void *userdata, const OSVR_TimeValue * /*timestamp*/,
+void myButtonCallback(void * /*userdata*/, const OSVR_TimeValue * /*timestamp*/,
     const OSVR_ButtonReport *report)
 {
-    bool *result = static_cast<bool*>(userdata);
-    *result = (report->state != 0);
+  if (report->state == 1) {
+
+    // Get the original distortion correction
+    std::string jsonString = osvrRenderManagerGetString(context.get(), "/display");
+    OSVRDisplayConfiguration displayConfiguration(jsonString);
+
+    // Create a new set of distortion parameters that is the original one
+    // with D parameters scaled by the current factor.
+    float scale = static_cast<float>(pow(2.0, scalePower));
+    std::cout << "XXX New scale for Ds = " << scale << std::endl;
+
+    osvr::renderkit::RenderManager::DistortionParameters distortion;
+    distortion.m_desiredTriangles = 200 * 64;
+    std::vector<float> Ds;
+    Ds.push_back(
+      displayConfiguration.getDistortionDistanceScaleX());
+    Ds.push_back(
+      displayConfiguration.getDistortionDistanceScaleY());
+    distortion.m_distortionD = Ds;
+    for (size_t i = 0; i < distortion.m_distortionD.size(); i++) {
+      distortion.m_distortionD[i] *= scale;
+    }
+    // @todo Remove this when COP is always in range 0..1
+    for (size_t i = 0; i < distortion.m_distortionCOP.size(); i++) {
+      distortion.m_distortionCOP[i] *= scale;
+    }
+    distortion.m_distortionPolynomialRed =
+      displayConfiguration.getDistortionPolynomalRed();
+    distortion.m_distortionPolynomialGreen =
+      displayConfiguration.getDistortionPolynomalGreen();
+    distortion.m_distortionPolynomialBlue =
+      displayConfiguration.getDistortionPolynomalBlue();
+
+    // Push the same distortion back for each eye.
+    std::vector<osvr::renderkit::RenderManager::DistortionParameters> distortionParams;
+    for (size_t i = 0; i < displayConfiguration.getEyes().size(); i++) {
+      distortionParams.push_back(distortion);
+    }
+
+    // Send a new set of parameters to construct a distortion mesh.
+    render->UpdateDistortionMesh(osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
+      distortionParams);
+  }
 }
 
 bool SetupRendering(osvr::renderkit::GraphicsLibrary library)
@@ -219,85 +292,25 @@ void DrawHead(
   draw_cube(0.005);
 }
 
-void DrawLeftHand(
-    void *userData              //< Passed into AddRenderCallback
-    , osvr::renderkit::GraphicsLibrary  library //< Graphics library context to use
-    , osvr::renderkit::RenderBuffer     buffers //< Buffers to use
-    , osvr::renderkit::OSVR_ViewportDescription viewport  //< Viewport we're rendering into
-    , OSVR_PoseState   pose     //< OSVR ModelView matrix set by RenderManager
-    , osvr::renderkit::OSVR_ProjectionMatrix  projection  //< Projection matrix set by RenderManager
-    , OSVR_TimeValue deadline   //< When the frame should be sent to the screen
-    )
-{
-  // Make sure our pointers are filled in correctly.  The config file selects
-  // the graphics library to use, and may not match our needs.
-  if (library.OpenGL == nullptr) {
-    std::cerr << "DrawLeftHand: No OpenGL GraphicsLibrary, this should not happen" << std::endl;
-    return;
-  }
-  if (buffers.OpenGL == nullptr) {
-    std::cerr << "DrawLeftHand: No OpenGL RenderBuffer, this should not happen" << std::endl;
-    return;
-  }
-
-  osvr::renderkit::GraphicsLibraryOpenGL *glLibrary = library.OpenGL;
-
-  /// Draw a small cube.
-  draw_cube(0.05);
-}
-
-void DrawRightHand(
-    void *userData              //< Passed into AddRenderCallback
-    , osvr::renderkit::GraphicsLibrary  library //< Graphics library context to use
-    , osvr::renderkit::RenderBuffer     buffers //< Buffers to use
-    , osvr::renderkit::OSVR_ViewportDescription viewport  //< Viewport we're rendering into
-    , OSVR_PoseState   pose     //< OSVR ModelView matrix set by RenderManager
-    , osvr::renderkit::OSVR_ProjectionMatrix  projection  //< Projection matrix set by RenderManager
-    , OSVR_TimeValue deadline   //< When the frame should be sent to the screen
-    )
-{
-  // Make sure our pointers are filled in correctly.  The config file selects
-  // the graphics library to use, and may not match our needs.
-  if (library.OpenGL == nullptr) {
-    std::cerr << "DrawRightHand: No OpenGL GraphicsLibrary, this should not happen" << std::endl;
-    return;
-  }
-  if (buffers.OpenGL == nullptr) {
-    std::cerr << "DrawRightHand: No OpenGL RenderBuffer, this should not happen" << std::endl;
-    return;
-  }
-
-  osvr::renderkit::GraphicsLibraryOpenGL *glLibrary = library.OpenGL;
-
-  /// Draw a small cube.
-  draw_cube(0.05);
-}
-
 int main(int argc, char *argv[])
 {
-    // Get an OSVR client context to use to access the devices
-    // that we need.
-    osvr::clientkit::ClientContext context(
-        "com.osvr.renderManager.openGLExample");
-
     // Construct button devices and connect them to a callback
-    // that will set the "quit" variable to true when it is
-    // pressed.  Use button "1" on the left-hand or
-    // right-hand controller.
-    osvr::clientkit::Interface leftButton1 =
-        context.getInterface("/controller/left/1");
-    leftButton1.registerCallback(&myButtonCallback, &quit);
+    // that will send new distortion parameters when
+    // button "8" on the controller is pressed.
+    osvr::clientkit::Interface button8 =
+        context.getInterface("/controller/8");
+    button8.registerCallback(&myButtonCallback, nullptr);
 
-    osvr::clientkit::Interface rightButton1 =
-        context.getInterface("/controller/right/1");
-    rightButton1.registerCallback(&myButtonCallback, &quit);
+    // Read the analog trigger, which will let us increase
+    // or decrease our D parameters for distortion correction.
+    osvr::clientkit::Interface analogTrigger =
+      context.getInterface("/controller/trigger");
 
     // Open Direct3D and set up the context for rendering to
     // an HMD.  Do this using the OSVR RenderManager interface,
     // which maps to the nVidia or other vendor direct mode
     // to reduce the latency.
-    osvr::renderkit::RenderManager *render =
-      osvr::renderkit::createRenderManager(context.get(), "OpenGL");
+    render = osvr::renderkit::createRenderManager(context.get(), "OpenGL");
 
     if ( (render == nullptr) ||
          (!render->doingOkay()) ) {
@@ -315,8 +328,6 @@ int main(int argc, char *argv[])
     // hand, and world space.
     render->AddRenderCallback("/", DrawWorld);
     render->AddRenderCallback("/me/head", DrawHead);
-    render->AddRenderCallback("/me/hands/left", DrawLeftHand);
-    render->AddRenderCallback("/me/hands/right", DrawRightHand);
 
     // Set up a handler to cause us to exit cleanly.
 #ifdef _WIN32
@@ -336,11 +347,35 @@ int main(int argc, char *argv[])
         return 3;
     }
 
+    // Keep track of time so we can scale UI analog adjustments
+    // properly.
+    std::chrono::time_point<std::chrono::system_clock> lastTime;
+    lastTime = std::chrono::system_clock::now();
+
     // Continue rendering until it is time to quit.
     while (!quit) {
         // Update the context so we get our callbacks called and
-        // update tracker state.
+        // update analog and button states.
         context.update();
+
+        // Read the current value of the analogs we want
+        OSVR_TimeValue  ignore;
+        OSVR_AnalogState triggerValue = 0;
+        osvrGetAnalogState(analogTrigger.get(), &ignore, &triggerValue);
+
+        // Adjust the distortion D parameters by scaling them by a changing scale
+        // that can be controlled by the trigger.  The analog value will be from
+        // -1 to 1, which we integrate after scaling, adjusting an initial factor
+        // of 0 (2^0 = 1) up and down.  We want the right controller to make
+        // the scale factor larger, so we negate it during integration.
+        std::chrono::time_point<std::chrono::system_clock> now =
+          std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_sec = now - lastTime;
+        lastTime = now;
+        if (triggerValue != 0) {
+          scalePower -= elapsed_sec.count() * triggerValue / 10;
+          std::cout << "New D scale: " << pow(2.0, scalePower) << std::endl;
+        }
 
         if (!render->Render()) {
             std::cerr << "Render() returned false, maybe because it was asked to quit" << std::endl;
