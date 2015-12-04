@@ -28,6 +28,7 @@
 #include <osvr/ClientKit/InterfaceStateC.h>
 #include <osvr/Client/RenderManagerConfig.h>
 #include "osvr/RenderKit/RenderManager.h"
+#include "font.h" // Simple helper functions to generate and draw OpenGL bitmapped text
 
 // Needed for render buffer calls.  OSVR will have called glewInit() for us
 // when we open the display.
@@ -76,6 +77,9 @@ typedef struct {
   double x;
   double y;
 } XY;
+
+static std::vector<float> params;  //< Distortion parameters
+static size_t activeParam = 0;  //< Which parameter are we adjusting?
 
 static std::string osvrGetString(OSVR_ClientContext context, const std::string& path)
 {
@@ -131,39 +135,37 @@ void myButtonCallback(void *userdata, const OSVR_TimeValue * /*timestamp*/,
 
   if (report->state == 1) {
 
-    // Create a new set of distortion parameters that is the original one
-    // with D parameters scaled by the current factor.
-    float scale = static_cast<float>(pow(2.0, scalePower));
-    std::cout << "XXX New scale for Ds = " << scale << std::endl;
+    // Create a new set of distortion parameters that has the
+    // specified parameters, but using the center of projection
+    // from the read-in values.
+    std::cout << "XXX New parameters: ";
 
     // Get the original distortion correction
-    osvr::renderkit::RenderManager::DistortionParameters distortion;
-    distortion.m_desiredTriangles = 200 * 64;
+    osvr::renderkit::RenderManager::DistortionParameters distortionLeft;
+    distortionLeft.m_desiredTriangles = 200 * 64;
     std::vector<float> Ds;
-    Ds.push_back(
-      displayConfiguration->getDistortionDistanceScaleX());
-    Ds.push_back(
-      displayConfiguration->getDistortionDistanceScaleY());
-    distortion.m_distortionD = Ds;
-    for (size_t i = 0; i < distortion.m_distortionD.size(); i++) {
-      distortion.m_distortionD[i] *= scale;
-    }
-    // @todo Remove this when COP is always in range 0..1
-    for (size_t i = 0; i < distortion.m_distortionCOP.size(); i++) {
-      distortion.m_distortionCOP[i] *= scale;
-    }
-    distortion.m_distortionPolynomialRed =
-      displayConfiguration->getDistortionPolynomalRed();
-    distortion.m_distortionPolynomialGreen =
-      displayConfiguration->getDistortionPolynomalGreen();
-    distortion.m_distortionPolynomialBlue =
-      displayConfiguration->getDistortionPolynomalBlue();
+    Ds.push_back(1.0);
+    Ds.push_back(1.0);
+    distortionLeft.m_distortionD = Ds;
+    distortionLeft.m_distortionPolynomialRed = params;
+    distortionLeft.m_distortionPolynomialGreen = params;
+    distortionLeft.m_distortionPolynomialBlue = params;
+    distortionLeft.m_distortionCOP[0] =
+      static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjX);
+    distortionLeft.m_distortionCOP[1] =
+      static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjY);
+
+    osvr::renderkit::RenderManager::DistortionParameters distortionRight;
+    distortionRight = distortionLeft;
+    distortionRight.m_distortionCOP[1] =
+      static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjX);
+    distortionRight.m_distortionCOP[1] =
+      static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjY);
 
     // Push the same distortion back for each eye.
     std::vector<osvr::renderkit::RenderManager::DistortionParameters> distortionParams;
-    for (size_t i = 0; i < displayConfiguration->getEyes().size(); i++) {
-      distortionParams.push_back(distortion);
-    }
+    distortionParams.push_back(distortionLeft);
+    distortionParams.push_back(distortionRight);
 
     // Send a new set of parameters to construct a distortion mesh.
     render->UpdateDistortionMesh(osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
@@ -262,6 +264,16 @@ void RenderView(
   draw_cube(5.0);
 
   // =================================================================
+  // Generate the font we're going to use the first time we are called.
+  // NOTE: This is an archaic way of generating a font and should not be used.
+  // in a real application.  It is here because it is the simplest way to do this
+  // in an example program without pulling in additional libraries.
+  static GLuint fontOffset = 0;
+  if (fontOffset == 0) {
+    fontOffset = loadFont(nullptr);
+  }
+
+  // =================================================================
   // Now we want to draw things in screen space, so we construct new
   // projection and modelview matrices to do orthographic projection
   // into the overfill viewport.  We draw spheres at the specified locations
@@ -281,14 +293,38 @@ void RenderView(
   // Draw the spheres in front of us, so we can see them.
   glTranslated(0, 0, 0.5);
 
-  // Draw a set of spheres at the specified locations in viewport space
+  // Draw a set of spheres at the specified locations in viewport space.
+  // They are offset so that (0,0) is at the center of projection for
+  // the eye.
   glColor3d(1, 1, 1);
   for (size_t i = 0; i < spheres.size(); i++) {
+    double xCOP = displayConfiguration.getEyes()[whichEye].m_CenterProjX;
+    double yCOP = displayConfiguration.getEyes()[whichEye].m_CenterProjY;
+    double xOffset = xCOP - 0.5;
+    double yOffset = yCOP - 0.5;
     glPushMatrix();
-    glTranslated(spheres[i].x, spheres[i].y, 0);
+    glTranslated(spheres[i].x + xOffset, spheres[i].y + yOffset, 0);
     gluSphere(sphere, 0.01, 10, 10);
     glPopMatrix();
   }
+
+  // =================================================================
+  // Draw our screen-locked text out in front of us.
+  // Set the color before setting the raster position, because it acts like glVertex
+  glPushMatrix();
+  for (size_t i = 0; i < params.size(); i++) {
+    if (i == activeParam) {
+      glColor3d(0, 0, 0);
+    } else {
+      glColor3d(1, 1, 1);
+    }
+    glRasterPos3d(0.1, -0.03*i, 0.0f);
+    char stringToPrint[128];
+    sprintf(stringToPrint, "P%d: %5.3lg", static_cast<int>(i), params[i]);
+    drawStringInFont(fontOffset, stringToPrint);
+  }
+  glPopMatrix();
+
 }
 
 int main(int argc, char *argv[])
@@ -459,6 +495,15 @@ int main(int argc, char *argv[])
       sphere.y = 0;
       spheres.push_back(sphere);
     }
+
+    // Initialize the distortion parameters, six parameters but only
+    // the linear one is nonzero.
+    params.push_back(0);
+    params.push_back(1);
+    params.push_back(0);
+    params.push_back(0);
+    params.push_back(0);
+    params.push_back(0);
 
     // Keep track of time so we can scale UI analog adjustments
     // properly.
