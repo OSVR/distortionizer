@@ -334,16 +334,29 @@ void RenderView(
   // They are offset so that (0,0) is at the center of projection for
   // the eye.
   glColor3d(1, 1, 1);
+  double xCOP = displayConfiguration.getEyes()[whichEye].m_CenterProjX;
+  double yCOP = displayConfiguration.getEyes()[whichEye].m_CenterProjY;
+  double xOffset = xCOP - 0.5;
+  double yOffset = yCOP - 0.5;
   for (size_t i = 0; i < spheres.size(); i++) {
-    double xCOP = displayConfiguration.getEyes()[whichEye].m_CenterProjX;
-    double yCOP = displayConfiguration.getEyes()[whichEye].m_CenterProjY;
-    double xOffset = xCOP - 0.5;
-    double yOffset = yCOP - 0.5;
     glPushMatrix();
     glTranslated(spheres[i].x + xOffset, spheres[i].y + yOffset, 0);
     gluSphere(sphere, 0.01, 10, 10);
     glPopMatrix();
   }
+
+  // Draw a set of horizontal and vertical lines
+  glColor3d(0,0,0);
+  glBegin(GL_LINES);
+  if (whichEye == 1) for (double ofs = -1; ofs <= 1; ofs += 0.05) {
+    glVertex2d(-1, yOffset + ofs);
+    glVertex2d( 1, yOffset + ofs);
+
+    glVertex2d(xOffset + ofs, -1);
+    glVertex2d(xOffset + ofs,  1);
+  }
+  glEnd();
+
 
   // =================================================================
   // Draw our screen-locked text out in front of us.
