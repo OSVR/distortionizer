@@ -67,7 +67,6 @@ static osvr::clientkit::ClientContext context(
   "com.osvr.renderManager.distortionCorrectRenderManager");
 
 static osvr::renderkit::RenderManager *render = nullptr;
-static double scalePower = 0.0;
 
 // Quadric and sphere to use for rendering.
 static GLUquadric *sphere = nullptr;
@@ -79,7 +78,7 @@ typedef struct {
 } XY;
 
 static std::vector<float> params;  //< Distortion parameters
-static size_t activeParam = 0;  //< Which parameter are we adjusting?
+static int activeParam = 0;  //< Which parameter are we adjusting?
 
 static std::string osvrGetString(OSVR_ClientContext context, const std::string& path)
 {
@@ -127,7 +126,29 @@ static BOOL CtrlHandler(DWORD fdwCtrlType)
 }
 #endif
 
-void myButtonCallback(void *userdata, const OSVR_TimeValue * /*timestamp*/,
+void prevParam(void * /*userdata*/, const OSVR_TimeValue * /*timestamp*/,
+  const OSVR_ButtonReport *report)
+{
+  if (report->state == 1) {
+    activeParam--;
+    if (activeParam < 0) {
+      activeParam = static_cast<int>(params.size()) - 1;
+    }
+  }
+}
+
+void nextParam(void * /*userdata*/, const OSVR_TimeValue * /*timestamp*/,
+  const OSVR_ButtonReport *report)
+{
+  if (report->state == 1) {
+    activeParam++;
+    if (activeParam >= params.size()) {
+      activeParam = 0;
+    }
+  }
+}
+
+void setParams(void *userdata, const OSVR_TimeValue * /*timestamp*/,
     const OSVR_ButtonReport *report)
 {
   OSVRDisplayConfiguration *displayConfiguration = 
@@ -139,6 +160,10 @@ void myButtonCallback(void *userdata, const OSVR_TimeValue * /*timestamp*/,
     // specified parameters, but using the center of projection
     // from the read-in values.
     std::cout << "XXX New parameters: ";
+    for (size_t i = 0; i < params.size(); i++) {
+      std::cout << params[i] << " ";
+    }
+    std::cout << std::endl;
 
     // Get the original distortion correction
     osvr::renderkit::RenderManager::DistortionParameters distortionLeft;
@@ -157,10 +182,10 @@ void myButtonCallback(void *userdata, const OSVR_TimeValue * /*timestamp*/,
 
     osvr::renderkit::RenderManager::DistortionParameters distortionRight;
     distortionRight = distortionLeft;
+    distortionRight.m_distortionCOP[0] =
+      static_cast<float>(displayConfiguration->getEyes()[1].m_CenterProjX);
     distortionRight.m_distortionCOP[1] =
-      static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjX);
-    distortionRight.m_distortionCOP[1] =
-      static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjY);
+      static_cast<float>(displayConfiguration->getEyes()[1].m_CenterProjY);
 
     // Push the same distortion back for each eye.
     std::vector<osvr::renderkit::RenderManager::DistortionParameters> distortionParams;
@@ -171,6 +196,18 @@ void myButtonCallback(void *userdata, const OSVR_TimeValue * /*timestamp*/,
     render->UpdateDistortionMesh(osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
       distortionParams);
   }
+}
+
+void resetParams(void *userdata, const OSVR_TimeValue *timestamp,
+  const OSVR_ButtonReport *report)
+{
+  if (report->state == 1) {
+    for (size_t i = 0; i < params.size(); i++) {
+      params[i] = 0;
+    }
+    params[1] = 1;
+  }
+  setParams(userdata, timestamp, report);
 }
 
 bool SetupRendering(osvr::renderkit::GraphicsLibrary library)
@@ -320,7 +357,7 @@ void RenderView(
     }
     glRasterPos3d(0.1, -0.03*i, 0.0f);
     char stringToPrint[128];
-    sprintf(stringToPrint, "P%d: %5.3lg", static_cast<int>(i), params[i]);
+    sprintf(stringToPrint, "P%d: %5.2lf", static_cast<int>(i), params[i]);
     drawStringInFont(fontOffset, stringToPrint);
   }
   glPopMatrix();
@@ -384,10 +421,24 @@ int main(int argc, char *argv[])
 
     // Construct button devices and connect them to a callback
     // that will send new distortion parameters when
-    // button "8" on the controller is pressed.
+    // button "8" on the controller is pressed.  Also that will
+    // decrement the param to be adjusted when "5" is pressed
+    // and increment it when "6" is pressed.  Also reset when
+    // "7" is pressed.
     osvr::clientkit::Interface button8 =
       context.getInterface("/controller/8");
-    button8.registerCallback(&myButtonCallback, &displayConfiguration);
+    button8.registerCallback(&setParams, &displayConfiguration);
+
+    osvr::clientkit::Interface button7 =
+      context.getInterface("/controller/7");
+    button7.registerCallback(&resetParams, &displayConfiguration);
+
+    osvr::clientkit::Interface button5 =
+      context.getInterface("/controller/5");
+    button5.registerCallback(&prevParam, nullptr);
+    osvr::clientkit::Interface button6 =
+      context.getInterface("/controller/6");
+    button6.registerCallback(&nextParam, nullptr);
 
     // Read the analog trigger, which will let us increase
     // or decrease our D parameters for distortion correction.
@@ -498,12 +549,40 @@ int main(int argc, char *argv[])
 
     // Initialize the distortion parameters, six parameters but only
     // the linear one is nonzero.
+
     params.push_back(0);
     params.push_back(1);
     params.push_back(0);
     params.push_back(0);
     params.push_back(0);
     params.push_back(0);
+
+    /*
+    params.push_back(0);
+    params.push_back(1);
+    params.push_back(-0.71f);
+    params.push_back(0);
+    params.push_back(0);
+    params.push_back(0);
+    */
+
+    /*
+    params.push_back(0);
+    params.push_back(1);
+    params.push_back(-0.93f);
+    params.push_back(1.5);
+    params.push_back(0);
+    params.push_back(0);
+    */
+
+    /*
+    params.push_back(0);
+    params.push_back(1);
+    params.push_back(-1.5f);
+    params.push_back(2.9f);
+    params.push_back(0);
+    params.push_back(0);
+    */
 
     // Keep track of time so we can scale UI analog adjustments
     // properly.
@@ -531,8 +610,11 @@ int main(int argc, char *argv[])
         std::chrono::duration<double> elapsed_sec = now - lastTime;
         lastTime = now;
         if (triggerValue != 0) {
-          scalePower -= elapsed_sec.count() * triggerValue / 10;
-          std::cout << "New D scale: " << pow(2.0, scalePower) << std::endl;
+          if (activeParam < params.size()) {
+            double changeScale = 1.0; pow(1.5, activeParam);
+            params[activeParam] -= static_cast<float>(
+              elapsed_sec.count() * triggerValue / (10 * changeScale));
+          }
         }
 
         renderInfo = render->GetRenderInfo();
