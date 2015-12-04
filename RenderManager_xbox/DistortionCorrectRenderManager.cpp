@@ -563,12 +563,14 @@ int main(int argc, char *argv[])
     // Initialize the distortion parameters, six parameters but only
     // the linear one is nonzero.
 
+    /*
     params.push_back(0);
     params.push_back(1);
     params.push_back(0);
     params.push_back(0);
     params.push_back(0);
     params.push_back(0);
+    */
 
     /*
     params.push_back(0);
@@ -596,6 +598,22 @@ int main(int argc, char *argv[])
     params.push_back(0);
     params.push_back(0);
     */
+
+    /*
+    params.push_back(0);
+    params.push_back(1);
+    params.push_back(-0.95);
+    params.push_back(1.84);
+    params.push_back(1.55);
+    params.push_back(1.03);
+    */
+
+    params.push_back(0);
+    params.push_back(1);
+    params.push_back(-0.95);
+    params.push_back(1.88);
+    params.push_back(1.62);
+    params.push_back(1.11);
 
     // Keep track of time so we can scale UI analog adjustments
     // properly.
