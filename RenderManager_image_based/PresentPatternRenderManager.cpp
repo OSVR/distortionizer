@@ -126,8 +126,9 @@ static float red_col[] = { 1.0, 0.0, 0.0 };
 static float grn_col[] = { 0.0, 1.0, 0.0 };
 static float blu_col[] = { 0.0, 0.0, 1.0 };
 static float yel_col[] = { 1.0, 1.0, 0.0 };
-static float lightblu_col[] = { 0.0, 1.0, 1.0 };
-static float pur_col[] = { 1.0, 0.0, 1.0 };
+static float cyn_col[] = { 0.0, 1.0, 1.0 };
+static float mag_col[] = { 1.0, 0.0, 1.0 };
+static float wht_col[] = { 1.0, 0.0, 0.0 };
 
 bool SetupRendering(osvr::renderkit::GraphicsLibrary library)
 {
@@ -161,11 +162,13 @@ void RenderView(
   const osvr::renderkit::RenderInfo &renderInfo,  //< Info needed to render
   GLuint frameBuffer, //< Frame buffer object to bind our buffers to
   GLuint colorBuffer, //< Color buffer to render into
-  GLuint depthBuffer  //< Depth buffer to render into
+  GLuint depthBuffer, //< Depth buffer to render into
+  XY const &xSphere,  //< Where to draw the X-axis-marking sphere
+  XY const &ySphere,  //< Where to draw the Y-axis-marking sphere
+  std::vector<XY> const &spheres,  //< Spheres to draw
+  float const *color  //< Color to draw the main spheres
   )
 {
-  std::vector<XY> spheres; //< Where to draw the spheres
-
   // Make sure our pointers are filled in correctly.  The config file selects
   // the graphics library to use, and may not match our needs.
   if (renderInfo.library.OpenGL == nullptr) {
@@ -244,7 +247,7 @@ void RenderView(
   // Draw a set of spheres at the specified locations in viewport space.
   // They are offset so that (0,0) is at the center of projection for
   // the eye.
-  glColor3d(1, 1, 1);
+  glColor3f(color[0], color[1], color[2]);
   double xCOP = displayConfiguration.getEyes()[whichEye].m_CenterProjX;
   double yCOP = displayConfiguration.getEyes()[whichEye].m_CenterProjY;
   double xOffset = xCOP - 0.5;
@@ -256,17 +259,20 @@ void RenderView(
     glPopMatrix();
   }
 
-  // Draw a set of horizontal and vertical lines
-  glColor3d(1,1,1);
-  glBegin(GL_LINES);
-  if (whichEye == 1) for (double ofs = -1; ofs <= 1; ofs += 0.05) {
-    glVertex2d(-1, yOffset + ofs);
-    glVertex2d( 1, yOffset + ofs);
-
-    glVertex2d(xOffset + ofs, -1);
-    glVertex2d(xOffset + ofs,  1);
-  }
-  glEnd();
+  // Draw the axis spheres at the specified locations in viewport space.
+  // They are offset so that (0,0) is at the center of projection for
+  // the eye.
+  // Draw the x sphere in red and the y in green.
+  glPushMatrix();
+    glColor3f(red_col[0], red_col[1], red_col[2]);
+    glTranslated(xSphere.x + xOffset, xSphere.y + yOffset, 0);
+    gluSphere(sphere, 0.01/2, 10, 10);
+  glPopMatrix();
+  glPushMatrix();
+    glColor3f(grn_col[0], grn_col[1], grn_col[2]);
+    glTranslated(ySphere.x + xOffset, ySphere.y + yOffset, 0);
+    gluSphere(sphere, 0.01 / 2, 10, 10);
+  glPopMatrix();
 }
 
 int main(int argc, char *argv[])
@@ -356,6 +362,21 @@ int main(int argc, char *argv[])
     glGenFramebuffers(1, &frameBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
+    std::vector<XY> spheres; //< Where to draw the spheres
+    const size_t numSpheres = 10;
+    const double sphereSpace = 1.0 / (numSpheres);
+    for (size_t i = 0; i < numSpheres; i++) {
+      XY sphere;
+      sphere.x = i * sphereSpace;
+      sphere.y = 0;
+      spheres.push_back(sphere);
+    }
+    XY xSphere, ySphere;
+    xSphere.x = sphereSpace / 2;
+    xSphere.y = 0;
+    ySphere.x = 0;
+    ySphere.y = sphereSpace / 2;
+
     for (size_t i = 0; i < renderInfo.size(); i++) {
 
       // The color buffer for this eye.  We need to put this into
@@ -423,11 +444,14 @@ int main(int argc, char *argv[])
         renderInfo = render->GetRenderInfo();
 
         // Render into each buffer using the specified information.
+        // @todo Pass the color as a command-line argument
         for (size_t i = 0; i < renderInfo.size(); i++) {
           RenderView(i, displayConfiguration, renderManagerConfig,
             renderInfo[i], frameBuffer,
             colorBuffers[i].OpenGL->colorBufferName,
-            depthBuffers[i]);
+            depthBuffers[i],
+            xSphere, ySphere,
+            spheres, red_col);
         }
 
         // Send the rendered results to the screen
