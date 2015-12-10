@@ -141,12 +141,30 @@ bool SetupRendering(osvr::renderkit::GraphicsLibrary library)
 
   osvr::renderkit::GraphicsLibraryOpenGL *glLibrary = library.OpenGL;
 
-  GLfloat matspec[4] = { 0.5, 0.5, 0.5, 0.0 };
+  GLfloat matspec[4] = { 0.0, 0.0, 0.0, 0.0 };
   glMaterialfv(GL_FRONT, GL_SPECULAR, matspec);
   glMaterialf(GL_FRONT, GL_SHININESS, 64.0);
 
   // Turn on depth testing, so we get correct ordering.
   glEnable(GL_DEPTH_TEST);
+
+  // Set up lighting so the spheres will be brightest in the center
+  // and fall off.
+  glEnable(GL_LIGHTING);
+  glEnable(GL_LIGHT0);
+
+  GLfloat ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+  GLfloat diffuseLight[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+  GLfloat specularLight[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+  GLfloat position[] = { 0.0f, 0.0f, -2.0e5f, 1.0f };
+
+  // Assign created components to GL_LIGHT0.
+  glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
+  glLightfv(GL_LIGHT0, GL_POSITION, position);
+
+  glEnable(GL_COLOR_MATERIAL);
 
   // Construct the quadric for the sphere primitive to draw to show spacing
   sphere = gluNewQuadric();
@@ -166,7 +184,8 @@ void RenderView(
   XY const &xSphere,  //< Where to draw the X-axis-marking sphere
   XY const &ySphere,  //< Where to draw the Y-axis-marking sphere
   std::vector<XY> const &spheres,  //< Spheres to draw
-  float const *color  //< Color to draw the main spheres
+  float const *color, //< Color to draw the main spheres
+  float radius  //< Radius of the spheres
   )
 {
   // Make sure our pointers are filled in correctly.  The config file selects
@@ -229,20 +248,22 @@ void RenderView(
   // projection and modelview matrices to do orthographic projection
   // into the overfill viewport.  We draw spheres at the specified locations
   // with respect to the original (non-overfill) viewport, such that
-  // pixels are square and the entire width of the screen is 1 unit
-  // in distortion space.
+  // pixels are square and the entire width of the screen is the size
+  // of the overfill zone.
 
   double overFill = renderManagerConfig->getRenderOverfillFactor();
   double width = displayConfiguration.getDisplayWidth();
   double height = displayConfiguration.getDisplayHeight();
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluOrtho2D(-overFill, overFill, -overFill, overFill);
+  glOrtho(-width / 2 * overFill, width / 2 * overFill,
+           -height / 2 * overFill, height / 2 * overFill,
+           100, -100);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 
   // Draw the spheres in front of us, so we can see them.
-  glTranslated(0, 0, 0.5);
+  glTranslated(0, 0, 1);
 
   // Draw a set of spheres at the specified locations in viewport space.
   // They are offset so that (0,0) is at the center of projection for
@@ -255,7 +276,7 @@ void RenderView(
   for (size_t i = 0; i < spheres.size(); i++) {
     glPushMatrix();
     glTranslated(spheres[i].x + xOffset, spheres[i].y + yOffset, 0);
-    gluSphere(sphere, 0.01, 10, 10);
+    gluSphere(sphere, radius, 40, 40);
     glPopMatrix();
   }
 
@@ -266,12 +287,12 @@ void RenderView(
   glPushMatrix();
     glColor3f(red_col[0], red_col[1], red_col[2]);
     glTranslated(xSphere.x + xOffset, xSphere.y + yOffset, 0);
-    gluSphere(sphere, 0.01/2, 10, 10);
+    gluSphere(sphere, radius/2, 40, 40);
   glPopMatrix();
   glPushMatrix();
     glColor3f(grn_col[0], grn_col[1], grn_col[2]);
     glTranslated(ySphere.x + xOffset, ySphere.y + yOffset, 0);
-    gluSphere(sphere, 0.01 / 2, 10, 10);
+    gluSphere(sphere, radius/2, 40, 40);
   glPopMatrix();
 }
 
@@ -356,26 +377,37 @@ int main(int argc, char *argv[])
     std::vector<osvr::renderkit::RenderBuffer> colorBuffers;
     std::vector<GLuint> depthBuffers; //< Depth/stencil buffers to render into
 
-    // Construct the buffers we're going to need for our render-to-texture
-    // code.
-    GLuint frameBuffer;               //< Groups a color buffer and a depth buffer
-    glGenFramebuffers(1, &frameBuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+    // Use the width of the first eye to figure out the spacing for the
+    // spheres based on the number requested across the viewport.
+    // Both the radius and position are in pixels.
+    const int numSpheresX = 20;
+    int width = static_cast<int>(renderInfo[0].viewport.width);
+    int height = static_cast<int>(renderInfo[0].viewport.width);
+    const float sphereSpace = (width / 2.0f) / (numSpheresX - 0.5f);
 
+    // Make sure we have enough spheres to cover the space in height
+    // as well as width.
+    int numSpheresY = static_cast<int>(0.5 + (numSpheresX * height) / width);
     std::vector<XY> spheres; //< Where to draw the spheres
-    const size_t numSpheres = 10;
-    const double sphereSpace = 1.0 / (numSpheres);
-    for (size_t i = 0; i < numSpheres; i++) {
-      XY sphere;
-      sphere.x = i * sphereSpace;
-      sphere.y = 0;
-      spheres.push_back(sphere);
+    for (int x = -numSpheresX + 1; x < numSpheresX; x++) {
+      for (int y = -numSpheresY + 1; y < numSpheresY; y++) {
+        XY sphere;
+        sphere.x = x * sphereSpace;
+        sphere.y = y * sphereSpace;
+        spheres.push_back(sphere);
+      }
     }
     XY xSphere, ySphere;
     xSphere.x = sphereSpace / 2;
     xSphere.y = 0;
     ySphere.x = 0;
     ySphere.y = sphereSpace / 2;
+
+    // Construct the buffers we're going to need for our render-to-texture
+    // code.
+    GLuint frameBuffer;               //< Groups a color buffer and a depth buffer
+    glGenFramebuffers(1, &frameBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
     for (size_t i = 0; i < renderInfo.size(); i++) {
 
@@ -451,7 +483,7 @@ int main(int argc, char *argv[])
             colorBuffers[i].OpenGL->colorBufferName,
             depthBuffers[i],
             xSphere, ySphere,
-            spheres, red_col);
+            spheres, red_col, sphereSpace / 4);
         }
 
         // Send the rendered results to the screen
