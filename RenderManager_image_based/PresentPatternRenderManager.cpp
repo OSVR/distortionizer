@@ -128,7 +128,7 @@ static float blu_col[] = { 0.0, 0.0, 1.0 };
 static float yel_col[] = { 1.0, 1.0, 0.0 };
 static float cyn_col[] = { 0.0, 1.0, 1.0 };
 static float mag_col[] = { 1.0, 0.0, 1.0 };
-static float wht_col[] = { 1.0, 0.0, 0.0 };
+static float wht_col[] = { 1.0, 1.0, 1.0 };
 
 bool SetupRendering(osvr::renderkit::GraphicsLibrary library)
 {
@@ -262,9 +262,6 @@ void RenderView(
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 
-  // Draw the spheres in front of us, so we can see them.
-  glTranslated(0, 0, 1);
-
   // Draw a set of spheres at the specified locations in viewport space.
   // They are offset so that (0,0) is at the center of projection for
   // the eye.
@@ -296,8 +293,53 @@ void RenderView(
   glPopMatrix();
 }
 
+void Usage(std::string name)
+{
+  std::cerr << "Usage: " << name
+    << " [color (one of red, green, blue, white, cyan, magenta, yellow)]"
+    << std::endl;
+  exit(-1);
+}
+
 int main(int argc, char *argv[])
 {
+    // Parse the command line
+    std::string colorName = "red";
+    const float *color = red_col;
+    int realParams = 0;
+    for (int i = 1; i < argc; i++) {
+      if (argv[i][0] == '-') {
+        Usage(argv[0]);
+      }
+      else switch (++realParams) {
+      case 1:
+        colorName = argv[i];
+        break;
+      default:
+        Usage(argv[0]);
+      }
+    }
+    if (realParams > 1) { Usage(argv[0]); }
+
+    if (colorName == "red") {
+      color = red_col;
+    } else if (colorName == "green") {
+      color = grn_col;
+    } else if (colorName == "blue") {
+      color = blu_col;
+    } else if (colorName == "white") {
+      color = wht_col;
+    } else if (colorName == "cyan") {
+      color = cyn_col;
+    } else if (colorName == "magenta") {
+      color = mag_col;
+    } else if (colorName == "yellow") {
+      color = yel_col;
+    } else {
+      std::cerr << "Unrecognized color: " << colorName << std::endl;
+      Usage(argv[0]);
+    }
+
     // Open RenderManager and set up the context for rendering to
     // an HMD.  Do this using the OSVR RenderManager interface,
     // which maps to the nVidia or other vendor direct mode
@@ -483,7 +525,7 @@ int main(int argc, char *argv[])
             colorBuffers[i].OpenGL->colorBufferName,
             depthBuffers[i],
             xSphere, ySphere,
-            spheres, red_col, sphereSpace / 4);
+            spheres, color, sphereSpace / 4);
         }
 
         // Send the rendered results to the screen
