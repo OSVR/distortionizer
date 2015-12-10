@@ -51,9 +51,6 @@
 //This must come after we include <GL/GL.h> so its pointer types are defined.
 #include "osvr/RenderKit/GraphicsLibraryOpenGL.h"
 
-// Forward declarations of rendering functions defined below.
-void draw_cube(double radius);
-
 // Set to true when it is time for the application to quit.
 // Handlers below that set it to true when the user causes
 // any of a variety of events so that we shut down the system
@@ -125,89 +122,12 @@ static BOOL CtrlHandler(DWORD fdwCtrlType)
 }
 #endif
 
-void prevParam(void * /*userdata*/, const OSVR_TimeValue * /*timestamp*/,
-  const OSVR_ButtonReport *report)
-{
-  if (report->state == 1) {
-    activeParam--;
-    if (activeParam < 0) {
-      activeParam = static_cast<int>(params.size()) - 1;
-    }
-  }
-}
-
-void nextParam(void * /*userdata*/, const OSVR_TimeValue * /*timestamp*/,
-  const OSVR_ButtonReport *report)
-{
-  if (report->state == 1) {
-    activeParam++;
-    if (activeParam >= params.size()) {
-      activeParam = 0;
-    }
-  }
-}
-
-void setParams(void *userdata, const OSVR_TimeValue * /*timestamp*/,
-    const OSVR_ButtonReport *report)
-{
-  OSVRDisplayConfiguration *displayConfiguration = 
-    reinterpret_cast<OSVRDisplayConfiguration *>(userdata);
-
-  if (report->state == 1) {
-
-    // Create a new set of distortion parameters that has the
-    // specified parameters, but using the center of projection
-    // from the read-in values.
-    std::cout << "XXX New parameters: ";
-    for (size_t i = 0; i < params.size(); i++) {
-      std::cout << params[i] << " ";
-    }
-    std::cout << std::endl;
-
-    // Get the original distortion correction
-    osvr::renderkit::RenderManager::DistortionParameters distortionLeft;
-    distortionLeft.m_desiredTriangles = 200 * 64;
-    std::vector<float> Ds;
-    Ds.push_back(1.0);
-    Ds.push_back(1.0);
-    distortionLeft.m_distortionD = Ds;
-    distortionLeft.m_distortionPolynomialRed = params;
-    distortionLeft.m_distortionPolynomialGreen = params;
-    distortionLeft.m_distortionPolynomialBlue = params;
-    distortionLeft.m_distortionCOP[0] =
-      static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjX);
-    distortionLeft.m_distortionCOP[1] =
-      static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjY);
-
-    osvr::renderkit::RenderManager::DistortionParameters distortionRight;
-    distortionRight = distortionLeft;
-    distortionRight.m_distortionCOP[0] =
-      static_cast<float>(displayConfiguration->getEyes()[1].m_CenterProjX);
-    distortionRight.m_distortionCOP[1] =
-      static_cast<float>(displayConfiguration->getEyes()[1].m_CenterProjY);
-
-    // Push the same distortion back for each eye.
-    std::vector<osvr::renderkit::RenderManager::DistortionParameters> distortionParams;
-    distortionParams.push_back(distortionLeft);
-    distortionParams.push_back(distortionRight);
-
-    // Send a new set of parameters to construct a distortion mesh.
-    render->UpdateDistortionMesh(osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
-      distortionParams);
-  }
-}
-
-void resetParams(void *userdata, const OSVR_TimeValue *timestamp,
-  const OSVR_ButtonReport *report)
-{
-  if (report->state == 1) {
-    for (size_t i = 0; i < params.size(); i++) {
-      params[i] = 0;
-    }
-    params[1] = 1;
-  }
-  setParams(userdata, timestamp, report);
-}
+static float red_col[] = { 1.0, 0.0, 0.0 };
+static float grn_col[] = { 0.0, 1.0, 0.0 };
+static float blu_col[] = { 0.0, 0.0, 1.0 };
+static float yel_col[] = { 1.0, 1.0, 0.0 };
+static float lightblu_col[] = { 0.0, 1.0, 1.0 };
+static float pur_col[] = { 1.0, 0.0, 1.0 };
 
 bool SetupRendering(osvr::renderkit::GraphicsLibrary library)
 {
@@ -219,6 +139,10 @@ bool SetupRendering(osvr::renderkit::GraphicsLibrary library)
   }
 
   osvr::renderkit::GraphicsLibraryOpenGL *glLibrary = library.OpenGL;
+
+  GLfloat matspec[4] = { 0.5, 0.5, 0.5, 0.0 };
+  glMaterialfv(GL_FRONT, GL_SPECULAR, matspec);
+  glMaterialf(GL_FRONT, GL_SHININESS, 64.0);
 
   // Turn on depth testing, so we get correct ordering.
   glEnable(GL_DEPTH_TEST);
@@ -237,10 +161,11 @@ void RenderView(
   const osvr::renderkit::RenderInfo &renderInfo,  //< Info needed to render
   GLuint frameBuffer, //< Frame buffer object to bind our buffers to
   GLuint colorBuffer, //< Color buffer to render into
-  GLuint depthBuffer,  //< Depth buffer to render into
-  std::vector<XY> spheres //< Where to draw the spheres
+  GLuint depthBuffer  //< Depth buffer to render into
   )
 {
+  std::vector<XY> spheres; //< Where to draw the spheres
+
   // Make sure our pointers are filled in correctly.  The config file selects
   // the graphics library to use, and may not match our needs.
   if (renderInfo.library.OpenGL == nullptr) {
@@ -296,9 +221,6 @@ void RenderView(
   // in OSVR spaces (like left/right hand space) we need to query the
   // interface and handle the coordinate tranforms ourselves.
 
-  // Draw a cube with a 5-meter radius as the room we are floating in.
-  draw_cube(5.0);
-
   // =================================================================
   // Now we want to draw things in screen space, so we construct new
   // projection and modelview matrices to do orthographic projection
@@ -335,7 +257,7 @@ void RenderView(
   }
 
   // Draw a set of horizontal and vertical lines
-  glColor3d(0,0,0);
+  glColor3d(1,1,1);
   glBegin(GL_LINES);
   if (whichEye == 1) for (double ofs = -1; ofs <= 1; ofs += 0.05) {
     glVertex2d(-1, yOffset + ofs);
@@ -401,32 +323,6 @@ int main(int argc, char *argv[])
       std::cerr << "Could not parse /render_manager_parameters string from server (NULL pipelineconfig)." << std::endl;
       return 101;
     }
-
-    // Construct button devices and connect them to a callback
-    // that will send new distortion parameters when
-    // button "8" on the controller is pressed.  Also that will
-    // decrement the param to be adjusted when "5" is pressed
-    // and increment it when "6" is pressed.  Also reset when
-    // "7" is pressed.
-    osvr::clientkit::Interface button8 =
-      context.getInterface("/controller/8");
-    button8.registerCallback(&setParams, &displayConfiguration);
-
-    osvr::clientkit::Interface button7 =
-      context.getInterface("/controller/7");
-    button7.registerCallback(&resetParams, &displayConfiguration);
-
-    osvr::clientkit::Interface button5 =
-      context.getInterface("/controller/5");
-    button5.registerCallback(&prevParam, nullptr);
-    osvr::clientkit::Interface button6 =
-      context.getInterface("/controller/6");
-    button6.registerCallback(&nextParam, nullptr);
-
-    // Read the analog trigger, which will let us increase
-    // or decrease our D parameters for distortion correction.
-    osvr::clientkit::Interface analogTrigger =
-      context.getInterface("/controller/trigger");
 
     // Set up a handler to cause us to exit cleanly.
 #ifdef _WIN32
@@ -518,60 +414,11 @@ int main(int argc, char *argv[])
       quit = true;
     }
 
-    // Generate the vector of sphere locations we're going to use to control
-    // distortion correction.
-    std::vector<XY> spheres;
-    const size_t numSpheres = 1;
-    const double sphereSpace = 1.0 / (numSpheres);
-    for (size_t i = 0; i < numSpheres; i++) {
-      XY sphere;
-      sphere.x = i * sphereSpace;
-      sphere.y = 0;
-      spheres.push_back(sphere);
-    }
-
-    // Initialize the distortion parameters, six parameters but only
-    // the linear one is nonzero.
-
-    params.push_back(0);
-    params.push_back(1);
-    params.push_back(0);
-    params.push_back(0);
-    params.push_back(0);
-    params.push_back(0);
-
-    // Keep track of time so we can scale UI analog adjustments
-    // properly.
-    std::chrono::time_point<std::chrono::system_clock> lastTime;
-    lastTime = std::chrono::system_clock::now();
-
     // Continue rendering until it is time to quit.
     while (!quit) {
         // Update the context so we get our callbacks called and
         // update analog and button states.
         context.update();
-
-        // Read the current value of the analogs we want
-        OSVR_TimeValue  ignore;
-        OSVR_AnalogState triggerValue = 0;
-        osvrGetAnalogState(analogTrigger.get(), &ignore, &triggerValue);
-
-        // Adjust the distortion D parameters by scaling them by a changing scale
-        // that can be controlled by the trigger.  The analog value will be from
-        // -1 to 1, which we integrate after scaling, adjusting an initial factor
-        // of 0 (2^0 = 1) up and down.  We want the right controller to make
-        // the scale factor larger, so we negate it during integration.
-        std::chrono::time_point<std::chrono::system_clock> now =
-          std::chrono::system_clock::now();
-        std::chrono::duration<double> elapsed_sec = now - lastTime;
-        lastTime = now;
-        if (triggerValue != 0) {
-          if (activeParam < params.size()) {
-            double changeScale = 1.0; pow(1.5, activeParam);
-            params[activeParam] -= static_cast<float>(
-              elapsed_sec.count() * triggerValue / (10 * changeScale));
-          }
-        }
 
         renderInfo = render->GetRenderInfo();
 
@@ -580,8 +427,7 @@ int main(int argc, char *argv[])
           RenderView(i, displayConfiguration, renderManagerConfig,
             renderInfo[i], frameBuffer,
             colorBuffers[i].OpenGL->colorBufferName,
-            depthBuffers[i],
-            spheres);
+            depthBuffers[i]);
         }
 
         // Send the rendered results to the screen
@@ -603,83 +449,5 @@ int main(int argc, char *argv[])
     delete render;
 
     return 0;
-}
-
-static GLfloat matspec[4] = { 0.5, 0.5, 0.5, 0.0 };
-static float red_col[] = { 1.0, 0.0, 0.0 };
-static float grn_col[] = { 0.0, 1.0, 0.0 };
-static float blu_col[] = { 0.0, 0.0, 1.0 };
-static float yel_col[] = { 1.0, 1.0, 0.0 };
-static float lightblu_col[] = { 0.0, 1.0, 1.0 };
-static float pur_col[] = { 1.0, 0.0, 1.0 };
-
-void draw_cube(double radius)
-{
-    GLfloat matspec[4] = { 0.5, 0.5, 0.5, 0.0 };
-    glPushMatrix();
-    glScaled(radius, radius, radius);
-    glMaterialfv(GL_FRONT, GL_SPECULAR, matspec);
-    glMaterialf(GL_FRONT, GL_SHININESS, 64.0);
-    glBegin(GL_POLYGON);
-    glColor3fv(lightblu_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, lightblu_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, lightblu_col);
-    glNormal3f(0.0, 0.0, -1.0);
-    glVertex3f(1.0, 1.0, -1.0);
-    glVertex3f(1.0, -1.0, -1.0);
-    glVertex3f(-1.0, -1.0, -1.0);
-    glVertex3f(-1.0, 1.0, -1.0);
-    glEnd();
-    glBegin(GL_POLYGON);
-    glColor3fv(blu_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, blu_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, blu_col);
-    glNormal3f(0.0, 0.0, 1.0);
-    glVertex3f(-1.0, 1.0, 1.0);
-    glVertex3f(-1.0, -1.0, 1.0);
-    glVertex3f(1.0, -1.0, 1.0);
-    glVertex3f(1.0, 1.0, 1.0);
-    glEnd();
-    glBegin(GL_POLYGON);
-    glColor3fv(yel_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, yel_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, yel_col);
-    glNormal3f(0.0, -1.0, 0.0);
-    glVertex3f(1.0, -1.0, 1.0);
-    glVertex3f(-1.0, -1.0, 1.0);
-    glVertex3f(-1.0, -1.0, -1.0);
-    glVertex3f(1.0, -1.0, -1.0);
-    glEnd();
-    glBegin(GL_POLYGON);
-    glColor3fv(grn_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, grn_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, grn_col);
-    glNormal3f(0.0, 1.0, 0.0);
-    glVertex3f(1.0, 1.0, 1.0);
-    glVertex3f(1.0, 1.0, -1.0);
-    glVertex3f(-1.0, 1.0, -1.0);
-    glVertex3f(-1.0, 1.0, 1.0);
-    glEnd();
-    glBegin(GL_POLYGON);
-    glColor3fv(pur_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, pur_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, pur_col);
-    glNormal3f(-1.0, 0.0, 0.0);
-    glVertex3f(-1.0, 1.0, 1.0);
-    glVertex3f(-1.0, 1.0, -1.0);
-    glVertex3f(-1.0, -1.0, -1.0);
-    glVertex3f(-1.0, -1.0, 1.0);
-    glEnd();
-    glBegin(GL_POLYGON);
-    glColor3fv(red_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, red_col);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, red_col);
-    glNormal3f(1.0, 0.0, 0.0);
-    glVertex3f(1.0, -1.0, 1.0);
-    glVertex3f(1.0, -1.0, -1.0);
-    glVertex3f(1.0, 1.0, -1.0);
-    glVertex3f(1.0, 1.0, 1.0);
-    glEnd();
-    glPopMatrix();
 }
 
