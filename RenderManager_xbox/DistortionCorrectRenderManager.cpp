@@ -159,11 +159,6 @@ void setParams(void *userdata, const OSVR_TimeValue * /*timestamp*/,
     // Create a new set of distortion parameters that has the
     // specified parameters, but using the center of projection
     // from the read-in values.
-    std::cout << "XXX New parameters: ";
-    for (size_t i = 0; i < params.size(); i++) {
-      std::cout << params[i] << " ";
-    }
-    std::cout << std::endl;
 
     // Get the original distortion correction
     osvr::renderkit::RenderManager::DistortionParameters distortionLeft;
