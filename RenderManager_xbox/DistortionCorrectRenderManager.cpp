@@ -197,10 +197,12 @@ void resetParams(void *userdata, const OSVR_TimeValue *timestamp,
   const OSVR_ButtonReport *report)
 {
   if (report->state == 1) {
+    // We want a vector that is [0, 1, 0, 0, 0, 0...]
+    // Set them all to zero and then set the second one to 1.
     for (size_t i = 0; i < params.size(); i++) {
       params[i] = 0;
     }
-    params[1] = 1;
+    if (params.size() >= 2) { params[1] = 1; }
   }
   setParams(userdata, timestamp, report);
 }
