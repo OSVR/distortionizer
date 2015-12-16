@@ -533,8 +533,13 @@ int main(int argc, char *argv[])
   ScreenDescription screen;
   MeshDescription mesh;
   if (!findScreenAndMesh(mapping, left, bottom, right, top, screen, mesh)) {
-    std::cerr << "Error: Could not find screen" << std::endl;
+    std::cerr << "Error: Could not find screen or mesh" << std::endl;
     return 3;
+  }
+  if (mesh.size() != mapping.size()) {
+    std::cerr << "Error: Mesh size " << mesh.size()
+      << " does not match mapping size" << mapping.size() << std::endl;
+    return 4;
   }
 
   //====================================================================
@@ -552,17 +557,35 @@ int main(int argc, char *argv[])
   jFOV["overlap_percent"] = jOverlap;
   jFOV["pitch_tilt"] = jPitch;
   jHmd["field_of_view"] = jFOV;
+
+  // Construct the Json distortion mesh description and add it to
+  // the existing HMD description.
+  Json::Value jDistortionType = "mono_point_samples";
+  Json::Value jDistortion;
+  Json::Value jMesh;
+  for (int i = 0; i < mesh.size(); i++) {
+    Json::Value jIn;
+    jIn[0] = mesh[i][0][0];
+    jIn[1] = mesh[i][0][1];
+    Json::Value jOut;
+    jOut[0] = mesh[i][1][0];
+    jOut[1] = mesh[i][1][1];
+    Json::Value jEntry;
+    jEntry[0] = jIn;
+    jEntry[1] = jOut;
+    jMesh[i] = jEntry;
+  }
+  jDistortion["type"] = jDistortionType;
+  jDistortion["mono_point_samples"] = jMesh;
+  jHmd["distortion"] = jDistortion;
+
+  // Store all of this into the hierarchy.
   jDisplay["hmd"] = jHmd;
   jRoot["display"] = jDisplay;
 
   //====================================================================
-  // Construct the Json distortion mesh description and add it to
-  // the existing HMD description.
-  // @todo
-
-  //====================================================================
   // Write the complete description.
-  Json::FastWriter jWriter;
+  Json::StyledWriter jWriter;
   std::cout << jWriter.write(jRoot) << std::endl;
 
   return 0;
