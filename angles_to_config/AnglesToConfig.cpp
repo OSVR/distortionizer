@@ -295,9 +295,10 @@ void Usage(std::string name)
   std::cerr << "Usage: " << name
     << " [-eye right|left] (default is right)"
     << " [-depth_meters D] (default is 2.0)"
-    << " [-mm] (default is meters)"
+    << " [-mm] (screen distance units in the config file, default is meters)"
     << " [-verbose] (default is not)"
-    << " screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters"
+    << " [-screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters]"
+    <<   " (default auto-compute based on ranges seen)"
     << std::endl
     << "  This program reads from standard input a configuration that has a list of" << std::endl
     << "x,y screen coordinates in meters followed by long,lat angles in" << std::endl
@@ -312,6 +313,7 @@ int main(int argc, char *argv[])
 {
   // Parse the command line
   bool rightEye = true;
+  bool computeBounds = true;
   double left, right, bottom, top;
   double depth = 2.0;
   double toMeters = 1.0;
@@ -321,11 +323,21 @@ int main(int argc, char *argv[])
       toMeters = 1e-3;  // Convert input in millimeters to meters
     } else if (std::string("-verbose") == argv[i]) {
       g_verbose = true;
-    }
-    else if (std::string("-depth_meters") == argv[i]) {
+    } else if (std::string("-depth_meters") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       depth = atof(argv[i]);
-    } else if (std::string("-eye") == argv[i]) {
+    } else if (std::string("-screen") == argv[i]) {
+      computeBounds = false;
+      if (++i >= argc) { Usage(argv[0]); }
+      left = atof(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      bottom = atof(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      right = atof(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      top = atof(argv[i]);
+    }
+    else if (std::string("-eye") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       std::string eye = argv[i];
       if (eye == "left") {
@@ -341,22 +353,11 @@ int main(int argc, char *argv[])
     }
     else switch (++realParams) {
     case 1:
-      left = atof(argv[i]);
-      break;
-    case 2:
-      bottom = atof(argv[i]);
-      break;
-    case 3:
-      right = atof(argv[i]);
-      break;
-    case 4:
-      top = atof(argv[i]);
-      break;
     default:
       Usage(argv[0]);
     }
   }
-  if (realParams != 4) { Usage(argv[0]); }
+  if (realParams != 0) { Usage(argv[0]); }
 
   //====================================================================
   // Run our algorithm test to make sure things are working properly.
@@ -375,37 +376,6 @@ int main(int argc, char *argv[])
     // Read the mapping info from the input file.
     Mapping map;
     std::cin >> map.xyLatLong.longitude >> map.xyLatLong.latitude >> map.xyLatLong.x >> map.xyLatLong.y;
-
-    //  Convert the input coordinates from its input space into meters
-    // and then convert (using the screen dimensions) into normalized screen units.
-    map.xyLatLong.x *= toMeters;
-    map.xyLatLong.x = (map.xyLatLong.x - left) / (right - left);
-    map.xyLatLong.y *= toMeters;
-    map.xyLatLong.y = (map.xyLatLong.y - bottom) / (top - bottom);
-
-    // Convert the input latitude and longitude from degrees to radians.
-    map.xyLatLong.latitude *= MY_PI / 180;
-    map.xyLatLong.longitude *= MY_PI / 180;
-
-    // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
-    // longitude = 0, lattitude = 0 points along the -Z axis in eye space.
-    // Positive rotation in longitude is towards -X and positive rotation in
-    // latitude points towards +Y.
-    map.xyz.y = depth * sin(map.xyLatLong.latitude);
-    map.xyz.z = -depth * cos(map.xyLatLong.longitude) * cos(map.xyLatLong.latitude);
-    map.xyz.x = -depth * (-sin(map.xyLatLong.longitude)) * cos(map.xyLatLong.latitude);
-
-    if (g_verbose) {
-      if (mapping.size() == 0) {
-        std::cerr << "First point:" << std::endl
-          << " Lat/long rad: " << map.xyLatLong.latitude
-          << "/" << map.xyLatLong.longitude
-          << ", norm x,y: " << map.xyLatLong.x << "," << map.xyLatLong.y
-          << ", meters x,y,z: " << map.xyz.x << "," << map.xyz.y << "," << map.xyz.z
-          << std::endl;
-      }
-    }
-
     mapping.push_back(map);
   }
   if (g_verbose) {
@@ -414,6 +384,65 @@ int main(int argc, char *argv[])
   if (mapping.size() == 0) {
     std::cerr << "Error: No input points found" << std::endl;
     return 2;
+  }
+
+  //====================================================================
+  // If we've been asked to auto-range the screen coordinates, compute
+  // them here.
+  if (computeBounds) {
+    left = right = mapping[0].xyLatLong.x;
+    bottom = top = mapping[0].xyLatLong.y;
+    for (size_t i = 1; i < mapping.size(); i++) {
+      double x = mapping[i].xyLatLong.x;
+      double y = mapping[i].xyLatLong.y;
+      if (x < left) { left = x; }
+      if (x > right) { right = x; }
+      if (y < bottom) { bottom = y; }
+      if (y > top) { top = y; }
+    }
+    left *= toMeters;
+    right *= toMeters;
+    bottom *= toMeters;
+    top *= toMeters;
+  }
+  if (g_verbose) {
+    std::cerr << "Left, bottom, right, top = " << left << ", "
+      << bottom << ", " << right << ", " << top << std::endl;
+  }
+
+  //====================================================================
+  // Convert the input values into normalized coordinates and into 3D
+  // locations.
+  for (size_t i = 0; i < mapping.size(); i++) {
+    //  Convert the input coordinates from its input space into meters
+    // and then convert (using the screen dimensions) into normalized screen units.
+    mapping[i].xyLatLong.x *= toMeters;
+    mapping[i].xyLatLong.x = (mapping[i].xyLatLong.x - left) / (right - left);
+    mapping[i].xyLatLong.y *= toMeters;
+    mapping[i].xyLatLong.y = (mapping[i].xyLatLong.y - bottom) / (top - bottom);
+
+    // Convert the input latitude and longitude from degrees to radians.
+    mapping[i].xyLatLong.latitude *= MY_PI / 180;
+    mapping[i].xyLatLong.longitude *= MY_PI / 180;
+
+    // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
+    // longitude = 0, lattitude = 0 points along the -Z axis in eye space.
+    // Positive rotation in longitude is towards -X and positive rotation in
+    // latitude points towards +Y.
+    mapping[i].xyz.y = depth * sin(mapping[i].xyLatLong.latitude);
+    mapping[i].xyz.z = -depth * cos(mapping[i].xyLatLong.longitude) * cos(mapping[i].xyLatLong.latitude);
+    mapping[i].xyz.x = -depth * (-sin(mapping[i].xyLatLong.longitude)) * cos(mapping[i].xyLatLong.latitude);
+
+    if (g_verbose) {
+      if (i == 0) {
+        std::cerr << "First point:" << std::endl
+          << " Lat/long rad: " << mapping[i].xyLatLong.latitude
+          << "/" << mapping[i].xyLatLong.longitude
+          << ", norm x,y: " << mapping[i].xyLatLong.x << "," << mapping[i].xyLatLong.y
+          << ", meters x,y,z: " << mapping[i].xyz.x << "," << mapping[i].xyz.y << "," << mapping[i].xyz.z
+          << std::endl;
+      }
+    }
   }
 
   // Make sure that the normalized points are all within 0 and 1.
@@ -492,16 +521,11 @@ static int testAlgorithms()
   Mapping p2(XYLatLong(1, 0,  45, -45), XYZ( 1, -1, -1));
   Mapping p3(XYLatLong(1, 1,  45,  45), XYZ( 1,  1, -1));
   Mapping p4(XYLatLong(0, 0, -45,  45), XYZ(-1,  1, -1));
-  // Additional redundant info to test the projection code and such
-  Mapping p5(XYLatLong(0.5, 0.5,   0,   0), XYZ( 0,  0, -1));
-  Mapping p6(XYLatLong(0.5,   0,   0,  45), XYZ( 0,  1, -1));
   std::vector<Mapping> mapping;
   mapping.push_back(p1);
   mapping.push_back(p2);
   mapping.push_back(p3);
   mapping.push_back(p4);
-  mapping.push_back(p5);
-  mapping.push_back(p6);
 
   // Find the screen associated with this mapping.
   ScreenDescription screen;
