@@ -601,7 +601,7 @@ static bool small(double d)
 static int testAlgorithms()
 {
   if (g_verbose) {
-    std::cerr << "Starting testAlgorithms()" << std::endl;
+    std::cerr << "=================== Starting testAlgorithms()" << std::endl;
   }
 
   // Construct a set of points that should make a square screen with no distortion
@@ -668,7 +668,7 @@ static int testAlgorithms()
   // @todo
 
   if (g_verbose) {
-    std::cerr << "Successfully finished testAlgorithms()" << std::endl;
+    std::cerr << "=================== Successfully finished testAlgorithms()" << std::endl;
   }
   return 0;
 }
