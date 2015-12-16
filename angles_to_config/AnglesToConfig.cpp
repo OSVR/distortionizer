@@ -122,7 +122,17 @@ typedef struct {
   double yCOP;
 } ScreenDescription;
 
-bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
+/// Holds a list of mappings from physical-display normalized
+/// coordinates to canonical-display normalized coordinates.
+typedef std::vector<        //!< Vector of mappings
+    std::vector<            //!< 2-vector of from, to coordinates
+      std::vector<double>   //!< 2-vector of unit coordinates (x,y)
+  >
+> MeshDescription;
+
+bool findScreenAndMesh(const std::vector<Mapping> &mapping,
+  double left, double bottom, double right, double top,
+  ScreenDescription &screen, MeshDescription &mesh)
 {
   //====================================================================
   // Figure out the X screen-space extents.
@@ -282,11 +292,69 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
     std::cerr << "Center of projection x,y: " << xCOP << ", " << yCOP << std::endl;
   }
 
-  ret.hFOVDegrees = hFOVDegrees;
-  ret.vFOVDegrees = vFOVDegrees;
-  ret.overlapPercent = overlapPercent;
-  ret.xCOP = xCOP;
-  ret.yCOP = yCOP;
+  //====================================================================
+  // Fill in the screen parameters.
+  screen.hFOVDegrees = hFOVDegrees;
+  screen.vFOVDegrees = vFOVDegrees;
+  screen.overlapPercent = overlapPercent;
+  screen.xCOP = xCOP;
+  screen.yCOP = yCOP;
+
+  //====================================================================
+  // Map each incoming mesh coordinate into the corresponding output
+  // coordinate, storing them into the output mesh.
+  mesh.clear();
+
+  // Scale and offset to apply to the input points to normalize them
+  // to screen coordinates.
+  double xInOffset = -left;
+  double xInScale = 1 / (right - left);
+  double yInOffset = -bottom;
+  double yInScale = 1 / (top - bottom);
+
+  // Scale and offset to apply to the points projected onto the plane
+  // to convert their values into normalized screen coordinates.  This
+  // checks the assumption that the screen has some width in the X
+  // coordinate (not rotated 90 degrees) and uses only the X value to
+  // scale X.
+  if (leftProj.x == rightProj.x) {
+    std::cerr << "Error computing mesh: screen has no X extent" << std::endl;
+    return false;
+  }
+  double xOutOffset = -leftProj.x;
+  double xOutScale = 1 / (rightProj.x - leftProj.x);
+  double yOutOffset = maxY; // Negative of negative maxY
+  double yOutScale = 1 / (2 * maxY);
+
+  for (size_t i = 0; i < mapping.size(); i++) {
+
+    // Scale and offset input coordinates so they are in normalized input
+    // screen coordinates.
+    double xNormIn = (mapping[i].xyLatLong.x + xInOffset) * xInScale;
+    double yNormIn = (mapping[i].xyLatLong.y + yInOffset) * yInScale;
+    std::vector<double> in;
+    in.push_back(xNormIn);
+    in.push_back(yNormIn);
+
+    // Project the 3D points back into the plane of the screen and determine
+    // the normalized coordinates in the coordinate system with the lower left
+    // corner at (0,0) and the upper right at (1,1).  Because we oversized the
+    // screen, these will all be in this range.  Otherwise, they might not be.
+    XYZ onScreen = mapping[i].xyz.projectOntoPlane(A, B, C, D);
+    double xNormOut = (onScreen.x + xOutOffset) * xOutScale;
+    double yNormOut = (onScreen.y + yOutOffset) * yOutScale;
+    std::vector<double> out;
+    out.push_back(xNormOut);
+    out.push_back(yNormOut);
+
+    // Add a new entry onto the mesh
+    std::vector< std::vector<double> > element;
+    element.push_back(in);
+    element.push_back(out);
+
+    mesh.push_back(element);
+  }
+
   return true;
 }
 
@@ -445,32 +513,29 @@ int main(int argc, char *argv[])
     }
   }
 
-  // Make sure that the normalized points are all within 0 and 1.
+  // Make sure that the normalized screen coordinates are all within 0 and 1.
   for (size_t i = 0; i < mapping.size(); i++) {
     if ((mapping[i].xyLatLong.x < 0) || (mapping[i].xyLatLong.x > 1)) {
       std::cerr << "Error: Point " << i << " x out of range [0,1]: "
-        << mapping[i].xyLatLong.x << " (increase bounds on command line)"
+        << mapping[i].xyLatLong.x << " (increase bounds on -screen or don't specify it)"
         << std::endl;
     }
     if ((mapping[i].xyLatLong.y < 0) || (mapping[i].xyLatLong.y > 1)) {
       std::cerr << "Error: Point " << i << " y out of range [0,1]: "
-        << mapping[i].xyLatLong.y << " (increase bounds on command line)"
+        << mapping[i].xyLatLong.y << " (increase bounds on -screen or don't specify it)"
         << std::endl;
     }
   }
 
   //====================================================================
-  // Determine the screen description based on the input points.
+  // Determine the screen description and distortion mesh based on the
+  // input points and screen parameters.
   ScreenDescription screen;
-  if (!findScreen(mapping, screen)) {
+  MeshDescription mesh;
+  if (!findScreenAndMesh(mapping, left, bottom, right, top, screen, mesh)) {
     std::cerr << "Error: Could not find screen" << std::endl;
     return 3;
   }
-
-  //====================================================================
-  // Determine the distortion mesh based on the screen and the input
-  // points.
-  // @todo
 
   //====================================================================
   // Construct Json screen description.
@@ -520,7 +585,7 @@ static int testAlgorithms()
   Mapping p1(XYLatLong(0, 0, -45, -45), XYZ(-1, -1, -1));
   Mapping p2(XYLatLong(1, 0,  45, -45), XYZ( 1, -1, -1));
   Mapping p3(XYLatLong(1, 1,  45,  45), XYZ( 1,  1, -1));
-  Mapping p4(XYLatLong(0, 0, -45,  45), XYZ(-1,  1, -1));
+  Mapping p4(XYLatLong(0, 1, -45,  45), XYZ(-1,  1, -1));
   std::vector<Mapping> mapping;
   mapping.push_back(p1);
   mapping.push_back(p2);
@@ -529,7 +594,8 @@ static int testAlgorithms()
 
   // Find the screen associated with this mapping.
   ScreenDescription screen;
-  if (!findScreen(mapping, screen)) {
+  MeshDescription mesh;
+  if (!findScreenAndMesh(mapping, 0, 0, 1, 1, screen, mesh)) {
     std::cerr << "testAlgorithms(): Could not find screen" << std::endl;
     return 100;
   }
@@ -555,6 +621,26 @@ static int testAlgorithms()
     std::cerr << "testAlgorithms(): yCOP not near 0.5: " << screen.yCOP << std::endl;
     return 205;
   }
+
+  // Make sure the mesh has the expected behavior.
+  if (mesh.size() != mapping.size()) {
+    std::cerr << "testAlgorithms(): Mesh size does not match mapping size: " << mesh.size() << std::endl;
+    return 301;
+  }
+  for (int entry = 0; entry < mesh.size(); entry++) {
+    size_t outIndex = 1;
+    if (!small(mesh[entry][outIndex][0] - mapping[entry].xyLatLong.x)) {
+      std::cerr << "testAlgorithms(): X normalized mesh mismatch for element: " << entry << std::endl;
+      return 400 + entry;
+    }
+    if (!small(mesh[entry][outIndex][1] - mapping[entry].xyLatLong.y)) {
+      std::cerr << "testAlgorithms(): Y normalized mesh mismatch for element: " << entry
+        << " (got " << mesh[entry][outIndex][1]
+        << ", expected " << mapping[entry].xyLatLong.y << ")" << std::endl;
+      return 500 + entry;
+    }
+  }
+  // @todo
 
   if (g_verbose) {
     std::cerr << "Successfully finished testAlgorithms()" << std::endl;
