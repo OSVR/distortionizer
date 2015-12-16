@@ -43,7 +43,8 @@ typedef struct {
 } XYLatLong;
 
 // 3D coordinate
-typedef struct {
+class XYZ {
+public:
   double x;
   double y;
   double z;
@@ -53,7 +54,29 @@ typedef struct {
   double rotationAboutY() const {
     return atan2(-x, -z);
   }
-} XYZ;
+
+  /// Project from the origin through our point onto a plane whose
+  // equation is specified.
+  XYZ projectOntoPlane(double A, double B, double C, double D) const {
+    XYZ ret;
+
+    // Solve for the value of S that satisfies:
+    //    Asx + Bsy + Csz + D = 0,
+    //    s = -D / (Ax + By + Cz)
+    // Then for the location sx, sy, sz.
+
+    double s = -D / (A*x + B*y + C*z);
+    ret.x = s*x;
+    ret.y = s*y;
+    ret.z = s*z;
+    return ret;
+  }
+
+  /// Return the rotation distance from another point.
+  double distanceFrom(const XYZ &p) const {
+    return sqrt( (x-p.x)*(x-p.x) + (y-p.y)*(y-p.y) + (z-p.z)*(z-p.z) );
+  }
+};
 
 // Mapping entry, along with its associated 3D coordinate
 typedef struct {
@@ -61,6 +84,151 @@ typedef struct {
   XYZ xyz;
 } Mapping;
 
+// Description of a screen
+typedef struct {
+  double hFOVDegrees;
+  double vFOVDegrees;
+  double overlapPercent;
+  double xCOP;
+  double yCOP;
+} ScreenDescription;
+
+bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
+{
+  //====================================================================
+  // Figure out the X screen-space extents.
+  // The X screen-space extents are defined by the lines perpendicular to the
+  // Y axis passing through:
+  //  left: the point location whose reprojection into the Y = 0 plane has the most -
+  //        positive angle(note that this may not be the point with the largest
+  //        longitudinal coordinate, because of the impact of changing latitude on
+  //        X - Z position).
+  //  right : the point location whose reprojection into the Y = 0 plane has the most -
+  //        negative angle(note that this may not be the point with the smallest
+  //        longitudinal coordinate, because of the impact of changing latitude on
+  //        X - Z position).
+  XYZ screenLeft, screenRight;
+  screenLeft = screenRight = mapping[0].xyz;
+  for (size_t i = 0; i < mapping.size(); i++) {
+    if (mapping[i].xyz.rotationAboutY() > screenLeft.rotationAboutY()) {
+      screenLeft = mapping[i].xyz;
+    }
+    if (mapping[i].xyz.rotationAboutY() < screenRight.rotationAboutY()) {
+      screenRight = mapping[i].xyz;
+    }
+  }
+  if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
+    std::cerr << "Error: Field of view > 180 degrees: found " <<
+      180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY())
+      << std::endl;
+    return false;
+  }
+
+  //====================================================================
+  // Find the plane of the screen, using the equation that has the normal
+  // pointing towards the origin.  This is AX + BY + CZ + D = 0, where the
+  // normal is in A, B, C and the offset is in D.
+  //   Two points on the plane are given above.  Two more are the projection
+  // of each of these points into the Y=0 plane.  We take the cross
+  // product of the line from the left-most projected point to the right-
+  // most projected point with the vertical line to get the normal to that
+  // plane that points towards the origin.  Then we normalize this and plug
+  // it back into the equation to solve for D.
+  //   We're crossing with the vector (0, 1, 0), so we get:
+  //   x = -dz
+  //   y = 0
+  //   z = dx
+  double dx = screenRight.x - screenLeft.x;
+  double dz = screenRight.z - screenLeft.z;
+  double A = -dz;
+  double B = 0;
+  double C = dx;
+  double len = sqrt(A*A + B*B + C*C);
+  A /= len;
+  B /= len;
+  C /= len;
+  double D = -(A*screenRight.x + B*screenRight.y + C*screenRight.z);
+
+  //====================================================================
+  // Figure out the Y screen-space extents.
+  // The Y screen-space extents are symmetric and correspond to the lines parallel
+  //  to the screen X axis that are within the plane of the X line specifying the
+  //  axis extents at the largest magnitude angle up or down from the horizontal.
+  // Find the highest-magnitude Y value of all points when they are
+  // projected into the plane of the screen.
+  double maxY = fabs(mapping[0].xyz.projectOntoPlane(A, B, C, D).y);
+  for (size_t i = 1; i < mapping.size(); i++) {
+    double Y = fabs(mapping[i].xyz.projectOntoPlane(A, B, C, D).y);
+    if (Y > maxY) { maxY = Y; }
+  }
+
+  //====================================================================
+  // Figure out the monocular horizontal field of view for the screen.
+  // Find the distance between the left and right points projected
+  // into the Y=0 plane.  The FOV is twice the arctangent of half of this
+  // distance divided by the distance to the screen.
+  XYZ leftProj = screenLeft;
+  XYZ rightProj = screenRight;
+  leftProj.y = 0;
+  rightProj.y = 0;
+  double screenWidth = leftProj.distanceFrom(rightProj);
+  double hFOVRadians = 2 * atan((screenWidth / 2) / fabs(D));
+  double hFOVDegrees = hFOVRadians * 180 / MY_PI;
+
+  //====================================================================
+  // Figure out the monocular vertical field of view for the screen.
+  // The FOV is twice the arctangent of half of the Y
+  // distance divided by the distance to the screen.
+  double vFOVRadians = 2 * atan(maxY / fabs(D));
+  double vFOVDegrees = vFOVRadians * 180 / MY_PI;
+
+  //====================================================================
+  // Figure out the overlap percent for the screen that corresponds to
+  // the angle between straight ahead and the normal to the plane.  First
+  // find the angle itself, and then the associated overlap percent.
+  // The angle is determined based on the unit normal to the plane,
+  // which is (A,B,C), but B = 0 and we only care about rotation
+  // around the Y axis.  For the purpose of the atan function, the part
+  // of X is played by the -Z axis and the part of Y is played by the
+  // -X axis.  A is associated with the X axis and C with the Z axis.
+  // Here is the code we are inverting...
+  //  double overlapFrac = m_params.m_displayConfiguration.getOverlapPercent();
+  //  const auto hfov = m_params.m_displayConfiguration.getHorizontalFOV();
+  //  const auto angularOverlap = hfov * overlapFrac;
+  //  rotateEyesApart = (hfov - angularOverlap) / 2.;
+  // Here is the inversion:
+  //  rotateEyesApart = (hfov - (hfov * overlapFrac));
+  //  rotateEyesApart - hfov = - hfov * overlapFrac;
+  //  1 - rotateEyesApart/hfov = overlapFrac
+  double angleRadians = fabs(atan2(-A, -C));
+  double overlapFrac = 1 - angleRadians / hFOVRadians;
+  double overlapPercent = overlapFrac * 100;
+
+  //====================================================================
+  // Figure out the center of projection for the screen.  This is the
+  // location where a line from the origin perpendicular to the screen
+  // pierces the screen.
+  // Then figure out the normalized coordinates of this point in screen
+  // space, which is the fraction of the way from the left to the right
+  // of the screen.  It is always (by construction above) in the center
+  // of the screen in Y.
+  // Also, by construction it is at a distance D along the (A,B,C) unit
+  // vector from the origin.
+  double yCOP = 0.5;
+  XYZ projection;
+  projection.x = -D * A;
+  projection.y = -D * B;
+  projection.z = -D * C;
+  double xCOP = leftProj.distanceFrom(projection) / leftProj.distanceFrom(rightProj);
+
+  ScreenDescription ret;
+  ret.hFOVDegrees = hFOVDegrees;
+  ret.vFOVDegrees = vFOVDegrees;
+  ret.overlapPercent = overlapPercent;
+  ret.xCOP = xCOP;
+  ret.yCOP = yCOP;
+  return true;
+}
 
 void Usage(std::string name)
 {
@@ -126,6 +294,7 @@ int main(int argc, char *argv[])
   }
   if (realParams != 4) { Usage(argv[0]); }
 
+  //====================================================================
   // Parse the angle-configuration information from standard input.  Expect white-space
   // separation between numbers and also between entries (which may be on separate
   // lines).
@@ -159,39 +328,46 @@ int main(int argc, char *argv[])
     return 2;
   }
 
-  // Figure out the X screen-space extents.
-  // The X screen-space extents are defined by the lines perpendicular to the Y axis passing through:
-  //  left: the point location whose reprojection into the Y = 0 plane has the most -
-  //        positive angle(note that this may not be the point with the largest
-  //        longitudinal coordinate, because of the impact of changing latitude on
-  //        X - Z position).
-  //  right : the point location whose reprojection into the Y = 0 plane has the most -
-  //        negative angle(note that this may not be the point with the smallest
-  //        longitudinal coordinate, because of the impact of changing latitude on
-  //        X - Z position).
-  XYZ screenLeft, screenRight;
-  screenLeft = screenRight = mapping[0].xyz;
-  for (size_t i = 0; i < mapping.size(); i++) {
-    if (mapping[i].xyz.rotationAboutY() > screenLeft.rotationAboutY()) {
-      screenLeft = mapping[i].xyz;
-    }
-    if (mapping[i].xyz.rotationAboutY() < screenRight.rotationAboutY()) {
-      screenRight = mapping[i].xyz;
-    }
-  }
-  if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
-    std::cerr << "Error: Field of view > 180 degrees: found " <<
-      180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY())
-      << std::endl;
+  //====================================================================
+  // Determine the screen description based on the input points.
+  ScreenDescription screen;
+  if (!findScreen(mapping, screen)) {
+    std::cerr << "Error: Could not find screen" << std::endl;
     return 3;
   }
 
-  // Figure out the Y screen-space extents.
-  // The Y screen-space extents are symmetric and correspond to the lines parallel
-  //  to the screen X axis that are within the plane of the X line specifying the
-  //  axis extents at the largest magnitude angle up or down from the horizontal.
-  XYZ screenTop, screenBottom;
-  screenTop = screenBottom = mapping[0].xyz;
+  //====================================================================
+  // Determine the distortion mesh based on the screen and the input
+  // points.
+  // @todo
+
+  //====================================================================
+  // Construct Json screen description.
+  Json::Value jRoot;
+  Json::Value jDisplay;
+  Json::Value jHmd;
+  Json::Value jFOV;
+  Json::Value jHFOV = screen.hFOVDegrees;
+  Json::Value jVFOV = screen.vFOVDegrees;
+  Json::Value jOverlap = screen.overlapPercent;
+  Json::Value jPitch = 0.0;
+  jFOV["monocular_horizontal"] = jHFOV;
+  jFOV["monocular_vertical"] = jVFOV;
+  jFOV["overlap_percent"] = jOverlap;
+  jFOV["pitch_tilt"] = jPitch;
+  jHmd["field_of_view"] = jFOV;
+  jDisplay["hmd"] = jHmd;
+  jRoot["display"] = jDisplay;
+
+  //====================================================================
+  // Construct the Json distortion mesh description and add it to
+  // the existing HMD description.
+  // @todo
+
+  //====================================================================
+  // Write the complete description.
+  Json::FastWriter jWriter;
+  std::cout << jWriter.write(jRoot) << std::endl;
 
   return 0;
 }
