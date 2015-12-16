@@ -446,6 +446,8 @@ int main(int argc, char *argv[])
     std::cin >> map.xyLatLong.longitude >> map.xyLatLong.latitude >> map.xyLatLong.x >> map.xyLatLong.y;
     mapping.push_back(map);
   }
+  // There will have been one extra added, when running into EOF.
+  mapping.pop_back();
   if (g_verbose) {
     std::cerr << "Found " << mapping.size() << " points" << std::endl;
   }
