@@ -32,7 +32,9 @@
 #include <cmath>
 #include <stdlib.h> // For exit()
 
+// Global constants and variables
 #define MY_PI (4.0*atan(1.0))
+static bool g_verbose = false;
 
 // Screen-space to/from angle-space map entry
 typedef struct {
@@ -51,6 +53,8 @@ public:
 
   /// Return the rotation about the Y axis, where 0 rotation points along
   // the -Z axis and positive rotation heads towards the -X axis.
+  // The X axis in atan space corresponds to the -z axis in head space,
+  // and the Y axis in atan space corresponds to the -x axis in head space.
   double rotationAboutY() const {
     return atan2(-x, -z);
   }
@@ -109,6 +113,10 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
   //        X - Z position).
   XYZ screenLeft, screenRight;
   screenLeft = screenRight = mapping[0].xyz;
+  if (g_verbose) {
+    std::cerr << "First point rotation about Y (degrees): "
+      << screenLeft.rotationAboutY() * 180 / MY_PI << std::endl;
+  }
   for (size_t i = 0; i < mapping.size(); i++) {
     if (mapping[i].xyz.rotationAboutY() > screenLeft.rotationAboutY()) {
       screenLeft = mapping[i].xyz;
@@ -116,6 +124,11 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
     if (mapping[i].xyz.rotationAboutY() < screenRight.rotationAboutY()) {
       screenRight = mapping[i].xyz;
     }
+  }
+  if (g_verbose) {
+    std::cerr << "Horizontal angular range: "
+      << 180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY())
+      << std::endl;
   }
   if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
     std::cerr << "Error: Field of view > 180 degrees: found " <<
@@ -148,6 +161,11 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
   B /= len;
   C /= len;
   double D = -(A*screenRight.x + B*screenRight.y + C*screenRight.z);
+  if (g_verbose) {
+    std::cerr << "Plane of the screen A,B,C, D: "
+      << A << "," << B << "," << C << ", " << D
+      << std::endl;
+  }
 
   //====================================================================
   // Figure out the Y screen-space extents.
@@ -161,6 +179,9 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
     double Y = fabs(mapping[i].xyz.projectOntoPlane(A, B, C, D).y);
     if (Y > maxY) { maxY = Y; }
   }
+  if (g_verbose) {
+    std::cerr << "Maximum-magnitude Y projection: " << maxY << std::endl;
+  }
 
   //====================================================================
   // Figure out the monocular horizontal field of view for the screen.
@@ -172,8 +193,14 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
   leftProj.y = 0;
   rightProj.y = 0;
   double screenWidth = leftProj.distanceFrom(rightProj);
+  if (g_verbose) {
+    std::cerr << "Screen width: " << screenWidth << std::endl;
+  }
   double hFOVRadians = 2 * atan((screenWidth / 2) / fabs(D));
   double hFOVDegrees = hFOVRadians * 180 / MY_PI;
+  if (g_verbose) {
+    std::cerr << "Horizontal field of view (degrees): " << hFOVDegrees<< std::endl;
+  }
 
   //====================================================================
   // Figure out the monocular vertical field of view for the screen.
@@ -221,7 +248,6 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
   projection.z = -D * C;
   double xCOP = leftProj.distanceFrom(projection) / leftProj.distanceFrom(rightProj);
 
-  ScreenDescription ret;
   ret.hFOVDegrees = hFOVDegrees;
   ret.vFOVDegrees = vFOVDegrees;
   ret.overlapPercent = overlapPercent;
@@ -236,6 +262,7 @@ void Usage(std::string name)
     << " [-eye right|left] (default is right)"
     << " [-depth_meters D] (default is 2.0)"
     << " [-mm] (default is meters)"
+    << " [-verbose] (default is not)"
     << " screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters"
     << std::endl
     << "  This program reads from standard input a configuration that has a list of" << std::endl
@@ -258,7 +285,10 @@ int main(int argc, char *argv[])
   for (int i = 1; i < argc; i++) {
     if (std::string("-mm") == argv[i]) {
       toMeters = 1e-3;  // Convert input in millimeters to meters
-    } else if (std::string("-depth_meters") == argv[i]) {
+    } else if (std::string("-verbose") == argv[i]) {
+      g_verbose = true;
+    }
+    else if (std::string("-depth_meters") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       depth = atof(argv[i]);
     } else if (std::string("-eye") == argv[i]) {
@@ -302,7 +332,7 @@ int main(int argc, char *argv[])
   while (!std::cin.eof()) {
     // Read the mapping info from the input file.
     Mapping map;
-    std::cin >> map.xyLatLong.x >> map.xyLatLong.y >> map.xyLatLong.latitude >> map.xyLatLong.longitude;
+    std::cin >> map.xyLatLong.longitude >> map.xyLatLong.latitude >> map.xyLatLong.x >> map.xyLatLong.y;
 
     //  Convert the input coordinates from its input space into meters
     // and then convert (using the screen dimensions) into normalized screen units.
@@ -317,15 +347,45 @@ int main(int argc, char *argv[])
 
     // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
     // longitude = 0, lattitude = 0 points along the -Z axis in eye space.
+    // Positive rotation in longitude is towards -X and positive rotation in
+    // latitude points towards +Y.
     map.xyz.y = depth * sin(map.xyLatLong.latitude);
     map.xyz.z = -depth * cos(map.xyLatLong.longitude) * cos(map.xyLatLong.latitude);
-    map.xyz.x = -depth * sin(map.xyLatLong.longitude) * cos(map.xyLatLong.latitude);
+    map.xyz.x = -depth * (-sin(map.xyLatLong.longitude)) * cos(map.xyLatLong.latitude);
+
+    if (g_verbose) {
+      if (mapping.size() == 0) {
+        std::cerr << "First point:" << std::endl
+          << " Lat/long rad: " << map.xyLatLong.latitude
+          << "/" << map.xyLatLong.longitude
+          << ", norm x,y: " << map.xyLatLong.x << "," << map.xyLatLong.y
+          << ", meters x,y,z: " << map.xyz.x << "," << map.xyz.y << "," << map.xyz.z
+          << std::endl;
+      }
+    }
 
     mapping.push_back(map);
+  }
+  if (g_verbose) {
+    std::cerr << "Found " << mapping.size() << " points" << std::endl;
   }
   if (mapping.size() == 0) {
     std::cerr << "Error: No input points found" << std::endl;
     return 2;
+  }
+
+  // Make sure that the normalized points are all within 0 and 1.
+  for (size_t i = 0; i < mapping.size(); i++) {
+    if ((mapping[i].xyLatLong.x < 0) || (mapping[i].xyLatLong.x > 1)) {
+      std::cerr << "Error: Point " << i << " x out of range [0,1]: "
+        << mapping[i].xyLatLong.x << " (increase bounds on command line)"
+        << std::endl;
+    }
+    if ((mapping[i].xyLatLong.y < 0) || (mapping[i].xyLatLong.y > 1)) {
+      std::cerr << "Error: Point " << i << " y out of range [0,1]: "
+        << mapping[i].xyLatLong.y << " (increase bounds on command line)"
+        << std::endl;
+    }
   }
 
   //====================================================================
