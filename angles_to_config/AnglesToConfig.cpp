@@ -36,13 +36,23 @@
 #define MY_PI (4.0*atan(1.0))
 static bool g_verbose = false;
 
+// Forward declarations
+static int testAlgorithms();
+
 // Screen-space to/from angle-space map entry
-typedef struct {
+class XYLatLong {
+public:
   double x;
   double y;
   double latitude;
   double longitude;
-} XYLatLong;
+
+  XYLatLong(double px, double py, double plat, double plong)
+  {
+    x = px; y = py; latitude = plat; longitude = plong;
+  }
+  XYLatLong() { x = y = latitude = longitude = 0; }
+};
 
 // 3D coordinate
 class XYZ {
@@ -50,6 +60,12 @@ public:
   double x;
   double y;
   double z;
+
+  XYZ(double px, double py, double pz)
+  {
+    x = px; y = py; z = pz;
+  }
+  XYZ() { x = y = z = 0; }
 
   /// Return the rotation about the Y axis, where 0 rotation points along
   // the -Z axis and positive rotation heads towards the -X axis.
@@ -73,6 +89,7 @@ public:
     ret.x = s*x;
     ret.y = s*y;
     ret.z = s*z;
+
     return ret;
   }
 
@@ -83,10 +100,18 @@ public:
 };
 
 // Mapping entry, along with its associated 3D coordinate
-typedef struct {
+class Mapping{
+public:
   XYLatLong xyLatLong;
   XYZ xyz;
-} Mapping;
+
+  Mapping(XYLatLong const &ll, XYZ const &x)
+  {
+    xyLatLong = ll;
+    xyz = x;
+  }
+  Mapping() {};
+};
 
 // Description of a screen
 typedef struct {
@@ -208,6 +233,9 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
   // distance divided by the distance to the screen.
   double vFOVRadians = 2 * atan(maxY / fabs(D));
   double vFOVDegrees = vFOVRadians * 180 / MY_PI;
+  if (g_verbose) {
+    std::cerr << "Vertical field of view (degrees): " << vFOVDegrees << std::endl;
+  }
 
   //====================================================================
   // Figure out the overlap percent for the screen that corresponds to
@@ -227,9 +255,12 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
   //  rotateEyesApart = (hfov - (hfov * overlapFrac));
   //  rotateEyesApart - hfov = - hfov * overlapFrac;
   //  1 - rotateEyesApart/hfov = overlapFrac
-  double angleRadians = fabs(atan2(-A, -C));
+  double angleRadians = fabs(atan2(A, C));
   double overlapFrac = 1 - angleRadians / hFOVRadians;
   double overlapPercent = overlapFrac * 100;
+  if (g_verbose) {
+    std::cerr << "Overlap percent: " << overlapPercent<< std::endl;
+  }
 
   //====================================================================
   // Figure out the center of projection for the screen.  This is the
@@ -247,6 +278,9 @@ bool findScreen(const std::vector<Mapping> &mapping, ScreenDescription &ret)
   projection.y = -D * B;
   projection.z = -D * C;
   double xCOP = leftProj.distanceFrom(projection) / leftProj.distanceFrom(rightProj);
+  if (g_verbose) {
+    std::cerr << "Center of projection x,y: " << xCOP << ", " << yCOP << std::endl;
+  }
 
   ret.hFOVDegrees = hFOVDegrees;
   ret.vFOVDegrees = vFOVDegrees;
@@ -323,6 +357,14 @@ int main(int argc, char *argv[])
     }
   }
   if (realParams != 4) { Usage(argv[0]); }
+
+  //====================================================================
+  // Run our algorithm test to make sure things are working properly.
+  int ret;
+  if ((ret = testAlgorithms()) != 0) {
+    std::cerr << "Error testing basic algorithms, code " << ret << std::endl;
+    return 100;
+  }
 
   //====================================================================
   // Parse the angle-configuration information from standard input.  Expect white-space
@@ -432,3 +474,66 @@ int main(int argc, char *argv[])
   return 0;
 }
 
+static bool small(double d)
+{
+  return fabs(d) <= 1e-5;
+}
+
+static int testAlgorithms()
+{
+  if (g_verbose) {
+    std::cerr << "Starting testAlgorithms()" << std::endl;
+  }
+
+  // Construct a set of points that should make a square screen with no distortion
+  // that has a 90 degree horizontal and vertical field of view and the identity
+  // distortion correction.
+  Mapping p1(XYLatLong(0, 0, -45, -45), XYZ(-1, -1, -1));
+  Mapping p2(XYLatLong(1, 0,  45, -45), XYZ( 1, -1, -1));
+  Mapping p3(XYLatLong(1, 1,  45,  45), XYZ( 1,  1, -1));
+  Mapping p4(XYLatLong(0, 0, -45,  45), XYZ(-1,  1, -1));
+  // Additional redundant info to test the projection code and such
+  Mapping p5(XYLatLong(0.5, 0.5,   0,   0), XYZ( 0,  0, -1));
+  Mapping p6(XYLatLong(0.5,   0,   0,  45), XYZ( 0,  1, -1));
+  std::vector<Mapping> mapping;
+  mapping.push_back(p1);
+  mapping.push_back(p2);
+  mapping.push_back(p3);
+  mapping.push_back(p4);
+  mapping.push_back(p5);
+  mapping.push_back(p6);
+
+  // Find the screen associated with this mapping.
+  ScreenDescription screen;
+  if (!findScreen(mapping, screen)) {
+    std::cerr << "testAlgorithms(): Could not find screen" << std::endl;
+    return 100;
+  }
+
+  // Make sure the screen has the expected behavior.
+  if (!small(screen.hFOVDegrees - 90)) {
+    std::cerr << "testAlgorithms(): hFOV not near 90: " << screen.hFOVDegrees << std::endl;
+    return 201;
+  }
+  if (!small(screen.vFOVDegrees - 90)) {
+    std::cerr << "testAlgorithms(): vFOV not near 90: " << screen.vFOVDegrees << std::endl;
+    return 202;
+  }
+  if (!small(screen.overlapPercent - 100)) {
+    std::cerr << "testAlgorithms(): Overlap percent not near 100: " << screen.overlapPercent << std::endl;
+    return 203;
+  }
+  if (!small(screen.xCOP - 0.5)) {
+    std::cerr << "testAlgorithms(): xCOP not near 0.5: " << screen.xCOP << std::endl;
+    return 204;
+  }
+  if (!small(screen.yCOP - 0.5)) {
+    std::cerr << "testAlgorithms(): yCOP not near 0.5: " << screen.yCOP << std::endl;
+    return 205;
+  }
+
+  if (g_verbose) {
+    std::cerr << "Successfully finished testAlgorithms()" << std::endl;
+  }
+  return 0;
+}
