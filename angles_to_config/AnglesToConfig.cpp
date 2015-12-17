@@ -28,6 +28,7 @@
 // Standard includes
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <vector>
 #include <stdlib.h> // For exit()
@@ -137,7 +138,8 @@ static void writeMesh(std::ostream &s, MeshDescription const &mesh)
   for (size_t i = 0; i < mesh.size(); i++) {
     if (i == 0) { s << " "; }
     else { s << ","; }
-    s << "[ [" << mesh[i][0][0] << "," << mesh[i][0][1] << "], ["
+    s << std::setprecision(4)
+      << "[ [" << mesh[i][0][0] << "," << mesh[i][0][1] << "], ["
       << mesh[i][1][0] << "," << mesh[i][1][1] << "] ]"
       << std::endl;
   }
