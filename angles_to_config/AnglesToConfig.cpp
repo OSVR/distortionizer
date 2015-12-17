@@ -577,11 +577,14 @@ int main(int argc, char *argv[])
 
   std::cout << "   \"distortion\": {" << std::endl;
   std::cout << "    \"type\": \"mono_point_samples\"," << std::endl;
-  std::cout << "    \"mono_point_samples\":" << std::endl;
+  std::cout << "    \"mono_point_samples\": {" << std::endl;
   writeMesh(std::cout, mesh);
-  // @todo resolution
-  // @todo distortion
-  std::cout << "   }," << std::endl; // field_of_view
+  std::cout << "," << std::endl;
+  // @todo Figure out which mesh to invert (left or right) and write
+  // two different meshes, rather than the same one twice.
+  writeMesh(std::cout, mesh);
+  std::cout << "    }" << std::endl; // mono_point_samples
+  std::cout << "   }," << std::endl; // distortion
 
   double leftEyeXCOP, rightEyeXCOP;
   double invertXCOP = 1.0 - screen.xCOP;
@@ -619,74 +622,6 @@ int main(int argc, char *argv[])
   std::cout << "  }" << std::endl;  // hmd
   std::cout << " }" << std::endl;   // display
   std::cout << "}" << std::endl;    // Closes outer object
-
-  /*
-  Json::Value jRoot;
-  Json::Value jDisplay;
-  Json::Value jHmd;
-  Json::Value jFOV;
-  Json::Value jHFOV = screen.hFOVDegrees;
-  Json::Value jVFOV = screen.vFOVDegrees;
-  Json::Value jOverlap = screen.overlapPercent;
-  Json::Value jPitch = 0.0;
-  jFOV["monocular_horizontal"] = jHFOV;
-  jFOV["monocular_vertical"] = jVFOV;
-  jFOV["overlap_percent"] = jOverlap;
-  jFOV["pitch_tilt"] = jPitch;
-  jHmd["field_of_view"] = jFOV;
-
-  // Construct Json eye description
-  Json::Value eyes;
-  Json::Value leftEye, rightEye;
-  double leftEyeXCOP, rightEyeXCOP;
-  double invertXCOP = 1.0 - screen.xCOP;
-  if (useRightEye) {
-    leftEyeXCOP = invertXCOP;
-    rightEyeXCOP = screen.xCOP;
-  } else {
-    leftEyeXCOP = screen.xCOP;
-    rightEyeXCOP = invertXCOP;
-  }
-  leftEye["center_proj_x"] = leftEyeXCOP;
-  leftEye["center_proj_y"] = screen.yCOP;
-  leftEye["rotate_180"] = 0;
-  rightEye["center_proj_x"] = rightEyeXCOP;
-  rightEye["center_proj_y"] = screen.yCOP;
-  rightEye["rotate_180"] = 0;
-  eyes[0] = leftEye;
-  eyes[1] = rightEye;
-  jHmd["eyes"] = eyes;
-
-  // Construct the Json distortion mesh description and add it to
-  // the existing HMD description.
-  Json::Value jDistortionType = "mono_point_samples";
-  Json::Value jDistortion;
-  Json::Value jMesh;
-  for (int i = 0; i < mesh.size(); i++) {
-    Json::Value jIn;
-    jIn[0] = mesh[i][0][0];
-    jIn[1] = mesh[i][0][1];
-    Json::Value jOut;
-    jOut[0] = mesh[i][1][0];
-    jOut[1] = mesh[i][1][1];
-    Json::Value jEntry;
-    jEntry[0] = jIn;
-    jEntry[1] = jOut;
-    jMesh[i] = jEntry;
-  }
-  jDistortion["type"] = jDistortionType;
-  jDistortion["mono_point_samples"] = jMesh;
-  jHmd["distortion"] = jDistortion;
-
-  // Store all of this into the hierarchy.
-  jDisplay["hmd"] = jHmd;
-  jRoot["display"] = jDisplay;
-
-  //====================================================================
-  // Write the complete description.
-  Json::StyledWriter jWriter;
-  std::cout << jWriter.write(jRoot) << std::endl;
-  */
 
   return 0;
 }
