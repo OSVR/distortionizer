@@ -305,13 +305,6 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   // coordinate, storing them into the output mesh.
   mesh.clear();
 
-  // Scale and offset to apply to the input points to normalize them
-  // to screen coordinates.
-  double xInOffset = -left;
-  double xInScale = 1 / (right - left);
-  double yInOffset = -bottom;
-  double yInScale = 1 / (top - bottom);
-
   // Scale and offset to apply to the points projected onto the plane
   // to convert their values into normalized screen coordinates.  This
   // checks the assumption that the screen has some width in the X
@@ -328,10 +321,9 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
 
   for (size_t i = 0; i < mapping.size(); i++) {
 
-    // Scale and offset input coordinates so they are in normalized input
-    // screen coordinates.
-    double xNormIn = (mapping[i].xyLatLong.x + xInOffset) * xInScale;
-    double yNormIn = (mapping[i].xyLatLong.y + yInOffset) * yInScale;
+    // Input point coordinates are already normalized.
+    double xNormIn = mapping[i].xyLatLong.x;
+    double yNormIn = mapping[i].xyLatLong.y;
     std::vector<double> in;
     in.push_back(xNormIn);
     in.push_back(yNormIn);
