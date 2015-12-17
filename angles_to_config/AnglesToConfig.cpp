@@ -130,6 +130,15 @@ typedef std::vector<        //!< Vector of mappings
   >
 > MeshDescription;
 
+static void writeMesh(std::ostream &s, MeshDescription const &mesh)
+{
+  // @todo resolution
+  s << "[" << std::endl;
+  // @todo
+  s << "]" << std::endl;
+}
+
+
 bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   double left, double bottom, double right, double top,
   ScreenDescription &screen, MeshDescription &mesh)
@@ -546,12 +555,59 @@ int main(int argc, char *argv[])
   std::cout << "  \"hmd\": {" << std::endl;
 
   std::cout << "   \"field_of_view\": {" << std::endl;
-  // @todo
+  // @todo resolution
+  std::cout << "    \"monocular_horizontal\": "
+    << screen.hFOVDegrees
+    << "," << std::endl;
+  std::cout << "    \"monocular_vertical\": "
+    << screen.vFOVDegrees
+    << "," << std::endl;
+  std::cout << "    \"overlap_percent\": "
+    << screen.overlapPercent
+    << "," << std::endl;
+  std::cout << "    \"pitch_tilt\": 0" << std::endl;
   std::cout << "   }," << std::endl; // field_of_view
 
-  std::cout << "   \"eyes\": {" << std::endl;
-  // @todo
-  std::cout << "   }" << std::endl; // eyes
+  std::cout << "   \"distortion\": {" << std::endl;
+  std::cout << "    \"type\": \"mono_point_samples\"," << std::endl;
+  std::cout << "    \"mono_point_samples\":" << std::endl;
+  writeMesh(std::cout, mesh);
+  // @todo resolution
+  // @todo distortion
+  std::cout << "   }," << std::endl; // field_of_view
+
+  double leftEyeXCOP, rightEyeXCOP;
+  double invertXCOP = 1.0 - screen.xCOP;
+  if (useRightEye) {
+    leftEyeXCOP = invertXCOP;
+    rightEyeXCOP = screen.xCOP;
+  }
+  else {
+    leftEyeXCOP = screen.xCOP;
+    rightEyeXCOP = invertXCOP;
+  }
+  std::cout << "   \"eyes\": [" << std::endl;
+  std::cout << "    {" << std::endl;
+  // @todo resolution
+  std::cout << "     \"center_proj_x\": "
+    << leftEyeXCOP
+    << "," << std::endl;
+  std::cout << "     \"center_proj_y\": "
+    << screen.yCOP
+    << "," << std::endl;
+  std::cout << "     \"rotate_180\": 0" << std::endl;
+  std::cout << "    }," << std::endl;
+  std::cout << "    {" << std::endl;
+  // @todo resolution
+  std::cout << "     \"center_proj_x\": "
+    << rightEyeXCOP
+    << "," << std::endl;
+  std::cout << "     \"center_proj_y\": "
+    << screen.yCOP
+    << "," << std::endl;
+  std::cout << "     \"rotate_180\": 0" << std::endl;
+  std::cout << "    }" << std::endl;
+  std::cout << "   ]" << std::endl; // eyes
 
   std::cout << "  }" << std::endl;  // hmd
   std::cout << " }" << std::endl;   // display
