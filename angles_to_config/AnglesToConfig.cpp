@@ -24,12 +24,12 @@
 // limitations under the License.
 
 // Internal Includes
-#include <json/json.h>
 
 // Standard includes
 #include <string>
 #include <iostream>
 #include <cmath>
+#include <vector>
 #include <stdlib.h> // For exit()
 
 // Global constants and variables
@@ -538,6 +538,26 @@ int main(int argc, char *argv[])
 
   //====================================================================
   // Construct Json screen description.
+  // We do this by hand rather than using JsonCPP because we need
+  // to control the printed precision of the numbers to avoid making
+  // a huge file.
+  std::cout << "{" << std::endl;
+  std::cout << " \"display\": {" << std::endl;
+  std::cout << "  \"hmd\": {" << std::endl;
+
+  std::cout << "   \"field_of_view\": {" << std::endl;
+  // @todo
+  std::cout << "   }," << std::endl; // field_of_view
+
+  std::cout << "   \"eyes\": {" << std::endl;
+  // @todo
+  std::cout << "   }" << std::endl; // eyes
+
+  std::cout << "  }" << std::endl;  // hmd
+  std::cout << " }" << std::endl;   // display
+  std::cout << "}" << std::endl;    // Closes outer object
+
+  /*
   Json::Value jRoot;
   Json::Value jDisplay;
   Json::Value jHmd;
@@ -603,6 +623,7 @@ int main(int argc, char *argv[])
   // Write the complete description.
   Json::StyledWriter jWriter;
   std::cout << jWriter.write(jRoot) << std::endl;
+  */
 
   return 0;
 }
