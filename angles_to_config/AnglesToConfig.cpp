@@ -577,13 +577,13 @@ int main(int argc, char *argv[])
 
   std::cout << "   \"distortion\": {" << std::endl;
   std::cout << "    \"type\": \"mono_point_samples\"," << std::endl;
-  std::cout << "    \"mono_point_samples\": {" << std::endl;
+  std::cout << "    \"mono_point_samples\": [" << std::endl;
   writeMesh(std::cout, mesh);
   std::cout << "," << std::endl;
   // @todo Figure out which mesh to invert (left or right) and write
   // two different meshes, rather than the same one twice.
   writeMesh(std::cout, mesh);
-  std::cout << "    }" << std::endl; // mono_point_samples
+  std::cout << "    ]" << std::endl; // mono_point_samples
   std::cout << "   }," << std::endl; // distortion
 
   double leftEyeXCOP, rightEyeXCOP;
