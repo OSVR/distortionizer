@@ -372,7 +372,7 @@ void Usage(std::string name)
 int main(int argc, char *argv[])
 {
   // Parse the command line
-  bool rightEye = true;
+  bool useRightEye = true;
   bool computeBounds = true;
   double left, right, bottom, top;
   double depth = 2.0;
@@ -401,9 +401,9 @@ int main(int argc, char *argv[])
       if (++i >= argc) { Usage(argv[0]); }
       std::string eye = argv[i];
       if (eye == "left") {
-        rightEye = false;
+        useRightEye = false;
       } else if (eye == "right") {
-        rightEye = true;
+        useRightEye = true;
       } else {
         std::cerr << "Bad value for -eye: " << eye << ", expected left or right" << std::endl;
         Usage(argv[0]);
@@ -551,6 +551,28 @@ int main(int argc, char *argv[])
   jFOV["overlap_percent"] = jOverlap;
   jFOV["pitch_tilt"] = jPitch;
   jHmd["field_of_view"] = jFOV;
+
+  // Construct Json eye description
+  Json::Value eyes;
+  Json::Value leftEye, rightEye;
+  double leftEyeXCOP, rightEyeXCOP;
+  double invertXCOP = 1.0 - screen.xCOP;
+  if (useRightEye) {
+    leftEyeXCOP = invertXCOP;
+    rightEyeXCOP = screen.xCOP;
+  } else {
+    leftEyeXCOP = screen.xCOP;
+    rightEyeXCOP = invertXCOP;
+  }
+  leftEye["center_proj_x"] = leftEyeXCOP;
+  leftEye["center_proj_y"] = screen.yCOP;
+  leftEye["rotate_180"] = 0;
+  rightEye["center_proj_x"] = rightEyeXCOP;
+  rightEye["center_proj_y"] = screen.yCOP;
+  rightEye["rotate_180"] = 0;
+  eyes[0] = leftEye;
+  eyes[1] = rightEye;
+  jHmd["eyes"] = eyes;
 
   // Construct the Json distortion mesh description and add it to
   // the existing HMD description.
