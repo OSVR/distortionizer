@@ -562,7 +562,6 @@ int main(int argc, char *argv[])
   std::cout << "  \"hmd\": {" << std::endl;
 
   std::cout << "   \"field_of_view\": {" << std::endl;
-  // @todo resolution
   std::cout << "    \"monocular_horizontal\": "
     << screen.hFOVDegrees
     << "," << std::endl;
@@ -598,7 +597,6 @@ int main(int argc, char *argv[])
   }
   std::cout << "   \"eyes\": [" << std::endl;
   std::cout << "    {" << std::endl;
-  // @todo resolution
   std::cout << "     \"center_proj_x\": "
     << leftEyeXCOP
     << "," << std::endl;
@@ -608,7 +606,6 @@ int main(int argc, char *argv[])
   std::cout << "     \"rotate_180\": 0" << std::endl;
   std::cout << "    }," << std::endl;
   std::cout << "    {" << std::endl;
-  // @todo resolution
   std::cout << "     \"center_proj_x\": "
     << rightEyeXCOP
     << "," << std::endl;
@@ -698,7 +695,6 @@ static int testAlgorithms()
       return 500 + entry;
     }
   }
-  // @todo
 
   if (g_verbose) {
     std::cerr << "=================== Successfully finished testAlgorithms()" << std::endl;
