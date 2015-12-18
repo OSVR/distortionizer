@@ -366,6 +366,73 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   return true;
 }
 
+// Produce a mapping that is reflected around X=0 in both angles and
+// screen coordinates.
+static std::vector<Mapping> reflect_mapping(std::vector<Mapping> mapping)
+{
+  std::vector<Mapping> ret;
+  for (size_t i = 0; i < mapping.size(); i++) {
+    ret.push_back(mapping[i]);
+    ret[i].xyLatLong.longitude *= -1;
+    ret[i].xyLatLong.x *= -1;
+  }
+
+  return ret;
+}
+
+static bool convert_to_normalized_and_meters(
+  std::vector<Mapping> &mapping, double toMeters, double depth,
+  double left, double bottom, double right, double top)
+{
+  for (size_t i = 0; i < mapping.size(); i++) {
+    //  Convert the input coordinates from its input space into meters
+    // and then convert (using the screen dimensions) into normalized screen units.
+    mapping[i].xyLatLong.x *= toMeters;
+    mapping[i].xyLatLong.x = (mapping[i].xyLatLong.x - left) / (right - left);
+    mapping[i].xyLatLong.y *= toMeters;
+    mapping[i].xyLatLong.y = (mapping[i].xyLatLong.y - bottom) / (top - bottom);
+
+    // Convert the input latitude and longitude from degrees to radians.
+    mapping[i].xyLatLong.latitude *= MY_PI / 180;
+    mapping[i].xyLatLong.longitude *= MY_PI / 180;
+
+    // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
+    // longitude = 0, lattitude = 0 points along the -Z axis in eye space.
+    // Positive rotation in longitude is towards -X and positive rotation in
+    // latitude points towards +Y.
+    mapping[i].xyz.y = depth * sin(mapping[i].xyLatLong.latitude);
+    mapping[i].xyz.z = -depth * cos(mapping[i].xyLatLong.longitude) * cos(mapping[i].xyLatLong.latitude);
+    mapping[i].xyz.x = -depth * (-sin(mapping[i].xyLatLong.longitude)) * cos(mapping[i].xyLatLong.latitude);
+
+    if (g_verbose) {
+      if (i == 0) {
+        std::cerr << "First point:" << std::endl
+          << " Lat/long rad: " << mapping[i].xyLatLong.latitude
+          << "/" << mapping[i].xyLatLong.longitude
+          << ", norm x,y: " << mapping[i].xyLatLong.x << "," << mapping[i].xyLatLong.y
+          << ", meters x,y,z: " << mapping[i].xyz.x << "," << mapping[i].xyz.y << "," << mapping[i].xyz.z
+          << std::endl;
+      }
+    }
+  }
+
+  // Make sure that the normalized screen coordinates are all within 0 and 1.
+  for (size_t i = 0; i < mapping.size(); i++) {
+    if ((mapping[i].xyLatLong.x < 0) || (mapping[i].xyLatLong.x > 1)) {
+      std::cerr << "Error: Point " << i << " x out of range [0,1]: "
+        << mapping[i].xyLatLong.x << " (increase bounds on -screen or don't specify it)"
+        << std::endl;
+    }
+    if ((mapping[i].xyLatLong.y < 0) || (mapping[i].xyLatLong.y > 1)) {
+      std::cerr << "Error: Point " << i << " y out of range [0,1]: "
+        << mapping[i].xyLatLong.y << " (increase bounds on -screen or don't specify it)"
+        << std::endl;
+    }
+  }
+
+  return true;
+}
+
 void Usage(std::string name)
 {
   std::cerr << "Usage: " << name
@@ -489,67 +556,67 @@ int main(int argc, char *argv[])
   }
 
   //====================================================================
+  // Make an inverse mapping for the opposite eye.  Invert around X in
+  // angle and viewing direction.  Depending on whether we are using the
+  // left or right eye, set the eyes appropriately.
+  //  Also make a different set of screen boundaries for each, again
+  // inverting around X = 0.
+  std::vector<Mapping> leftMapping;
+  std::vector<Mapping> rightMapping;
+  double leftScreenLeft, leftScreenRight, leftScreenBottom, leftScreenTop;
+  double rightScreenLeft, rightScreenRight, rightScreenBottom, rightScreenTop;
+  rightScreenBottom = leftScreenBottom = bottom;
+  rightScreenTop = leftScreenTop = top;
+  if (useRightEye) {
+    rightMapping = mapping;
+    rightScreenLeft = left;
+    rightScreenRight = right;
+
+    leftMapping = reflect_mapping(mapping);
+    leftScreenLeft = -right;
+    leftScreenRight = -left;
+  } else {
+    leftMapping = mapping;
+    leftScreenLeft = left;
+    leftScreenRight = right;
+
+    rightMapping = reflect_mapping(mapping);
+    rightScreenLeft = -right;
+    rightScreenBottom = -left;
+  }
+
+  //====================================================================
   // Convert the input values into normalized coordinates and into 3D
   // locations.
-  for (size_t i = 0; i < mapping.size(); i++) {
-    //  Convert the input coordinates from its input space into meters
-    // and then convert (using the screen dimensions) into normalized screen units.
-    mapping[i].xyLatLong.x *= toMeters;
-    mapping[i].xyLatLong.x = (mapping[i].xyLatLong.x - left) / (right - left);
-    mapping[i].xyLatLong.y *= toMeters;
-    mapping[i].xyLatLong.y = (mapping[i].xyLatLong.y - bottom) / (top - bottom);
-
-    // Convert the input latitude and longitude from degrees to radians.
-    mapping[i].xyLatLong.latitude *= MY_PI / 180;
-    mapping[i].xyLatLong.longitude *= MY_PI / 180;
-
-    // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
-    // longitude = 0, lattitude = 0 points along the -Z axis in eye space.
-    // Positive rotation in longitude is towards -X and positive rotation in
-    // latitude points towards +Y.
-    mapping[i].xyz.y = depth * sin(mapping[i].xyLatLong.latitude);
-    mapping[i].xyz.z = -depth * cos(mapping[i].xyLatLong.longitude) * cos(mapping[i].xyLatLong.latitude);
-    mapping[i].xyz.x = -depth * (-sin(mapping[i].xyLatLong.longitude)) * cos(mapping[i].xyLatLong.latitude);
-
-    if (g_verbose) {
-      if (i == 0) {
-        std::cerr << "First point:" << std::endl
-          << " Lat/long rad: " << mapping[i].xyLatLong.latitude
-          << "/" << mapping[i].xyLatLong.longitude
-          << ", norm x,y: " << mapping[i].xyLatLong.x << "," << mapping[i].xyLatLong.y
-          << ", meters x,y,z: " << mapping[i].xyz.x << "," << mapping[i].xyz.y << "," << mapping[i].xyz.z
-          << std::endl;
-      }
-    }
-  }
-
-  // Make sure that the normalized screen coordinates are all within 0 and 1.
-  for (size_t i = 0; i < mapping.size(); i++) {
-    if ((mapping[i].xyLatLong.x < 0) || (mapping[i].xyLatLong.x > 1)) {
-      std::cerr << "Error: Point " << i << " x out of range [0,1]: "
-        << mapping[i].xyLatLong.x << " (increase bounds on -screen or don't specify it)"
-        << std::endl;
-    }
-    if ((mapping[i].xyLatLong.y < 0) || (mapping[i].xyLatLong.y > 1)) {
-      std::cerr << "Error: Point " << i << " y out of range [0,1]: "
-        << mapping[i].xyLatLong.y << " (increase bounds on -screen or don't specify it)"
-        << std::endl;
-    }
-  }
+  convert_to_normalized_and_meters(leftMapping, toMeters, depth,
+    leftScreenLeft, leftScreenBottom, leftScreenRight, leftScreenTop);
+  convert_to_normalized_and_meters(rightMapping, toMeters, depth,
+    rightScreenLeft, rightScreenBottom, rightScreenRight, rightScreenTop);
 
   //====================================================================
   // Determine the screen description and distortion mesh based on the
   // input points and screen parameters.
-  ScreenDescription screen;
-  MeshDescription mesh;
-  if (!findScreenAndMesh(mapping, left, bottom, right, top, screen, mesh)) {
-    std::cerr << "Error: Could not find screen or mesh" << std::endl;
+  ScreenDescription leftScreen, rightScreen;
+  MeshDescription leftMesh, rightMesh;
+  if (!findScreenAndMesh(leftMapping, leftScreenLeft, leftScreenBottom,
+    leftScreenRight, leftScreenTop, leftScreen, leftMesh)) {
+    std::cerr << "Error: Could not find left screen or mesh" << std::endl;
     return 3;
   }
-  if (mesh.size() != mapping.size()) {
-    std::cerr << "Error: Mesh size " << mesh.size()
+  if (leftMesh.size() != mapping.size()) {
+    std::cerr << "Error: Left mesh size " << leftMesh.size()
       << " does not match mapping size" << mapping.size() << std::endl;
     return 4;
+  }
+  if (!findScreenAndMesh(rightMapping, rightScreenLeft, rightScreenBottom,
+    rightScreenRight, rightScreenTop, rightScreen, rightMesh)) {
+    std::cerr << "Error: Could not find right screen or mesh" << std::endl;
+    return 5;
+  }
+  if (rightMesh.size() != mapping.size()) {
+    std::cerr << "Error: Right mesh size " << rightMesh.size()
+      << " does not match mapping size" << mapping.size() << std::endl;
+    return 6;
   }
 
   //====================================================================
@@ -563,13 +630,13 @@ int main(int argc, char *argv[])
 
   std::cout << "   \"field_of_view\": {" << std::endl;
   std::cout << "    \"monocular_horizontal\": "
-    << screen.hFOVDegrees
+    << rightScreen.hFOVDegrees
     << "," << std::endl;
   std::cout << "    \"monocular_vertical\": "
-    << screen.vFOVDegrees
+    << rightScreen.vFOVDegrees
     << "," << std::endl;
   std::cout << "    \"overlap_percent\": "
-    << screen.overlapPercent
+    << rightScreen.overlapPercent
     << "," << std::endl;
   std::cout << "    \"pitch_tilt\": 0" << std::endl;
   std::cout << "   }," << std::endl; // field_of_view
@@ -577,40 +644,30 @@ int main(int argc, char *argv[])
   std::cout << "   \"distortion\": {" << std::endl;
   std::cout << "    \"type\": \"mono_point_samples\"," << std::endl;
   std::cout << "    \"mono_point_samples\": [" << std::endl;
-  writeMesh(std::cout, mesh);
+  writeMesh(std::cout, leftMesh);
   std::cout << "," << std::endl;
   // @todo Figure out which mesh to invert (left or right) and write
   // two different meshes, rather than the same one twice.
-  writeMesh(std::cout, mesh);
+  writeMesh(std::cout, rightMesh);
   std::cout << "    ]" << std::endl; // mono_point_samples
   std::cout << "   }," << std::endl; // distortion
 
-  double leftEyeXCOP, rightEyeXCOP;
-  double invertXCOP = 1.0 - screen.xCOP;
-  if (useRightEye) {
-    leftEyeXCOP = invertXCOP;
-    rightEyeXCOP = screen.xCOP;
-  }
-  else {
-    leftEyeXCOP = screen.xCOP;
-    rightEyeXCOP = invertXCOP;
-  }
   std::cout << "   \"eyes\": [" << std::endl;
   std::cout << "    {" << std::endl;
   std::cout << "     \"center_proj_x\": "
-    << leftEyeXCOP
+    << leftScreen.xCOP
     << "," << std::endl;
   std::cout << "     \"center_proj_y\": "
-    << screen.yCOP
+    << leftScreen.yCOP
     << "," << std::endl;
   std::cout << "     \"rotate_180\": 0" << std::endl;
   std::cout << "    }," << std::endl;
   std::cout << "    {" << std::endl;
   std::cout << "     \"center_proj_x\": "
-    << rightEyeXCOP
+    << rightScreen.xCOP
     << "," << std::endl;
   std::cout << "     \"center_proj_y\": "
-    << screen.yCOP
+    << rightScreen.yCOP
     << "," << std::endl;
   std::cout << "     \"rotate_180\": 0" << std::endl;
   std::cout << "    }" << std::endl;
