@@ -16,7 +16,8 @@ set (CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};F:/Packages/nVidia/VR_SDK_under_NDA/
 find_package(osvr REQUIRED)
 find_package(jsoncpp REQUIRED)
 if(TARGET jsoncpp_lib_static AND NOT TARGET jsoncpp_lib)
-	add_library(jsoncpp_lib ALIAS jsoncpp_lib_static)
+    add_library(jsoncpp_lib INTERFACE)
+    target_link_libraries(jsoncpp_lib INTERFACE jsoncpp_lib_static)
 endif()
 
 find_package(OpenGL REQUIRED)
