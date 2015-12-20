@@ -15,7 +15,7 @@ set(OSVRRENDERMANAGER_ROOT_DIR
 	"${OSVRRENDERMANAGER_ROOT_DIR}"
 	CACHE
 	PATH
-	"Root directory to search for quatlib")
+	"Root directory to search for RenderManager")
 
 if("${CMAKE_SIZEOF_VOID_P}" MATCHES "8")
 	set(_libsuffixes lib64 lib)
@@ -43,7 +43,9 @@ find_path(OSVRRENDERMANAGER_INCLUDE_DIR
 	PATH_SUFFIXES
 	include
 	PATHS
+	"${_progfiles}/osvrRenderManager"
 	"${_progfiles}/Sensics/osvrRenderManager0.6.18"
+	"${_progfiles}/Sensics/osvrRenderManager0.6.25"
 	)
 
 # Look for the library.
@@ -56,18 +58,20 @@ find_library(OSVRRENDERMANAGER_LIBRARY
 	PATH_SUFFIXES
 	${_libsuffixes}
 	PATHS
+	"${_progfiles}/osvrRenderManager"
 	"${_progfiles}/Sensics/osvrRenderManager0.6.18"
+	"${_progfiles}/Sensics/osvrRenderManager0.6.25"
 	)
 
-# handle the QUIETLY and REQUIRED arguments and set QUATLIB_FOUND to TRUE if
+# handle the QUIETLY and REQUIRED arguments and set OSVRRENDERMANAGER_FOUND to TRUE if
 # all listed variables are TRUE
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(osvrRenderManager
 	DEFAULT_MSG
-	QUATLIB_LIBRARY
-	QUATLIB_INCLUDE_DIR)
+	OSVRRENDERMANAGER_LIBRARY
+	OSVRRENDERMANAGER_INCLUDE_DIR)
 
-if(QUATLIB_FOUND)
+if(OSVRRENDERMANAGER_FOUND)
 	set(OSVRRENDERMANAGER_LIBRARIES ${OSVRRENDERMANAGER_LIBRARY})
 	if(NOT WIN32)
 		list(APPEND OSVRRENDERMANAGER_LIBRARIES m)
