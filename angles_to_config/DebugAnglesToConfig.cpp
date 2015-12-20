@@ -28,6 +28,7 @@
 #include <osvr/ClientKit/InterfaceStateC.h>
 #include <osvr/Client/RenderManagerConfig.h>
 #include "osvr/RenderKit/RenderManager.h"
+#include "types.h"
 
 // Needed for render buffer calls.  OSVR will have called glewInit() for us
 // when we open the display.
@@ -54,85 +55,8 @@
 // Forward declarations of rendering functions defined below.
 void draw_cube(double radius);
 
-// Set to true when it is time for the application to quit.
-// Handlers below that set it to true when the user causes
-// any of a variety of events so that we shut down the system
-// cleanly.  This only works on Windows, but so does D3D...
-static bool quit = false;
-
-// Screen-space to/from angle-space map entry
-class XYLatLong {
-public:
-  double x;
-  double y;
-  double latitude;
-  double longitude;
-
-  XYLatLong(double px, double py, double plat, double plong)
-  {
-    x = px; y = py; latitude = plat; longitude = plong;
-  }
-  XYLatLong() { x = y = latitude = longitude = 0; }
-};
-
-// 3D coordinate
-class XYZ {
-public:
-  double x;
-  double y;
-  double z;
-
-  XYZ(double px, double py, double pz)
-  {
-    x = px; y = py; z = pz;
-  }
-  XYZ() { x = y = z = 0; }
-
-  /// Return the rotation about the Y axis, where 0 rotation points along
-  // the -Z axis and positive rotation heads towards the -X axis.
-  // The X axis in atan space corresponds to the -z axis in head space,
-  // and the Y axis in atan space corresponds to the -x axis in head space.
-  double rotationAboutY() const {
-    return atan2(-x, -z);
-  }
-
-  /// Project from the origin through our point onto a plane whose
-  // equation is specified.
-  XYZ projectOntoPlane(double A, double B, double C, double D) const {
-    XYZ ret;
-
-    // Solve for the value of S that satisfies:
-    //    Asx + Bsy + Csz + D = 0,
-    //    s = -D / (Ax + By + Cz)
-    // Then for the location sx, sy, sz.
-
-    double s = -D / (A*x + B*y + C*z);
-    ret.x = s*x;
-    ret.y = s*y;
-    ret.z = s*z;
-
-    return ret;
-  }
-
-  /// Return the rotation distance from another point.
-  double distanceFrom(const XYZ &p) const {
-    return sqrt((x - p.x)*(x - p.x) + (y - p.y)*(y - p.y) + (z - p.z)*(z - p.z));
-  }
-};
-
-// Mapping entry, along with its associated 3D coordinate
-class Mapping{
-public:
-  XYLatLong xyLatLong;
-  XYZ xyz;
-
-  Mapping(XYLatLong const &ll, XYZ const &x)
-  {
-    xyLatLong = ll;
-    xyz = x;
-  }
-  Mapping() {};
-};
+// Set this to true to cause the program to exit.
+bool quit = false;
 
 // Get an OSVR client context to use to access the devices
 // that we need.
