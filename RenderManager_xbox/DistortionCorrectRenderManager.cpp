@@ -570,22 +570,22 @@ int main(int argc, char *argv[])
     // Initialize the distortion parameters, six parameters but only
     // the linear one is nonzero.
 
-    params.push_back(0);
-    params.push_back(1);
-    params.push_back(0);
-    params.push_back(0);
-    params.push_back(0);
-    params.push_back(0);
-
-    // Closest found so far for HDK 1.3.
     /*
     params.push_back(0);
     params.push_back(1);
-    params.push_back(-0.95);
-    params.push_back(1.88);
-    params.push_back(1.62);
-    params.push_back(1.11);
+    params.push_back(0);
+    params.push_back(0);
+    params.push_back(0);
+    params.push_back(0);
     */
+
+    // Closest found so far for HDK 1.3.
+    params.push_back(0);
+    params.push_back(1);
+    params.push_back(-1.74);
+    params.push_back(5.15);
+    params.push_back(-1.27);
+    params.push_back(-2.23);
 
     // Keep track of time so we can scale UI analog adjustments
     // properly.
