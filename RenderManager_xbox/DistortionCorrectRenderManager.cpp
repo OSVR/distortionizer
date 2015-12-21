@@ -190,6 +190,16 @@ void setParams(void *userdata, const OSVR_TimeValue * /*timestamp*/,
     // Send a new set of parameters to construct a distortion mesh.
     render->UpdateDistortionMeshes(osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
       distortionParams);
+
+    // Print the parameters to the console, so we can know what was set.
+    std::cout << "Params: ";
+    if (params.size() > 0) {
+      std::cout << params[0];
+    }
+    for (size_t i = 1; i < params.size(); i++) {
+      std::cout << ", " << params[i];
+    }
+    std::cout << std::endl;
   }
 }
 
