@@ -188,7 +188,7 @@ void setParams(void *userdata, const OSVR_TimeValue * /*timestamp*/,
     distortionParams.push_back(distortionRight);
 
     // Send a new set of parameters to construct a distortion mesh.
-    render->UpdateDistortionMesh(osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
+    render->UpdateDistortionMeshes(osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
       distortionParams);
   }
 }
