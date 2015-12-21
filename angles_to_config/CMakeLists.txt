@@ -17,11 +17,11 @@ if(TARGET jsoncpp_lib_static AND NOT TARGET jsoncpp_lib)
 endif()
 
 #-----------------------------------------------------------------------------
-add_executable(AnglesToConfig AnglesToConfig.cpp)
+add_executable(AnglesToConfig AnglesToConfig.cpp helper.cpp)
 
 if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND)
   include_directories(${OSVRRENDERMANAGER_INCLUDE_DIRS})
 
-  add_executable(DebugAnglesToConfig DebugAnglesToConfig.cpp)
+  add_executable(DebugAnglesToConfig DebugAnglesToConfig.cpp helper.cpp)
   target_link_libraries(DebugAnglesToConfig PRIVATE ${OSVRRENDERMANAGER_LIBRARIES} osvr::osvrClientKitCpp osvr::osvrClient osvr::osvrCommon ${OPENGL_LIBRARY} GLEW::GLEW SDL2::SDL2 jsoncpp_lib)
 endif()

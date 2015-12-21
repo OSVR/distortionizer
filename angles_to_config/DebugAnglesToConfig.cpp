@@ -29,6 +29,7 @@
 #include <osvr/Client/RenderManagerConfig.h>
 #include "osvr/RenderKit/RenderManager.h"
 #include "types.h"
+#include "helper.h"
 
 // Needed for render buffer calls.  OSVR will have called glewInit() for us
 // when we open the display.
@@ -527,14 +528,16 @@ int main(int argc, char *argv[])
     quit = true;
   }
 
-  // Figure out the normalized screen coordinates for the "forwards"
+  // Locate the normalized screen coordinates for the "forwards"
   // direction in the left and right screens; this is the direction
   // where the angles are both 0.
   // @todo if exact sample not found, interpolate between nearest three
   // non-collinear points.
+  convert_to_normalized_and_meters(mapping, toMeters, depth,
+    left, bottom, right, top);
   XY forward;
-  forward.x = -10;    // Start out off-screen
-  forward.y = -10;  // Start out off-screen
+  forward.x = -1e5;    // Start out off-screen
+  forward.y = -1e5;  // Start out off-screen
   for (size_t i = 0; i < mapping.size(); i++) {
     if ((mapping[i].xyLatLong.latitude == 0) &&
         (mapping[i].xyLatLong.longitude == 0)) {
@@ -542,10 +545,6 @@ int main(int argc, char *argv[])
       forward.y = mapping[i].xyLatLong.y;
     }
   }
-
-  // Compute the normalized location w.r.t. the screen.
-  forward.x = (forward.x - left) / (right - left);
-  forward.y = (forward.y - bottom) / (top - bottom);
 
   XY leftForward;
   XY rightForward;
