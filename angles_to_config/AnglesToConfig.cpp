@@ -330,7 +330,7 @@ static int testAlgorithms()
 
   // Construct a set of points that should make a square screen with no distortion
   // that has a 90 degree horizontal and vertical field of view and the identity
-  // distortion correction.
+  // distortion correction and that is oriented straight ahead.
   Mapping p1(XYLatLong(0, 0, -45, -45), XYZ(-1, -1, -1));
   Mapping p2(XYLatLong(1, 0,  45, -45), XYZ( 1, -1, -1));
   Mapping p3(XYLatLong(1, 1,  45,  45), XYZ( 1,  1, -1));
@@ -387,6 +387,69 @@ static int testAlgorithms()
         << " (got " << mesh[entry][outIndex][1]
         << ", expected " << mapping[entry].xyLatLong.y << ")" << std::endl;
       return 500 + entry;
+    }
+  }
+
+  // Construct a set of points that should make a square screen with no distortion
+  // that has a 90 degree horizontal and vertical field of view and the identity
+  // distortion correction, but which is rotated 45 degrees with respect to straight
+  // ahead.
+  Mapping rp1(XYLatLong(0, 0, 0, -45), XYZ(0, -1, -sqrt(2)));
+  Mapping rp2(XYLatLong(1, 0, 90, -45), XYZ(sqrt(2), -1, 0));
+  Mapping rp3(XYLatLong(1, 1, 90, 45), XYZ(sqrt(2), 1, 0));
+  Mapping rp4(XYLatLong(0, 1, 0, 45), XYZ(0, 1, -sqrt(2)));
+  std::vector<Mapping> rmapping;
+  rmapping.push_back(rp1);
+  rmapping.push_back(rp2);
+  rmapping.push_back(rp3);
+  rmapping.push_back(rp4);
+
+  // Find the screen associated with this mapping.
+  ScreenDescription rscreen;
+  MeshDescription rmesh;
+  if (!findScreenAndMesh(rmapping, 0, 0, 1, 1, rscreen, rmesh, g_verbose)) {
+    std::cerr << "testAlgorithms(): Could not find rotated screen" << std::endl;
+    return 600;
+  }
+
+  // Make sure the screen has the expected behavior.
+  if (!small(rscreen.hFOVDegrees - 90)) {
+    std::cerr << "testAlgorithms(): rotated hFOV not near 90: " << rscreen.hFOVDegrees << std::endl;
+    return 701;
+  }
+  if (!small(rscreen.vFOVDegrees - 90)) {
+    std::cerr << "testAlgorithms(): rotated vFOV not near 90: " << rscreen.vFOVDegrees << std::endl;
+    return 702;
+  }
+  if (!small(rscreen.overlapPercent - 0)) {
+    std::cerr << "testAlgorithms(): Rotated overlap percent not near 0: " << rscreen.overlapPercent << std::endl;
+    return 703;
+  }
+  if (!small(rscreen.xCOP - 0.5)) {
+    std::cerr << "testAlgorithms(): Rotated xCOP not near 0.5: " << rscreen.xCOP << std::endl;
+    return 704;
+  }
+  if (!small(rscreen.yCOP - 0.5)) {
+    std::cerr << "testAlgorithms(): Rotated yCOP not near 0.5: " << rscreen.yCOP << std::endl;
+    return 705;
+  }
+
+  // Make sure the mesh has the expected behavior.
+  if (rmesh.size() != rmapping.size()) {
+    std::cerr << "testAlgorithms(): Rotated mesh size does not match mapping size: " << mesh.size() << std::endl;
+    return 801;
+  }
+  for (int entry = 0; entry < rmesh.size(); entry++) {
+    size_t outIndex = 1;
+    if (!small(rmesh[entry][outIndex][0] - rmapping[entry].xyLatLong.x)) {
+      std::cerr << "testAlgorithms(): Rotated X normalized mesh mismatch for element: " << entry << std::endl;
+      return 800 + entry;
+    }
+    if (!small(rmesh[entry][outIndex][1] - rmapping[entry].xyLatLong.y)) {
+      std::cerr << "testAlgorithms(): Rotated Y normalized mesh mismatch for element: " << entry
+        << " (got " << rmesh[entry][outIndex][1]
+        << ", expected " << rmapping[entry].xyLatLong.y << ")" << std::endl;
+      return 900 + entry;
     }
   }
 
