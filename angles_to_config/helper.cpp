@@ -201,22 +201,34 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   // Figure out the overlap percent for the screen that corresponds to
   // the angle between straight ahead and the normal to the plane.  First
   // find the angle itself, and then the associated overlap percent.
-  // The angle is determined based on the unit normal to the plane,
+  // The percent overlap assumes that the center of projection is at the
+  // center of the screen and that both eyes are at the origin (discounts
+  // the IPD).
+  // The angle is determined by finding the location at which the vector
+  // along the -Z axis from the eye location (which is at the origin)
+  // pierces the screen.  The angle between this vector and the normal
+  // to the plane of the screen determines how much to rotate the screen.
+  // Because the angle between forward direction and the -Z axis is 0,
+  // the angle depends only on the unit normal to the plane,
   // which is (A,B,C), but B = 0 and we only care about rotation
   // around the Y axis.  For the purpose of the atan function, the part
   // of X is played by the -Z axis and the part of Y is played by the
   // -X axis.  A is associated with the X axis and C with the Z axis.
-  // Here is the code we are inverting...
+  // Here is the code we are inverting to go from angle to overlap...
   //  double overlapFrac = m_params.m_displayConfiguration.getOverlapPercent();
   //  const auto hfov = m_params.m_displayConfiguration.getHorizontalFOV();
   //  const auto angularOverlap = hfov * overlapFrac;
-  //  rotateEyesApart = (hfov - angularOverlap) / 2.;
+  //  rotateEyesApart = (hfov - angularOverlap) / 2;
   // Here is the inversion:
-  //  rotateEyesApart = (hfov - (hfov * overlapFrac));
-  //  rotateEyesApart - hfov = - hfov * overlapFrac;
-  //  1 - rotateEyesApart/hfov = overlapFrac
+  //  rotateEyesApart = (hfov - (hfov * overlapFrac)) / 2;
+  //  2 * rotateEyesApart = (hfov - (hfov * overlapFrac));
+  //  2 * rotateEyesApart - hfov = - hfov * overlapFrac;
+  //  1 - 2*rotateEyesApart/hfov = overlapFrac
   double angleRadians = fabs(atan2(A, C));
-  double overlapFrac = 1 - angleRadians / hFOVRadians;
+  if (verbose) {
+    std::cerr << "Angle degrees: " << angleRadians * 180 / MY_PI << std::endl;
+  }
+  double overlapFrac = 1 - 2 * angleRadians / hFOVRadians;
   double overlapPercent = overlapFrac * 100;
   if (verbose) {
     std::cerr << "Overlap percent: " << overlapPercent << std::endl;
