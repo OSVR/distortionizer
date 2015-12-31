@@ -56,227 +56,6 @@ static void writeMesh(std::ostream &s, MeshDescription const &mesh)
   s << "]" << std::endl;
 }
 
-
-bool findScreenAndMesh(const std::vector<Mapping> &mapping,
-  double left, double bottom, double right, double top,
-  ScreenDescription &screen, MeshDescription &mesh)
-{
-  //====================================================================
-  // Figure out the X screen-space extents.
-  // The X screen-space extents are defined by the lines perpendicular to the
-  // Y axis passing through:
-  //  left: the point location whose reprojection into the Y = 0 plane has the most -
-  //        positive angle(note that this may not be the point with the largest
-  //        longitudinal coordinate, because of the impact of changing latitude on
-  //        X - Z position).
-  //  right : the point location whose reprojection into the Y = 0 plane has the most -
-  //        negative angle(note that this may not be the point with the smallest
-  //        longitudinal coordinate, because of the impact of changing latitude on
-  //        X - Z position).
-  XYZ screenLeft, screenRight;
-  screenLeft = screenRight = mapping[0].xyz;
-  if (g_verbose) {
-    std::cerr << "First point rotation about Y (degrees): "
-      << screenLeft.rotationAboutY() * 180 / MY_PI << std::endl;
-  }
-  for (size_t i = 0; i < mapping.size(); i++) {
-    if (mapping[i].xyz.rotationAboutY() > screenLeft.rotationAboutY()) {
-      screenLeft = mapping[i].xyz;
-    }
-    if (mapping[i].xyz.rotationAboutY() < screenRight.rotationAboutY()) {
-      screenRight = mapping[i].xyz;
-    }
-  }
-  if (g_verbose) {
-    std::cerr << "Horizontal angular range: "
-      << 180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY())
-      << std::endl;
-  }
-  if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
-    std::cerr << "Error: Field of view > 180 degrees: found " <<
-      180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY())
-      << std::endl;
-    return false;
-  }
-
-  //====================================================================
-  // Find the plane of the screen, using the equation that has the normal
-  // pointing towards the origin.  This is AX + BY + CZ + D = 0, where the
-  // normal is in A, B, C and the offset is in D.
-  //   Two points on the plane are given above.  Two more are the projection
-  // of each of these points into the Y=0 plane.  We take the cross
-  // product of the line from the left-most projected point to the right-
-  // most projected point with the vertical line to get the normal to that
-  // plane that points towards the origin.  Then we normalize this and plug
-  // it back into the equation to solve for D.
-  //   We're crossing with the vector (0, 1, 0), so we get:
-  //   x = -dz
-  //   y = 0
-  //   z = dx
-  double dx = screenRight.x - screenLeft.x;
-  double dz = screenRight.z - screenLeft.z;
-  double A = -dz;
-  double B = 0;
-  double C = dx;
-  double len = sqrt(A*A + B*B + C*C);
-  A /= len;
-  B /= len;
-  C /= len;
-  double D = -(A*screenRight.x + B*screenRight.y + C*screenRight.z);
-  if (g_verbose) {
-    std::cerr << "Plane of the screen A,B,C, D: "
-      << A << "," << B << "," << C << ", " << D
-      << std::endl;
-  }
-
-  //====================================================================
-  // Figure out the Y screen-space extents.
-  // The Y screen-space extents are symmetric and correspond to the lines parallel
-  //  to the screen X axis that are within the plane of the X line specifying the
-  //  axis extents at the largest magnitude angle up or down from the horizontal.
-  // Find the highest-magnitude Y value of all points when they are
-  // projected into the plane of the screen.
-  double maxY = fabs(mapping[0].xyz.projectOntoPlane(A, B, C, D).y);
-  for (size_t i = 1; i < mapping.size(); i++) {
-    double Y = fabs(mapping[i].xyz.projectOntoPlane(A, B, C, D).y);
-    if (Y > maxY) { maxY = Y; }
-  }
-  if (g_verbose) {
-    std::cerr << "Maximum-magnitude Y projection: " << maxY << std::endl;
-  }
-
-  //====================================================================
-  // Figure out the monocular horizontal field of view for the screen.
-  // Find the distance between the left and right points projected
-  // into the Y=0 plane.  The FOV is twice the arctangent of half of this
-  // distance divided by the distance to the screen.
-  XYZ leftProj = screenLeft;
-  XYZ rightProj = screenRight;
-  leftProj.y = 0;
-  rightProj.y = 0;
-  double screenWidth = leftProj.distanceFrom(rightProj);
-  if (g_verbose) {
-    std::cerr << "Screen width: " << screenWidth << std::endl;
-  }
-  double hFOVRadians = 2 * atan((screenWidth / 2) / fabs(D));
-  double hFOVDegrees = hFOVRadians * 180 / MY_PI;
-  if (g_verbose) {
-    std::cerr << "Horizontal field of view (degrees): " << hFOVDegrees<< std::endl;
-  }
-
-  //====================================================================
-  // Figure out the monocular vertical field of view for the screen.
-  // The FOV is twice the arctangent of half of the Y
-  // distance divided by the distance to the screen.
-  double vFOVRadians = 2 * atan(maxY / fabs(D));
-  double vFOVDegrees = vFOVRadians * 180 / MY_PI;
-  if (g_verbose) {
-    std::cerr << "Vertical field of view (degrees): " << vFOVDegrees << std::endl;
-  }
-
-  //====================================================================
-  // Figure out the overlap percent for the screen that corresponds to
-  // the angle between straight ahead and the normal to the plane.  First
-  // find the angle itself, and then the associated overlap percent.
-  // The angle is determined based on the unit normal to the plane,
-  // which is (A,B,C), but B = 0 and we only care about rotation
-  // around the Y axis.  For the purpose of the atan function, the part
-  // of X is played by the -Z axis and the part of Y is played by the
-  // -X axis.  A is associated with the X axis and C with the Z axis.
-  // Here is the code we are inverting...
-  //  double overlapFrac = m_params.m_displayConfiguration.getOverlapPercent();
-  //  const auto hfov = m_params.m_displayConfiguration.getHorizontalFOV();
-  //  const auto angularOverlap = hfov * overlapFrac;
-  //  rotateEyesApart = (hfov - angularOverlap) / 2.;
-  // Here is the inversion:
-  //  rotateEyesApart = (hfov - (hfov * overlapFrac));
-  //  rotateEyesApart - hfov = - hfov * overlapFrac;
-  //  1 - rotateEyesApart/hfov = overlapFrac
-  double angleRadians = fabs(atan2(A, C));
-  double overlapFrac = 1 - angleRadians / hFOVRadians;
-  double overlapPercent = overlapFrac * 100;
-  if (g_verbose) {
-    std::cerr << "Overlap percent: " << overlapPercent<< std::endl;
-  }
-
-  //====================================================================
-  // Figure out the center of projection for the screen.  This is the
-  // location where a line from the origin perpendicular to the screen
-  // pierces the screen.
-  // Then figure out the normalized coordinates of this point in screen
-  // space, which is the fraction of the way from the left to the right
-  // of the screen.  It is always (by construction above) in the center
-  // of the screen in Y.
-  // Also, by construction it is at a distance D along the (A,B,C) unit
-  // vector from the origin.
-  double yCOP = 0.5;
-  XYZ projection;
-  projection.x = -D * A;
-  projection.y = -D * B;
-  projection.z = -D * C;
-  double xCOP = leftProj.distanceFrom(projection) / leftProj.distanceFrom(rightProj);
-  if (g_verbose) {
-    std::cerr << "Center of projection x,y: " << xCOP << ", " << yCOP << std::endl;
-  }
-
-  //====================================================================
-  // Fill in the screen parameters.
-  screen.hFOVDegrees = hFOVDegrees;
-  screen.vFOVDegrees = vFOVDegrees;
-  screen.overlapPercent = overlapPercent;
-  screen.xCOP = xCOP;
-  screen.yCOP = yCOP;
-
-  //====================================================================
-  // Map each incoming mesh coordinate into the corresponding output
-  // coordinate, storing them into the output mesh.
-  mesh.clear();
-
-  // Scale and offset to apply to the points projected onto the plane
-  // to convert their values into normalized screen coordinates.  This
-  // checks the assumption that the screen has some width in the X
-  // coordinate (not rotated 90 degrees) and uses only the X value to
-  // scale X.
-  if (leftProj.x == rightProj.x) {
-    std::cerr << "Error computing mesh: screen has no X extent" << std::endl;
-    return false;
-  }
-  double xOutOffset = -leftProj.x;
-  double xOutScale = 1 / (rightProj.x - leftProj.x);
-  double yOutOffset = maxY; // Negative of negative maxY
-  double yOutScale = 1 / (2 * maxY);
-
-  for (size_t i = 0; i < mapping.size(); i++) {
-
-    // Input point coordinates are already normalized.
-    double xNormIn = mapping[i].xyLatLong.x;
-    double yNormIn = mapping[i].xyLatLong.y;
-    std::vector<double> in;
-    in.push_back(xNormIn);
-    in.push_back(yNormIn);
-
-    // Project the 3D points back into the plane of the screen and determine
-    // the normalized coordinates in the coordinate system with the lower left
-    // corner at (0,0) and the upper right at (1,1).  Because we oversized the
-    // screen, these will all be in this range.  Otherwise, they might not be.
-    XYZ onScreen = mapping[i].xyz.projectOntoPlane(A, B, C, D);
-    double xNormOut = (onScreen.x + xOutOffset) * xOutScale;
-    double yNormOut = (onScreen.y + yOutOffset) * yOutScale;
-    std::vector<double> out;
-    out.push_back(xNormOut);
-    out.push_back(yNormOut);
-
-    // Add a new entry onto the mesh
-    std::vector< std::vector<double> > element;
-    element.push_back(in);
-    element.push_back(out);
-
-    mesh.push_back(element);
-  }
-
-  return true;
-}
-
 // Produce a mapping that is reflected around X=0 in both angles and
 // screen coordinates.
 static std::vector<Mapping> reflect_mapping(std::vector<Mapping> mapping)
@@ -457,7 +236,7 @@ int main(int argc, char *argv[])
   ScreenDescription leftScreen, rightScreen;
   MeshDescription leftMesh, rightMesh;
   if (!findScreenAndMesh(leftMapping, leftScreenLeft, leftScreenBottom,
-    leftScreenRight, leftScreenTop, leftScreen, leftMesh)) {
+    leftScreenRight, leftScreenTop, leftScreen, leftMesh, g_verbose)) {
     std::cerr << "Error: Could not find left screen or mesh" << std::endl;
     return 3;
   }
@@ -467,7 +246,7 @@ int main(int argc, char *argv[])
     return 4;
   }
   if (!findScreenAndMesh(rightMapping, rightScreenLeft, rightScreenBottom,
-    rightScreenRight, rightScreenTop, rightScreen, rightMesh)) {
+    rightScreenRight, rightScreenTop, rightScreen, rightMesh, g_verbose)) {
     std::cerr << "Error: Could not find right screen or mesh" << std::endl;
     return 5;
   }
@@ -565,7 +344,7 @@ static int testAlgorithms()
   // Find the screen associated with this mapping.
   ScreenDescription screen;
   MeshDescription mesh;
-  if (!findScreenAndMesh(mapping, 0, 0, 1, 1, screen, mesh)) {
+  if (!findScreenAndMesh(mapping, 0, 0, 1, 1, screen, mesh, g_verbose)) {
     std::cerr << "testAlgorithms(): Could not find screen" << std::endl;
     return 100;
   }
