@@ -212,6 +212,10 @@ void RenderView(
   // Draw a cube with a 5-meter radius as the room we are floating in.
   draw_cube(5.0);
 
+  // Draw another cube 1 meter along the -Z axis
+  glTranslated(0, 0, -1);
+  draw_cube(0.1);
+
   // =================================================================
   // Now we want to draw things in screen space, so we construct new
   // projection and modelview matrices to do orthographic projection
