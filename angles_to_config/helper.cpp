@@ -59,7 +59,7 @@ bool convert_to_normalized_and_meters(
     mapping[i].xyz.x = -depth * (-sin(mapping[i].xyLatLong.longitude)) * cos(mapping[i].xyLatLong.latitude);
   }
 
-  // Make sure that the normalized screen coordinates are all within 0 and 1.
+  // Make sure that the normalized screen coordinates are all within the range 0 to 1.
   for (size_t i = 0; i < mapping.size(); i++) {
     if ((mapping[i].xyLatLong.x < 0) || (mapping[i].xyLatLong.x > 1)) {
       std::cerr << "Error: Point " << i << " x out of range [0,1]: "
@@ -80,6 +80,12 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   double left, double bottom, double right, double top,
   ScreenDescription &screen, MeshDescription &mesh, bool verbose)
 {
+  if (mapping.size() == 0) {
+    std::cerr << "findScreenAndMesh(): Error: No points in mapping" 
+      << std::endl;
+    return false;
+  }
+
   //====================================================================
   // Figure out the X screen-space extents.
   // The X screen-space extents are defined by the lines perpendicular to the
@@ -112,7 +118,7 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
       << std::endl;
   }
   if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
-    std::cerr << "Error: Field of view > 180 degrees: found " <<
+    std::cerr << "findScreenAndMesh(): Error: Field of view > 180 degrees: found " <<
       180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY())
       << std::endl;
     return false;
