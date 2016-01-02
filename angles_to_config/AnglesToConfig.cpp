@@ -326,13 +326,26 @@ static int testAlgorithms()
     std::cerr << "=================== Starting testAlgorithms()" << std::endl;
   }
 
+  // The latitude to use is less than 45 degrees at the corners of the
+  // cube.  Wolfram's online calculator reports it as the arcsine of
+  // the square root of 2/3, but that is the angle down from Pi/2, so
+  // we convert it here to that coordinate system and to degrees.
+  double phi = 90 - (180 / MY_PI * asin(sqrt(2.0 / 3.0)));
+
+  // The longitude of the corners of the cube is 45 degrees.
+  double theta = 45;
+
+  // The distance to the corners of the unit cube is the square root
+  // of the sum of the squares of the distance.
+  double depth = sqrt(3);
+
   // Construct a set of points that should make a square screen with no distortion
   // that has a 90 degree horizontal and vertical field of view and the identity
   // distortion correction and that is oriented straight ahead.
-  Mapping p1(XYLatLong(0, 0, -45, -45), XYZ(-1, -1, -1));
-  Mapping p2(XYLatLong(1, 0,  45, -45), XYZ( 1, -1, -1));
-  Mapping p3(XYLatLong(1, 1,  45,  45), XYZ( 1,  1, -1));
-  Mapping p4(XYLatLong(0, 1, -45,  45), XYZ(-1,  1, -1));
+  Mapping p1(XYLatLong(0, 0, -phi, -theta), XYZ(-1, -1, -1));
+  Mapping p2(XYLatLong(1, 0, -phi,  theta), XYZ( 1, -1, -1));
+  Mapping p3(XYLatLong(1, 1,  phi,  theta), XYZ( 1,  1, -1));
+  Mapping p4(XYLatLong(0, 1,  phi, -theta), XYZ(-1,  1, -1));
   std::vector<Mapping> mapping;
   mapping.push_back(p1);
   mapping.push_back(p2);
@@ -340,6 +353,11 @@ static int testAlgorithms()
   mapping.push_back(p4);
 
   // Find the screen associated with this mapping.
+  if (!convert_to_normalized_and_meters(mapping, 1, depth,
+    0, 0, 1, 1)) {
+    std::cerr << "testAlgorithms(): Could not normalize points" << std::endl;
+    return 100;
+  }
   ScreenDescription screen;
   MeshDescription mesh;
   if (!findScreenAndMesh(mapping, 0, 0, 1, 1, screen, mesh, g_verbose)) {
@@ -392,10 +410,11 @@ static int testAlgorithms()
   // that has a 90 degree horizontal and vertical field of view and the identity
   // distortion correction, but which is rotated 45 degrees with respect to straight
   // ahead.
-  Mapping rp1(XYLatLong(0, 0, 0, -45), XYZ(0, -1, -sqrt(2)));
-  Mapping rp2(XYLatLong(1, 0, 90, -45), XYZ(sqrt(2), -1, 0));
-  Mapping rp3(XYLatLong(1, 1, 90, 45), XYZ(sqrt(2), 1, 0));
-  Mapping rp4(XYLatLong(0, 1, 0, 45), XYZ(0, 1, -sqrt(2)));
+  // In this case, the distance to the points is sqrt(2).
+  Mapping rp1(XYLatLong(0, 0, 0, -theta), XYZ(0, -1, -sqrt(2)));
+  Mapping rp2(XYLatLong(1, 0, 90, -theta), XYZ(sqrt(2), -1, 0));
+  Mapping rp3(XYLatLong(1, 1, 90, theta), XYZ(sqrt(2), 1, 0));
+  Mapping rp4(XYLatLong(0, 1, 0, theta), XYZ(0, 1, -sqrt(2)));
   std::vector<Mapping> rmapping;
   rmapping.push_back(rp1);
   rmapping.push_back(rp2);
@@ -467,21 +486,21 @@ static int testAlgorithms()
   std::vector<double> dExpectedXIn, dExpectedYIn;
   std::vector<double> dExpectedXOut, dExpectedYOut;
 
-  Mapping dp1(XYLatLong(0.1, 0.1, -45, -45), XYZ(-1, -1, -1));
+  Mapping dp1(XYLatLong(0.1, 0.1, -phi, -theta), XYZ(-1, -1, -1));
   dExpectedXIn.push_back(0.1); dExpectedYIn.push_back(0.1);
-  dExpectedXOut.push_back(0.0); dExpectedYIn.push_back(0.0);
-  Mapping dp2(XYLatLong(0.9, 0.1,  45, -45), XYZ( 1, -1, -1));
+  dExpectedXOut.push_back(0.0); dExpectedYOut.push_back(0.0);
+  Mapping dp2(XYLatLong(0.9, 0.1, -phi, theta), XYZ(1, -1, -1));
   dExpectedXIn.push_back(0.9); dExpectedYIn.push_back(0.1);
   dExpectedXOut.push_back(1.0); dExpectedYOut.push_back(0.0);
-  Mapping dp3(XYLatLong(0.9, 0.9,  45,  45), XYZ( 1,  1, -1));
+  Mapping dp3(XYLatLong(0.9, 0.9, phi, theta), XYZ(1, 1, -1));
   dExpectedXIn.push_back(0.9); dExpectedYIn.push_back(0.9);
   dExpectedXOut.push_back(1.0); dExpectedYOut.push_back(1.0);
-  Mapping dp4(XYLatLong(0.1, 0.9, -45,  45), XYZ(-1,  1, -1));
+  Mapping dp4(XYLatLong(0.1, 0.9, phi, -theta), XYZ(-1, 1, -1));
   dExpectedXIn.push_back(0.1); dExpectedYIn.push_back(0.9);
   dExpectedXOut.push_back(0.0); dExpectedYOut.push_back(1.0);
-  Mapping dp5(XYLatLong(0.5, 0.5, -15,  15), XYZ(-1,  1, -1));
-  dExpectedXIn.push_back(0.5); dExpectedYIn.push_back(0.9);
-  dExpectedXOut.push_back(30.0/90.0); dExpectedYOut.push_back(60.0/90.0);
+  Mapping dp5(XYLatLong(0.2, 0.3, 0,  0), XYZ(0, 0, -depth));
+  dExpectedXIn.push_back(0.2); dExpectedYIn.push_back(0.3);
+  dExpectedXOut.push_back(0.5); dExpectedYOut.push_back(0.5);
   std::vector<Mapping> dmapping;
   dmapping.push_back(dp1);
   dmapping.push_back(dp2);
@@ -491,7 +510,7 @@ static int testAlgorithms()
 
   // Normalize the mapping and make sure the results are as expected.
   std::vector<Mapping> ndmapping = dmapping;
-  if (!convert_to_normalized_and_meters(ndmapping, 1, sqrt(3),
+  if (!convert_to_normalized_and_meters(ndmapping, 1, depth,
       0, 0, 1, 1)) {
     std::cerr << "testAlgorithms(): Could not normalize distorted points" << std::endl;
     return 1100;
