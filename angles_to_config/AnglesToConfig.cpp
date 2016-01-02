@@ -283,8 +283,6 @@ int main(int argc, char *argv[])
   std::cout << "    \"mono_point_samples\": [" << std::endl;
   writeMesh(std::cout, leftMesh);
   std::cout << "," << std::endl;
-  // @todo Figure out which mesh to invert (left or right) and write
-  // two different meshes, rather than the same one twice.
   writeMesh(std::cout, rightMesh);
   std::cout << "    ]" << std::endl; // mono_point_samples
   std::cout << "   }," << std::endl; // distortion
@@ -450,6 +448,140 @@ static int testAlgorithms()
         << " (got " << rmesh[entry][outIndex][1]
         << ", expected " << rmapping[entry].xyLatLong.y << ")" << std::endl;
       return 900 + entry;
+    }
+  }
+
+  // Construct a set of points that should make a square screen with distortion
+  // that has a 90 degree horizontal and vertical field of view 
+  // that is oriented straight ahead.  Make the points not cover the entire
+  // screen so that we can test the impact of the oversize parameters.
+
+  // The expected results, based on a screen that goes from 0-1 in X and Y.
+  // The mapping goes from physical display-normalized coordinates to
+  // normalized coordinates in the canonical display.
+  // This places the normalized output texture coordinates in the range from
+  // 0.1 to 0.9 and the normalized input texture coordinates into the range
+  // 0 to 1 (covering the whole virtual viewport).  The center point has an
+  // input coordinate in the center of the input space but not in the center
+  // of the output space.
+  std::vector<double> dExpectedXIn, dExpectedYIn;
+  std::vector<double> dExpectedXOut, dExpectedYOut;
+
+  Mapping dp1(XYLatLong(0.1, 0.1, -45, -45), XYZ(-1, -1, -1));
+  dExpectedXIn.push_back(0.1); dExpectedYIn.push_back(0.1);
+  dExpectedXOut.push_back(0.0); dExpectedYIn.push_back(0.0);
+  Mapping dp2(XYLatLong(0.9, 0.1,  45, -45), XYZ( 1, -1, -1));
+  dExpectedXIn.push_back(0.9); dExpectedYIn.push_back(0.1);
+  dExpectedXOut.push_back(1.0); dExpectedYOut.push_back(0.0);
+  Mapping dp3(XYLatLong(0.9, 0.9,  45,  45), XYZ( 1,  1, -1));
+  dExpectedXIn.push_back(0.9); dExpectedYIn.push_back(0.9);
+  dExpectedXOut.push_back(1.0); dExpectedYOut.push_back(1.0);
+  Mapping dp4(XYLatLong(0.1, 0.9, -45,  45), XYZ(-1,  1, -1));
+  dExpectedXIn.push_back(0.1); dExpectedYIn.push_back(0.9);
+  dExpectedXOut.push_back(0.0); dExpectedYOut.push_back(1.0);
+  Mapping dp5(XYLatLong(0.5, 0.5, -15,  15), XYZ(-1,  1, -1));
+  dExpectedXIn.push_back(0.5); dExpectedYIn.push_back(0.9);
+  dExpectedXOut.push_back(30.0/90.0); dExpectedYOut.push_back(60.0/90.0);
+  std::vector<Mapping> dmapping;
+  dmapping.push_back(dp1);
+  dmapping.push_back(dp2);
+  dmapping.push_back(dp3);
+  dmapping.push_back(dp4);
+  dmapping.push_back(dp5);
+
+  // Normalize the mapping and make sure the results are as expected.
+  std::vector<Mapping> ndmapping = dmapping;
+  if (!convert_to_normalized_and_meters(ndmapping, 1, sqrt(3),
+      0, 0, 1, 1)) {
+    std::cerr << "testAlgorithms(): Could not normalize distorted points" << std::endl;
+    return 1100;
+  }
+  for (int entry = 0; entry < ndmapping.size(); entry++) {
+    size_t outIndex = 1;
+
+    /*
+    if (!small(ndmapping[entry].xyz.x - dmapping[entry].xyz.x)) {
+      std::cerr << "testAlgorithms(): Distorted X coord mismatch for element: " << entry
+      << " (found " << ndmapping[entry].xyz.x
+      << ", expected " << dmapping[entry].xyz.x << ")"
+      << std::endl;
+      return 1100 + 3*entry;
+    }
+    if (!small(ndmapping[entry].xyz.y - dmapping[entry].xyz.y)) {
+      std::cerr << "testAlgorithms(): Distorted Y coord mismatch for element: " << entry
+      << " (found " << ndmapping[entry].xyz.y
+      << ", expected " << dmapping[entry].xyz.y << ")"
+      << std::endl;
+      return 1101 + 3*entry;
+    }
+    if (!small(ndmapping[entry].xyz.z - dmapping[entry].xyz.z)) {
+      std::cerr << "testAlgorithms(): Distorted Z coord mismatch for element: " << entry
+      << " (found " << ndmapping[entry].xyz.z
+      << ", expected " << dmapping[entry].xyz.z << ")"
+      << std::endl;
+      return 1100 + 3*entry;
+    }
+    */
+
+    if (!small(ndmapping[entry].xyLatLong.x - dExpectedXIn)) {
+XXX      std::cerr << "testAlgorithms(): Distorted X coord mismatch for element: " << entry
+      << " (found " << ndmapping[entry].xyz.x
+      << ", expected " << dmapping[entry].xyz.x << ")"
+      << std::endl;
+      return 1100 + 3*entry;
+    }
+  }
+
+  // Find the screen associated with this mapping.
+  ScreenDescription dscreen;
+  MeshDescription dmesh;
+  if (!findScreenAndMesh(dmapping, 0, 0, 1, 1, dscreen, dmesh, g_verbose)) {
+    std::cerr << "testAlgorithms(): Could not find distorted screen" << std::endl;
+    return 1190;
+  }
+
+  // Make sure the screen has the expected behavior.
+  if (!small(dscreen.hFOVDegrees - 90)) {
+    std::cerr << "testAlgorithms(): Distorted hFOV not near 90: " << dscreen.hFOVDegrees << std::endl;
+    return 1201;
+  }
+  if (!small(dscreen.vFOVDegrees - 90)) {
+    std::cerr << "testAlgorithms(): Distorted vFOV not near 90: " << dscreen.vFOVDegrees << std::endl;
+    return 1202;
+  }
+  if (!small(dscreen.overlapPercent - 100)) {
+    std::cerr << "testAlgorithms(): Distorted overlap percent not near 100: " << dscreen.overlapPercent << std::endl;
+    return 1203;
+  }
+  if (!small(dscreen.xCOP - 0.5)) {
+    std::cerr << "testAlgorithms(): Distorted xCOP not near 0.5: " << dscreen.xCOP << std::endl;
+    return 1204;
+  }
+  if (!small(dscreen.yCOP - 0.5)) {
+    std::cerr << "testAlgorithms(): Distorted yCOP not near 0.5: " << dscreen.yCOP << std::endl;
+    return 1205;
+  }
+
+  // Make sure the mesh has the expected behavior.
+  if (dmesh.size() != dmapping.size()) {
+    std::cerr << "testAlgorithms(): Destorted mesh size does not match mapping size: " << mesh.size() << std::endl;
+    return 1301;
+  }
+// @todo Why do we get coordinates (0,1) for the fifth element, when we expect (1/3, 2/3)?
+  for (int entry = 0; entry < dmesh.size(); entry++) {
+    size_t outIndex = 1;
+    if (!small(dmesh[entry][outIndex][0] - dExpectedXIn[entry])) {
+      std::cerr << "testAlgorithms(): Distorted X normalized mesh mismatch for element: " << entry
+      << " (found " << dmesh[entry][outIndex][0]
+      << ", expected " << dExpectedXIn[entry] << ")"
+      << std::endl;
+      return 1400 + entry;
+    }
+    if (!small(dmesh[entry][outIndex][1] - dExpectedYIn[entry])) {
+      std::cerr << "testAlgorithms(): Distorted Y normalized mesh mismatch for element: " << entry
+        << " (found " << dmesh[entry][outIndex][1]
+        << ", expected " << dExpectedYIn[entry] << ")" << std::endl;
+      return 1500 + entry;
     }
   }
 
