@@ -225,13 +225,16 @@ void RenderView(
   // match the overfilled width and height.  The origin of the screen
   // is at the middle.
 
+  // @todo Handle overfill.
   double overFill = renderManagerConfig->getRenderOverfillFactor();
-  double width = renderInfo.viewport.width * overFill;
-  double height = renderInfo.viewport.height * overFill;
+  double width = renderInfo.viewport.width;
+  double height = renderInfo.viewport.height;
+  double overWidth = width * overFill;
+  double overHeight = height * overFill;
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(-width / 2, width / 2,
-    -height / 2, height / 2,
+  glOrtho(-overWidth / 2, overWidth / 2,
+    -overHeight / 2, overHeight / 2,
     -1000, 1000);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
@@ -250,6 +253,7 @@ void RenderView(
 
   // Draw the forwards sphere at the specified locations in viewport space.
   // Change from normalized (0-1) coordinates into absolute viewport coordinates.
+  // Draw into the original viewport space, not the oversized viewport.
   glColor3d(1, 1, 1);
   double xOffset = -0.5;
   double yOffset = -0.5;
@@ -262,7 +266,8 @@ void RenderView(
   glPopMatrix();
   
   // Draw a set of horizontal and vertical lines in the right eye
-  glColor3d(0,0,0);
+  // Draw into the original viewport space, not the oversized viewport.
+  glColor3d(0, 0, 0);
   glBegin(GL_LINES);
   if (whichEye == 1) for (double ofs = -width; ofs <= width; ofs += width/50) {
     glVertex2d(-width, ofs);
