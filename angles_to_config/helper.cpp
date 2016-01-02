@@ -54,9 +54,11 @@ bool convert_to_normalized_and_meters(
     // longitude = 0, lattitude = 0 points along the -Z axis in eye space.
     // Positive rotation in longitude is towards -X and positive rotation in
     // latitude points towards +Y.
-    mapping[i].xyz.y = depth * sin(mapping[i].xyLatLong.latitude);
-    mapping[i].xyz.z = -depth * cos(mapping[i].xyLatLong.longitude) * cos(mapping[i].xyLatLong.latitude);
-    mapping[i].xyz.x = -depth * (-sin(mapping[i].xyLatLong.longitude)) * cos(mapping[i].xyLatLong.latitude);
+    double theta = mapping[i].xyLatLong.longitude;
+    double phi = MY_PI/2 - mapping[i].xyLatLong.latitude;
+    mapping[i].xyz.y = depth * cos(phi);
+    mapping[i].xyz.z = -depth * cos(theta) * sin(phi);
+    mapping[i].xyz.x = -depth * (-sin(theta)) * sin(phi);
   }
 
   // Make sure that the normalized screen coordinates are all within the range 0 to 1.
