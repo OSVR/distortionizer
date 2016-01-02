@@ -362,7 +362,7 @@ static int testAlgorithms()
   MeshDescription mesh;
   if (!findScreenAndMesh(mapping, 0, 0, 1, 1, screen, mesh, g_verbose)) {
     std::cerr << "testAlgorithms(): Could not find screen" << std::endl;
-    return 100;
+    return 101;
   }
 
   // Make sure the screen has the expected behavior.
@@ -395,7 +395,9 @@ static int testAlgorithms()
   for (int entry = 0; entry < mesh.size(); entry++) {
     size_t outIndex = 1;
     if (!small(mesh[entry][outIndex][0] - mapping[entry].xyLatLong.x)) {
-      std::cerr << "testAlgorithms(): X normalized mesh mismatch for element: " << entry << std::endl;
+      std::cerr << "testAlgorithms(): X normalized mesh mismatch for element: " << entry
+        << " (got " << mesh[entry][outIndex][0]
+        << ", expected " << mapping[entry].xyLatLong.x << ")" << std::endl;
       return 400 + entry;
     }
     if (!small(mesh[entry][outIndex][1] - mapping[entry].xyLatLong.y)) {
@@ -518,7 +520,6 @@ static int testAlgorithms()
   for (int entry = 0; entry < ndmapping.size(); entry++) {
     size_t outIndex = 1;
 
-    /*
     if (!small(ndmapping[entry].xyz.x - dmapping[entry].xyz.x)) {
       std::cerr << "testAlgorithms(): Distorted X coord mismatch for element: " << entry
       << " (found " << ndmapping[entry].xyz.x
@@ -538,25 +539,31 @@ static int testAlgorithms()
       << " (found " << ndmapping[entry].xyz.z
       << ", expected " << dmapping[entry].xyz.z << ")"
       << std::endl;
-      return 1100 + 3*entry;
+      return 1102 + 3*entry;
     }
-    */
 
-    if (!small(ndmapping[entry].xyLatLong.x - dExpectedXIn)) {
-XXX      std::cerr << "testAlgorithms(): Distorted X coord mismatch for element: " << entry
-      << " (found " << ndmapping[entry].xyz.x
-      << ", expected " << dmapping[entry].xyz.x << ")"
+    if (!small(ndmapping[entry].xyLatLong.x - dExpectedXIn[entry])) {
+      std::cerr << "testAlgorithms(): Distorted X coord mismatch for element: " << entry
+        << " (found " << ndmapping[entry].xyLatLong.x
+        << ", expected " << dExpectedXIn[entry] << ")"
       << std::endl;
-      return 1100 + 3*entry;
+      return 1103 + 3*entry;
+    }
+    if (!small(ndmapping[entry].xyLatLong.y - dExpectedYIn[entry])) {
+      std::cerr << "testAlgorithms(): Distorted Y coord mismatch for element: " << entry
+        << " (found " << ndmapping[entry].xyLatLong.y
+        << ", expected " << dExpectedYIn[entry] << ")"
+        << std::endl;
+      return 1104 + 3 * entry;
     }
   }
 
   // Find the screen associated with this mapping.
   ScreenDescription dscreen;
   MeshDescription dmesh;
-  if (!findScreenAndMesh(dmapping, 0, 0, 1, 1, dscreen, dmesh, g_verbose)) {
+  if (!findScreenAndMesh(ndmapping, 0, 0, 1, 1, dscreen, dmesh, g_verbose)) {
     std::cerr << "testAlgorithms(): Could not find distorted screen" << std::endl;
-    return 1190;
+    return 1200;
   }
 
   // Make sure the screen has the expected behavior.
@@ -589,17 +596,17 @@ XXX      std::cerr << "testAlgorithms(): Distorted X coord mismatch for element:
 // @todo Why do we get coordinates (0,1) for the fifth element, when we expect (1/3, 2/3)?
   for (int entry = 0; entry < dmesh.size(); entry++) {
     size_t outIndex = 1;
-    if (!small(dmesh[entry][outIndex][0] - dExpectedXIn[entry])) {
+    if (!small(dmesh[entry][outIndex][0] - dExpectedXOut[entry])) {
       std::cerr << "testAlgorithms(): Distorted X normalized mesh mismatch for element: " << entry
       << " (found " << dmesh[entry][outIndex][0]
-      << ", expected " << dExpectedXIn[entry] << ")"
+      << ", expected " << dExpectedXOut[entry] << ")"
       << std::endl;
       return 1400 + entry;
     }
-    if (!small(dmesh[entry][outIndex][1] - dExpectedYIn[entry])) {
+    if (!small(dmesh[entry][outIndex][1] - dExpectedYOut[entry])) {
       std::cerr << "testAlgorithms(): Distorted Y normalized mesh mismatch for element: " << entry
         << " (found " << dmesh[entry][outIndex][1]
-        << ", expected " << dExpectedYIn[entry] << ")" << std::endl;
+        << ", expected " << dExpectedYOut[entry] << ")" << std::endl;
       return 1500 + entry;
     }
   }
