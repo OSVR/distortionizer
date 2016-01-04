@@ -64,12 +64,12 @@ bool convert_to_normalized_and_meters(
   // Make sure that the normalized screen coordinates are all within the range 0 to 1.
   for (size_t i = 0; i < mapping.size(); i++) {
     if ((mapping[i].xyLatLong.x < 0) || (mapping[i].xyLatLong.x > 1)) {
-      std::cerr << "Error: Point " << i << " x out of range [0,1]: "
+      std::cerr << "Warning: Point " << i << " x out of range [0,1]: "
         << mapping[i].xyLatLong.x << " (increase bounds on -screen or don't specify it)"
         << std::endl;
     }
     if ((mapping[i].xyLatLong.y < 0) || (mapping[i].xyLatLong.y > 1)) {
-      std::cerr << "Error: Point " << i << " y out of range [0,1]: "
+      std::cerr << "Warning: Point " << i << " y out of range [0,1]: "
         << mapping[i].xyLatLong.y << " (increase bounds on -screen or don't specify it)"
         << std::endl;
     }
