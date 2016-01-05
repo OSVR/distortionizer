@@ -75,6 +75,7 @@ void Usage(std::string name)
   std::cerr << "Usage: " << name
     << " [-eye right|left] (default is right)"
     << " [-depth_meters D] (default is 2.0)"
+    << " [-field_angles] (use field angles, default is longitude and latitude)"
     << " [-mm] (screen distance units in the config file, default is meters)"
     << " [-verbose] (default is not)"
     << " [-screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters]"
@@ -94,6 +95,7 @@ int main(int argc, char *argv[])
   // Parse the command line
   bool useRightEye = true;
   bool computeBounds = true;
+  bool useFieldAngles = false;
   double left, right, bottom, top;
   double depth = 2.0;
   double toMeters = 1.0;
@@ -103,6 +105,8 @@ int main(int argc, char *argv[])
       toMeters = 1e-3;  // Convert input in millimeters to meters
     } else if (std::string("-verbose") == argv[i]) {
       g_verbose = true;
+    } else if (std::string("-field_angles") == argv[i]) {
+      useFieldAngles = true;
     } else if (std::string("-depth_meters") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       depth = atof(argv[i]);
@@ -116,8 +120,7 @@ int main(int argc, char *argv[])
       right = atof(argv[i]);
       if (++i >= argc) { Usage(argv[0]); }
       top = atof(argv[i]);
-    }
-    else if (std::string("-eye") == argv[i]) {
+    } else if (std::string("-eye") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       std::string eye = argv[i];
       if (eye == "left") {
@@ -226,9 +229,11 @@ int main(int argc, char *argv[])
   // Convert the input values into normalized coordinates and into 3D
   // locations.
   convert_to_normalized_and_meters(leftMapping, toMeters, depth,
-    leftScreenLeft, leftScreenBottom, leftScreenRight, leftScreenTop);
+    leftScreenLeft, leftScreenBottom, leftScreenRight, leftScreenTop,
+    useFieldAngles);
   convert_to_normalized_and_meters(rightMapping, toMeters, depth,
-    rightScreenLeft, rightScreenBottom, rightScreenRight, rightScreenTop);
+    rightScreenLeft, rightScreenBottom, rightScreenRight, rightScreenTop,
+    useFieldAngles);
 
   //====================================================================
   // Determine the screen description and distortion mesh based on the
@@ -610,6 +615,8 @@ static int testAlgorithms()
       return 1500 + entry;
     }
   }
+
+  // @todo Insert a test for field angles in normalization.
 
   if (g_verbose) {
     std::cerr << "=================== Successfully finished testAlgorithms()" << std::endl;

@@ -284,6 +284,7 @@ void Usage(std::string name)
   std::cerr << "Usage: " << name
     << " [-eye right|left] (default is right)"
     << " [-depth_meters D] (default is 2.0)"
+    << " [-field_angles] (use field angles, default is longitude and latitude)"
     << " [-mm] (screen distance units in the config file, default is meters)"
     << " [-screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters]"
     << " (default auto-compute based on ranges seen)"
@@ -303,6 +304,7 @@ int main(int argc, char *argv[])
   bool testingForwards = true;
   bool useRightEye = true;
   bool computeBounds = true;
+  bool useFieldAngles = false;
   double left, right, bottom, top;
   double depth = 2.0;
   double toMeters = 1.0;
@@ -310,12 +312,12 @@ int main(int argc, char *argv[])
   for (int i = 1; i < argc; i++) {
     if (std::string("-mm") == argv[i]) {
       toMeters = 1e-3;  // Convert input in millimeters to meters
-    }
-    else if (std::string("-depth_meters") == argv[i]) {
+    } else if (std::string("-depth_meters") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       depth = atof(argv[i]);
-    }
-    else if (std::string("-screen") == argv[i]) {
+    } else if (std::string("-field_angles") == argv[i]) {
+      useFieldAngles = true;
+    } else if (std::string("-screen") == argv[i]) {
       computeBounds = false;
       if (++i >= argc) { Usage(argv[0]); }
       left = atof(argv[i]);
@@ -325,22 +327,18 @@ int main(int argc, char *argv[])
       right = atof(argv[i]);
       if (++i >= argc) { Usage(argv[0]); }
       top = atof(argv[i]);
-    }
-    else if (std::string("-eye") == argv[i]) {
+    } else if (std::string("-eye") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       std::string eye = argv[i];
       if (eye == "left") {
         useRightEye = false;
-      }
-      else if (eye == "right") {
+      } else if (eye == "right") {
         useRightEye = true;
-      }
-      else {
+      } else {
         std::cerr << "Bad value for -eye: " << eye << ", expected left or right" << std::endl;
         Usage(argv[0]);
       }
-    }
-    else if ((argv[i][0] == '-') && (atof(argv[i]) == 0.0)) {
+    } else if ((argv[i][0] == '-') && (atof(argv[i]) == 0.0)) {
       Usage(argv[0]);
     }
     else switch (++realParams) {
@@ -543,7 +541,7 @@ int main(int argc, char *argv[])
   // @todo if exact sample not found, interpolate between nearest three
   // non-collinear points.
   convert_to_normalized_and_meters(mapping, toMeters, depth,
-    left, bottom, right, top);
+    left, bottom, right, top, useFieldAngles);
   XY forward;
   forward.x = -1e5;    // Start out off-screen
   forward.y = -1e5;  // Start out off-screen

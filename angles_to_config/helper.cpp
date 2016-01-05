@@ -36,7 +36,8 @@
 
 bool convert_to_normalized_and_meters(
   std::vector<Mapping> &mapping, double toMeters, double depth,
-  double left, double bottom, double right, double top)
+  double left, double bottom, double right, double top,
+  bool useFieldAngles)
 {
   for (size_t i = 0; i < mapping.size(); i++) {
     //  Convert the input coordinates from its input space into meters
@@ -50,15 +51,25 @@ bool convert_to_normalized_and_meters(
     mapping[i].xyLatLong.latitude *= MY_PI / 180;
     mapping[i].xyLatLong.longitude *= MY_PI / 180;
 
-    // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
-    // longitude = 0, lattitude = 0 points along the -Z axis in eye space.
-    // Positive rotation in longitude is towards -X and positive rotation in
-    // latitude points towards +Y.
-    double theta = mapping[i].xyLatLong.longitude;
-    double phi = MY_PI/2 - mapping[i].xyLatLong.latitude;
-    mapping[i].xyz.y = depth * cos(phi);
-    mapping[i].xyz.z = -depth * cos(theta) * sin(phi);
-    mapping[i].xyz.x = -depth * (-sin(theta)) * sin(phi);
+    if (useFieldAngles) {
+      // These are expressed as angles with respect to a screen that is
+      // straight ahead, independent in X and Y.  The -Z axis is straight
+      // ahead.  Positive rotation in longitude points towards +X,
+      // positive rotation in latitude points towards +Y.
+      mapping[i].xyz.x =  depth * tan(mapping[i].xyLatLong.longitude);
+      mapping[i].xyz.y =  depth * tan(mapping[i].xyLatLong.latitude);
+      mapping[i].xyz.z = -depth;
+    } else {
+      // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
+      // longitude = 0, latitude = 0 points along the -Z axis in eye space.
+      // Positive rotation in longitude is towards -X and positive rotation in
+      // latitude points towards +Y.
+      double theta = mapping[i].xyLatLong.longitude;
+      double phi = MY_PI / 2 - mapping[i].xyLatLong.latitude;
+      mapping[i].xyz.y = depth * cos(phi);
+      mapping[i].xyz.z = -depth * cos(theta) * sin(phi);
+      mapping[i].xyz.x = -depth * (-sin(theta)) * sin(phi);
+    }
   }
 
   // Make sure that the normalized screen coordinates are all within the range 0 to 1.
@@ -288,7 +299,7 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   }
   double xOutOffset = -leftProj.x;
   double xOutScale = 1 / (rightProj.x - leftProj.x);
-  double yOutOffset = maxY; // Negative of negative maxY
+  double yOutOffset = maxY; // Negative of negative maxY is maxY
   double yOutScale = 1 / (2 * maxY);
 
   for (size_t i = 0; i < mapping.size(); i++) {
