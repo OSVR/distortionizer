@@ -284,7 +284,7 @@ void Usage(std::string name)
   std::cerr << "Usage: " << name
     << " [-eye right|left] (default is right)"
     << " [-depth_meters D] (default is 2.0)"
-    << " [-field_angles] (use field angles, default is longitude and latitude)"
+    << " [-latlong] (use latitude/longitude angles, default is field angles)"
     << " [-mm] (screen distance units in the config file, default is meters)"
     << " [-screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters]"
     << " (default auto-compute based on ranges seen)"
@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
   bool testingForwards = true;
   bool useRightEye = true;
   bool computeBounds = true;
-  bool useFieldAngles = false;
+  bool useFieldAngles = true;
   double left, right, bottom, top;
   double depth = 2.0;
   double toMeters = 1.0;
@@ -315,8 +315,8 @@ int main(int argc, char *argv[])
     } else if (std::string("-depth_meters") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       depth = atof(argv[i]);
-    } else if (std::string("-field_angles") == argv[i]) {
-      useFieldAngles = true;
+    } else if (std::string("-latlong") == argv[i]) {
+      useFieldAngles = false;
     } else if (std::string("-screen") == argv[i]) {
       computeBounds = false;
       if (++i >= argc) { Usage(argv[0]); }
