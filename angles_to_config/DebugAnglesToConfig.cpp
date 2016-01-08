@@ -604,11 +604,6 @@ int main(int argc, char *argv[])
         distortionParams);
     }
 
-    // Keep track of time so we can scale UI analog adjustments
-    // properly.
-    std::chrono::time_point<std::chrono::system_clock> lastTime;
-    lastTime = std::chrono::system_clock::now();
-
     // Continue rendering until it is time to quit.
     while (!quit) {
         // Update the context so we get our callbacks called and
