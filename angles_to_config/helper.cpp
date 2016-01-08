@@ -322,9 +322,9 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
     // Input point coordinates are already normalized.
     double xNormIn = mapping[i].xyLatLong.x;
     double yNormIn = mapping[i].xyLatLong.y;
-    std::vector<double> in;
-    in.push_back(xNormIn);
-    in.push_back(yNormIn);
+    std::array<double,2> in;
+    in[0] = xNormIn;
+    in[1] = yNormIn;
 
     // Project the 3D points back into the plane of the screen and determine
     // the normalized coordinates in the coordinate system with the lower left
@@ -333,14 +333,14 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
     XYZ onScreen = mapping[i].xyz.projectOntoPlane(A, B, C, D);
     double xNormOut = (onScreen.x + xOutOffset) * xOutScale;
     double yNormOut = (onScreen.y + yOutOffset) * yOutScale;
-    std::vector<double> out;
-    out.push_back(xNormOut);
-    out.push_back(yNormOut);
+    std::array<double,2> out;
+    out[0] = xNormOut;
+    out[1] = yNormOut;
 
     // Add a new entry onto the mesh
-    std::vector< std::vector<double> > element;
-    element.push_back(in);
-    element.push_back(out);
+    std::array< std::array<double,2>,2 > element;
+    element[0] = in;
+    element[1] = out;
 
     mesh.push_back(element);
   }

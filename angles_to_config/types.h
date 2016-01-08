@@ -30,6 +30,7 @@
 // Standard includes
 #include <string>
 #include <cmath>
+#include <array>
 #include <vector>
 
 // Global constants and variables
@@ -121,7 +122,7 @@ typedef struct {
 /// Holds a list of mappings from physical-display normalized
 /// coordinates to canonical-display normalized coordinates.
 typedef std::vector<        //!< Vector of mappings
-    std::vector<            //!< 2-vector of from, to coordinates
-      std::vector<double>   //!< 2-vector of unit coordinates (x,y)
-  >
+    std::array<            //!< 2-vector of from, to coordinates
+      std::array<double,2>   //!< 2-vector of unit coordinates (x,y)
+    ,2 >
 > MeshDescription;
