@@ -29,6 +29,7 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 #include <cmath>
 #include <vector>
 #include <stdlib.h> // For exit()
@@ -80,11 +81,15 @@ void Usage(std::string name)
     << " [-verbose] (default is not)"
     << " [-screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters]"
     <<   " (default auto-compute based on ranges seen)"
+    << " [-mono in_config_mono_file_name ] (default standard input)"
+    << " [-rgb in_config_red_file_name in_config_green_file_name in_config_blue_file_name]"
     << std::endl
-    << "  This program reads from standard input a configuration that has a list of" << std::endl
+    << "  This program reads one or three configurations with lists of" << std::endl
     << "x,y screen coordinates in meters followed by long,lat angles in" << std::endl
     << "degrees where (0,0) is straight ahead from the eye, positive" << std::endl
     << "longitude is left and positive latitude is up." << std::endl
+    << "  A single color from standard input is the default, input files" << std::endl
+    << "can be optionally specified." << std::endl
     << "  It produces on standard output a partial OSVR display configuration file." << std::endl
     << std::endl;
   exit(1);
@@ -93,6 +98,7 @@ void Usage(std::string name)
 int main(int argc, char *argv[])
 {
   // Parse the command line
+  std::vector<std::string> inputFileNames;
   bool useRightEye = true;
   bool computeBounds = true;
   bool useFieldAngles = true;
@@ -110,7 +116,11 @@ int main(int argc, char *argv[])
     } else if (std::string("-depth_meters") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       depth = atof(argv[i]);
-    } else if (std::string("-screen") == argv[i]) {
+    } else if (std::string("-mono") == argv[i]) {
+      if (++i >= argc) { Usage(argv[0]); }
+      inputFileNames.push_back(argv[i]);
+    }
+    else if (std::string("-screen") == argv[i]) {
       computeBounds = false;
       if (++i >= argc) { Usage(argv[0]); }
       left = atof(argv[i]);
@@ -151,114 +161,132 @@ int main(int argc, char *argv[])
   }
 
   //====================================================================
-  // Parse the angle-configuration information from standard input.  Expect white-space
-  // separation between numbers and also between entries (which may be on separate
-  // lines).
-  std::vector<Mapping> mapping;
-  while (!std::cin.eof()) {
-    // Read the mapping info from the input file.
-    Mapping map;
-    std::cin >> map.xyLatLong.longitude >> map.xyLatLong.latitude >> map.xyLatLong.x >> map.xyLatLong.y;
-    mapping.push_back(map);
-  }
-  // There will have been one extra added, when running into EOF.
-  mapping.pop_back();
-  if (g_verbose) {
-    std::cerr << "Found " << mapping.size() << " points" << std::endl;
-  }
-  if (mapping.size() == 0) {
-    std::cerr << "Error: No input points found" << std::endl;
-    return 2;
-  }
-
-  //====================================================================
-  // If we've been asked to auto-range the screen coordinates, compute
-  // them here.
-  if (computeBounds) {
-    left = right = mapping[0].xyLatLong.x;
-    bottom = top = mapping[0].xyLatLong.y;
-    for (size_t i = 1; i < mapping.size(); i++) {
-      double x = mapping[i].xyLatLong.x;
-      double y = mapping[i].xyLatLong.y;
-      if (x < left) { left = x; }
-      if (x > right) { right = x; }
-      if (y < bottom) { bottom = y; }
-      if (y > top) { top = y; }
-    }
-    left *= toMeters;
-    right *= toMeters;
-    bottom *= toMeters;
-    top *= toMeters;
-  }
-  if (g_verbose) {
-    std::cerr << "Left, bottom, right, top = " << left << ", "
-      << bottom << ", " << right << ", " << top << std::endl;
-  }
-
-  //====================================================================
-  // Make an inverse mapping for the opposite eye.  Invert around X in
-  // angle and viewing direction.  Depending on whether we are using the
-  // left or right eye, set the eyes appropriately.
-  //  Also make a different set of screen boundaries for each, again
-  // inverting around X = 0.
-  std::vector<Mapping> leftMapping;
-  std::vector<Mapping> rightMapping;
-  double leftScreenLeft, leftScreenRight, leftScreenBottom, leftScreenTop;
-  double rightScreenLeft, rightScreenRight, rightScreenBottom, rightScreenTop;
-  rightScreenBottom = leftScreenBottom = bottom;
-  rightScreenTop = leftScreenTop = top;
-  if (useRightEye) {
-    rightMapping = mapping;
-    rightScreenLeft = left;
-    rightScreenRight = right;
-
-    leftMapping = reflect_mapping(mapping);
-    leftScreenLeft = -right;
-    leftScreenRight = -left;
-  } else {
-    leftMapping = mapping;
-    leftScreenLeft = left;
-    leftScreenRight = right;
-
-    rightMapping = reflect_mapping(mapping);
-    rightScreenLeft = -right;
-    rightScreenBottom = -left;
-  }
-
-  //====================================================================
-  // Convert the input values into normalized coordinates and into 3D
-  // locations.
-  convert_to_normalized_and_meters(leftMapping, toMeters, depth,
-    leftScreenLeft, leftScreenBottom, leftScreenRight, leftScreenTop,
-    useFieldAngles);
-  convert_to_normalized_and_meters(rightMapping, toMeters, depth,
-    rightScreenLeft, rightScreenBottom, rightScreenRight, rightScreenTop,
-    useFieldAngles);
-
-  //====================================================================
-  // Determine the screen description and distortion mesh based on the
-  // input points and screen parameters.
+  // The output screens and meshes.
+  // @todo Make the meshes into vectors.
   ScreenDescription leftScreen, rightScreen;
   MeshDescription leftMesh, rightMesh;
-  if (!findScreenAndMesh(leftMapping, leftScreenLeft, leftScreenBottom,
-    leftScreenRight, leftScreenTop, leftScreen, leftMesh, g_verbose)) {
-    std::cerr << "Error: Could not find left screen or mesh" << std::endl;
-    return 3;
+
+  //====================================================================
+  // Parse the angle-configuration information from standard or from the set
+  // of input files specified.  Expect white-space
+  // separation between numbers and also between entries (which may be on separate
+  // lines).
+  std::vector<std::istream *> inFiles;
+  if (inputFileNames.size() == 0) {
+    inFiles.push_back(&std::cin);
+  } else {
+    for (size_t i = 0; i < inputFileNames.size(); i++) {
+      if (g_verbose) {
+        std::cerr << "Opening file " << inputFileNames[i] << std::endl;
+      }
+      std::ifstream *inFile = new std::ifstream;
+      inFile->open(inputFileNames[i].c_str(), std::ifstream::in);
+      if (!inFile->good()) {
+        std::cerr << "Error: Could not open" << inputFileNames[i] << std::endl;
+        return 1;
+      }
+      inFiles.push_back(inFile);
+    }
   }
-  if (leftMesh.size() != mapping.size()) {
-    std::cerr << "Error: Left mesh size " << leftMesh.size()
-      << " does not match mapping size" << mapping.size() << std::endl;
-    return 4;
-  }
-  if (!findScreenAndMesh(rightMapping, rightScreenLeft, rightScreenBottom,
-    rightScreenRight, rightScreenTop, rightScreen, rightMesh, g_verbose)) {
-    std::cerr << "Error: Could not find right screen or mesh" << std::endl;
-    return 5;
-  }
-  if (rightMesh.size() != mapping.size()) {
-    std::cerr << "Error: Right mesh size " << rightMesh.size()
-      << " does not match mapping size" << mapping.size() << std::endl;
-    return 6;
+  for (size_t i = 0; i < inFiles.size(); i++) {
+    std::vector<Mapping> mapping = read_from_infile(*inFiles[i]);
+    if (g_verbose) {
+      std::cerr << "Found " << mapping.size() << " points" << std::endl;
+    }
+    if (mapping.size() == 0) {
+      std::cerr << "Error: No input points found" << std::endl;
+      return 2;
+    }
+
+    //====================================================================
+    // If we've been asked to auto-range the screen coordinates, compute
+    // them here.
+    if (computeBounds) {
+      left = right = mapping[0].xyLatLong.x;
+      bottom = top = mapping[0].xyLatLong.y;
+      for (size_t i = 1; i < mapping.size(); i++) {
+        double x = mapping[i].xyLatLong.x;
+        double y = mapping[i].xyLatLong.y;
+        if (x < left) { left = x; }
+        if (x > right) { right = x; }
+        if (y < bottom) { bottom = y; }
+        if (y > top) { top = y; }
+      }
+      left *= toMeters;
+      right *= toMeters;
+      bottom *= toMeters;
+      top *= toMeters;
+    }
+    if (g_verbose) {
+      std::cerr << "Left, bottom, right, top = " << left << ", "
+        << bottom << ", " << right << ", " << top << std::endl;
+    }
+
+    //====================================================================
+    // Make an inverse mapping for the opposite eye.  Invert around X in
+    // angle and viewing direction.  Depending on whether we are using the
+    // left or right eye, set the eyes appropriately.
+    //  Also make a different set of screen boundaries for each, again
+    // inverting around X = 0.
+    std::vector<Mapping> leftMapping;
+    std::vector<Mapping> rightMapping;
+    double leftScreenLeft, leftScreenRight, leftScreenBottom, leftScreenTop;
+    double rightScreenLeft, rightScreenRight, rightScreenBottom, rightScreenTop;
+    rightScreenBottom = leftScreenBottom = bottom;
+    rightScreenTop = leftScreenTop = top;
+    if (useRightEye) {
+      rightMapping = mapping;
+      rightScreenLeft = left;
+      rightScreenRight = right;
+
+      leftMapping = reflect_mapping(mapping);
+      leftScreenLeft = -right;
+      leftScreenRight = -left;
+    }
+    else {
+      leftMapping = mapping;
+      leftScreenLeft = left;
+      leftScreenRight = right;
+
+      rightMapping = reflect_mapping(mapping);
+      rightScreenLeft = -right;
+      rightScreenBottom = -left;
+    }
+
+    //====================================================================
+    // Convert the input values into normalized coordinates and into 3D
+    // locations.
+    convert_to_normalized_and_meters(leftMapping, toMeters, depth,
+      leftScreenLeft, leftScreenBottom, leftScreenRight, leftScreenTop,
+      useFieldAngles);
+    convert_to_normalized_and_meters(rightMapping, toMeters, depth,
+      rightScreenLeft, rightScreenBottom, rightScreenRight, rightScreenTop,
+      useFieldAngles);
+
+    //====================================================================
+    // Determine the screen description and distortion mesh based on the
+    // input points and screen parameters.
+    // @todo Figure out the screens based on all inputs.
+    if (!findScreenAndMesh(leftMapping, leftScreenLeft, leftScreenBottom,
+      leftScreenRight, leftScreenTop, leftScreen, leftMesh, g_verbose)) {
+      std::cerr << "Error: Could not find left screen or mesh" << std::endl;
+      return 3;
+    }
+    if (leftMesh.size() != mapping.size()) {
+      std::cerr << "Error: Left mesh size " << leftMesh.size()
+        << " does not match mapping size" << mapping.size() << std::endl;
+      return 4;
+    }
+    if (!findScreenAndMesh(rightMapping, rightScreenLeft, rightScreenBottom,
+      rightScreenRight, rightScreenTop, rightScreen, rightMesh, g_verbose)) {
+      std::cerr << "Error: Could not find right screen or mesh" << std::endl;
+      return 5;
+    }
+    if (rightMesh.size() != mapping.size()) {
+      std::cerr << "Error: Right mesh size " << rightMesh.size()
+        << " does not match mapping size" << mapping.size() << std::endl;
+      return 6;
+    }
   }
 
   //====================================================================
