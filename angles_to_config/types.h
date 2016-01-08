@@ -117,6 +117,14 @@ typedef struct {
   double overlapPercent;
   double xCOP;
   double yCOP;
+
+  // These are quantities computed along the way to getting the
+  // screen that are needed by the mesh calculations, so they
+  // are stored in the screen to pass from the findScreen to
+  // the findMesh functions.
+  double A, B, C, D;  //!< Ax + By + Cz + D = 0 screen plane
+  XYZ screenLeft, screenRight;  //!< Left-most and right-most points on screen
+  double maxY;  //!< Maximum absolute value of Y for points on screen
 } ScreenDescription;
 
 /// Holds a list of mappings from physical-display normalized

@@ -106,12 +106,12 @@ bool convert_to_normalized_and_meters(
   return true;
 }
 
-bool findScreenAndMesh(const std::vector<Mapping> &mapping,
+bool findScreen(const std::vector<Mapping> &mapping,
   double left, double bottom, double right, double top,
-  ScreenDescription &screen, MeshDescription &mesh, bool verbose)
+  ScreenDescription &screen, bool verbose)
 {
   if (mapping.size() == 0) {
-    std::cerr << "findScreenAndMesh(): Error: No points in mapping" 
+    std::cerr << "findScreen(): Error: No points in mapping" 
       << std::endl;
     return false;
   }
@@ -128,7 +128,8 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   //        negative angle(note that this may not be the point with the smallest
   //        longitudinal coordinate, because of the impact of changing latitude on
   //        X - Z position).
-  XYZ screenLeft, screenRight;
+  XYZ &screenLeft = screen.screenLeft;
+  XYZ &screenRight = screen.screenRight;;
   screenLeft = screenRight = mapping[0].xyz;
   if (verbose) {
     std::cerr << "First point rotation about Y (degrees): "
@@ -148,7 +149,7 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
       << std::endl;
   }
   if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
-    std::cerr << "findScreenAndMesh(): Error: Field of view > 180 degrees: found " <<
+    std::cerr << "findScreen(): Error: Field of view > 180 degrees: found " <<
       180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY())
       << std::endl;
     return false;
@@ -170,14 +171,18 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   //   z = dx
   double dx = screenRight.x - screenLeft.x;
   double dz = screenRight.z - screenLeft.z;
-  double A = -dz;
-  double B = 0;
-  double C = dx;
+  double &A = screen.A;
+  double &B = screen.B;
+  double &C = screen.C;
+  double &D = screen.D;
+  A = -dz;
+  B = 0;
+  C = dx;
   double len = sqrt(A*A + B*B + C*C);
   A /= len;
   B /= len;
   C /= len;
-  double D = -(A*screenRight.x + B*screenRight.y + C*screenRight.z);
+  D = -(A*screenRight.x + B*screenRight.y + C*screenRight.z);
   if (verbose) {
     std::cerr << "Plane of the screen A,B,C, D: "
       << A << "," << B << "," << C << ", " << D
@@ -191,7 +196,8 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   //  axis extents at the largest magnitude angle up or down from the horizontal.
   // Find the highest-magnitude Y value of all points when they are
   // projected into the plane of the screen.
-  double maxY = fabs(mapping[0].xyz.projectOntoPlane(A, B, C, D).y);
+  double &maxY = screen.maxY;
+  maxY = fabs(mapping[0].xyz.projectOntoPlane(A, B, C, D).y);
   for (size_t i = 1; i < mapping.size(); i++) {
     double Y = fabs(mapping[i].xyz.projectOntoPlane(A, B, C, D).y);
     if (Y > maxY) { maxY = Y; }
@@ -298,6 +304,24 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   screen.xCOP = xCOP;
   screen.yCOP = yCOP;
 
+  return true;
+}
+
+bool findMesh(const std::vector<Mapping> &mapping,
+  double left, double bottom, double right, double top,
+  ScreenDescription const &screen, MeshDescription &mesh, bool verbose)
+{
+  if (mapping.size() == 0) {
+    std::cerr << "findMesh(): Error: No points in mapping"
+      << std::endl;
+    return false;
+  }
+
+  const double &A = screen.A;
+  const double &B = screen.B;
+  const double &C = screen.C;
+  const double &D = screen.D;
+
   //====================================================================
   // Map each incoming mesh coordinate into the corresponding output
   // coordinate, storing them into the output mesh.
@@ -308,21 +332,23 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
   // checks the assumption that the screen has some width in the X
   // coordinate (not rotated 90 degrees) and uses only the X value to
   // scale X.
+  const XYZ &leftProj = screen.screenLeft;
+  const XYZ &rightProj = screen.screenRight;
   if (leftProj.x == rightProj.x) {
     std::cerr << "Error computing mesh: screen has no X extent" << std::endl;
     return false;
   }
   double xOutOffset = -leftProj.x;
   double xOutScale = 1 / (rightProj.x - leftProj.x);
-  double yOutOffset = maxY; // Negative of negative maxY is maxY
-  double yOutScale = 1 / (2 * maxY);
+  double yOutOffset = screen.maxY; // Negative of negative maxY is maxY
+  double yOutScale = 1 / (2 * screen.maxY);
 
   for (size_t i = 0; i < mapping.size(); i++) {
 
     // Input point coordinates are already normalized.
     double xNormIn = mapping[i].xyLatLong.x;
     double yNormIn = mapping[i].xyLatLong.y;
-    std::array<double,2> in;
+    std::array<double, 2> in;
     in[0] = xNormIn;
     in[1] = yNormIn;
 
@@ -333,12 +359,12 @@ bool findScreenAndMesh(const std::vector<Mapping> &mapping,
     XYZ onScreen = mapping[i].xyz.projectOntoPlane(A, B, C, D);
     double xNormOut = (onScreen.x + xOutOffset) * xOutScale;
     double yNormOut = (onScreen.y + yOutOffset) * yOutScale;
-    std::array<double,2> out;
+    std::array<double, 2> out;
     out[0] = xNormOut;
     out[1] = yNormOut;
 
     // Add a new entry onto the mesh
-    std::array< std::array<double,2>,2 > element;
+    std::array< std::array<double, 2>, 2 > element;
     element[0] = in;
     element[1] = out;
 

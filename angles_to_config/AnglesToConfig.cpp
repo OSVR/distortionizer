@@ -175,9 +175,8 @@ int main(int argc, char *argv[])
 
   //====================================================================
   // Parse the angle-configuration information from standard or from the set
-  // of input files specified.  Expect white-space
-  // separation between numbers and also between entries (which may be on separate
-  // lines).
+  // of input files specified.  Expect white-space separation between numbers
+  // and also between entries (which may be on separate lines).
   std::vector<std::istream *> inFiles;
   if (inputFileNames.size() == 0) {
     inFiles.push_back(&std::cin);
@@ -195,39 +194,77 @@ int main(int argc, char *argv[])
       inFiles.push_back(inFile);
     }
   }
+  std::vector< std::vector<Mapping> > mappings;
   for (size_t i = 0; i < inFiles.size(); i++) {
     std::vector<Mapping> mapping = read_from_infile(*inFiles[i]);
     if (g_verbose) {
-      std::cerr << "Found " << mapping.size() << " points" << std::endl;
+      std::cerr << "Found " << mapping.size() << " points in "
+        << inputFileNames[i] << std::endl;
     }
     if (mapping.size() == 0) {
-      std::cerr << "Error: No input points found" << std::endl;
+      std::cerr << "Error: No input points found in " << inputFileNames[i]
+        << std::endl;
       return 2;
     }
+    mappings.push_back(mapping);
+  }
 
-    //====================================================================
-    // If we've been asked to auto-range the screen coordinates, compute
-    // them here.
-    if (computeBounds) {
-      left = right = mapping[0].xyLatLong.x;
-      bottom = top = mapping[0].xyLatLong.y;
-      for (size_t i = 1; i < mapping.size(); i++) {
-        double x = mapping[i].xyLatLong.x;
-        double y = mapping[i].xyLatLong.y;
+  //====================================================================
+  // If we've been asked to auto-range the screen coordinates, compute
+  // them here.  Look at all of the points from all of the colors and
+  // make a bound on all of them.
+  if (computeBounds) {
+    left = right = mappings[0][0].xyLatLong.x;
+    bottom = top = mappings[0][0].xyLatLong.y;
+    for (size_t m = 0; m < mappings.size(); m++) {
+      for (size_t i = 1; i < mappings[m].size(); i++) {
+        double x = mappings[m][i].xyLatLong.x;
+        double y = mappings[m][i].xyLatLong.y;
         if (x < left) { left = x; }
         if (x > right) { right = x; }
         if (y < bottom) { bottom = y; }
         if (y > top) { top = y; }
       }
-      left *= toMeters;
-      right *= toMeters;
-      bottom *= toMeters;
-      top *= toMeters;
     }
-    if (g_verbose) {
-      std::cerr << "Left, bottom, right, top = " << left << ", "
-        << bottom << ", " << right << ", " << top << std::endl;
-    }
+    left *= toMeters;
+    right *= toMeters;
+    bottom *= toMeters;
+    top *= toMeters;
+  }
+  if (g_verbose) {
+    std::cerr << "Left, bottom, right, top = " << left << ", "
+      << bottom << ", " << right << ", " << top << std::endl;
+  }
+
+  //====================================================================
+  // Compute left and right screen boundaries that are mirror images
+  // of each other.
+  double leftScreenLeft, leftScreenRight, leftScreenBottom, leftScreenTop;
+  double rightScreenLeft, rightScreenRight, rightScreenBottom, rightScreenTop;
+  rightScreenBottom = leftScreenBottom = bottom;
+  rightScreenTop = leftScreenTop = top;
+  if (useRightEye) {
+    rightScreenLeft = left;
+    rightScreenRight = right;
+
+    leftScreenLeft = -right;
+    leftScreenRight = -left;
+  } else {
+    leftScreenLeft = left;
+    leftScreenRight = right;
+
+    rightScreenLeft = -right;
+    rightScreenBottom = -left;
+  }
+
+  //====================================================================
+  // Compute a left- and right-eye mappings that are mirrors of each
+  // other, so that we can produce distortion maps for both eyes.
+  std::vector< std::vector<Mapping> > leftMappings;
+  std::vector< std::vector<Mapping> > rightMappings;
+  for (size_t i = 0; i < mappings.size(); i++) {
+    // Do each mapping in turn, one per color.
+    std::vector<Mapping> &mapping = mappings[i];
 
     //====================================================================
     // Make an inverse mapping for the opposite eye.  Invert around X in
@@ -237,27 +274,14 @@ int main(int argc, char *argv[])
     // inverting around X = 0.
     std::vector<Mapping> leftMapping;
     std::vector<Mapping> rightMapping;
-    double leftScreenLeft, leftScreenRight, leftScreenBottom, leftScreenTop;
-    double rightScreenLeft, rightScreenRight, rightScreenBottom, rightScreenTop;
     rightScreenBottom = leftScreenBottom = bottom;
     rightScreenTop = leftScreenTop = top;
     if (useRightEye) {
       rightMapping = mapping;
-      rightScreenLeft = left;
-      rightScreenRight = right;
-
       leftMapping = reflect_mapping(mapping);
-      leftScreenLeft = -right;
-      leftScreenRight = -left;
-    }
-    else {
+    } else {
       leftMapping = mapping;
-      leftScreenLeft = left;
-      leftScreenRight = right;
-
       rightMapping = reflect_mapping(mapping);
-      rightScreenLeft = -right;
-      rightScreenBottom = -left;
     }
 
     //====================================================================
@@ -271,31 +295,72 @@ int main(int argc, char *argv[])
       useFieldAngles);
 
     //====================================================================
+    // Store the mappings.
+    leftMappings.push_back(leftMapping);
+    rightMappings.push_back(rightMapping);
+  }
+
+  //====================================================================
+  // Construct mappings that include all points for all colors that
+  // we will use to determine the screen boundaries in a manner that
+  // encompasses all of them.
+  std::vector<Mapping> leftFullMapping, rightFullMapping;
+  for (size_t i = 0; i < mappings.size(); i++) {
+    for (size_t j = 0; j < leftMappings[i].size(); j++) {
+      leftFullMapping.push_back(leftMappings[i][j]);
+    }
+    for (size_t j = 0; j < rightMappings[i].size(); j++) {
+      rightFullMapping.push_back(rightMappings[i][j]);
+    }
+  }
+  if (!findScreen(leftFullMapping, leftScreenLeft, leftScreenBottom,
+    leftScreenRight, leftScreenTop, leftScreen, g_verbose)) {
+    std::cerr << "Error: Could not find left screen" << std::endl;
+    return 3;
+  }
+  if (!findScreen(rightFullMapping, rightScreenLeft, rightScreenBottom,
+    rightScreenRight, rightScreenTop, rightScreen, g_verbose)) {
+    std::cerr << "Error: Could not find right screen" << std::endl;
+    return 5;
+  }
+
+  //====================================================================
+  // Compute the three colored mappings based on the screen boundaries
+  // we found above.
+  // @todo HOw to keep the screen bounds and normalization from changing
+  // per color?
+  for (size_t i = 0; i < mappings.size(); i++) {
+    // Do each pair of mappings in turn, one per color.
+    std::vector<Mapping> &leftMapping = leftMappings[i];
+    std::vector<Mapping> &rightMapping = rightMappings[i];
+
+    //====================================================================
     // Determine the screen description and distortion mesh based on the
     // input points and screen parameters.
     // This will re-compute the screen each time, but it will get the same
     // answer because we're using the same bounds for each of them.
     // @todo Figure out the screens based on all inputs.
     MeshDescription leftMesh, rightMesh;
-    if (!findScreenAndMesh(leftMapping, leftScreenLeft, leftScreenBottom,
+    if (!findMesh(leftMapping, leftScreenLeft, leftScreenBottom,
       leftScreenRight, leftScreenTop, leftScreen, leftMesh, g_verbose)) {
-      std::cerr << "Error: Could not find left screen or mesh" << std::endl;
-      return 3;
+      std::cerr << "Error: Could not find left mesh" << std::endl;
+      return 30;
     }
-    if (leftMesh.size() != mapping.size()) {
+    if (leftMesh.size() != leftMapping.size()) {
       std::cerr << "Error: Left mesh size " << leftMesh.size()
-        << " does not match mapping size" << mapping.size() << std::endl;
+        << " does not match mapping size" << leftMapping.size() << std::endl;
       return 4;
     }
     leftMeshes.push_back(leftMesh);
-    if (!findScreenAndMesh(rightMapping, rightScreenLeft, rightScreenBottom,
+
+    if (!findMesh(rightMapping, rightScreenLeft, rightScreenBottom,
       rightScreenRight, rightScreenTop, rightScreen, rightMesh, g_verbose)) {
-      std::cerr << "Error: Could not find right screen or mesh" << std::endl;
-      return 5;
+      std::cerr << "Error: Could not find right mesh" << std::endl;
+      return 50;
     }
-    if (rightMesh.size() != mapping.size()) {
+    if (rightMesh.size() != rightMapping.size()) {
       std::cerr << "Error: Right mesh size " << rightMesh.size()
-        << " does not match mapping size" << mapping.size() << std::endl;
+        << " does not match mapping size" << rightMapping.size() << std::endl;
       return 6;
     }
     rightMeshes.push_back(rightMesh);
@@ -432,9 +497,13 @@ static int testAlgorithms()
   }
   ScreenDescription screen;
   MeshDescription mesh;
-  if (!findScreenAndMesh(mapping, 0, 0, 1, 1, screen, mesh, g_verbose)) {
+  if (!findScreen(mapping, 0, 0, 1, 1, screen, g_verbose)) {
     std::cerr << "testAlgorithms(): Could not find screen" << std::endl;
     return 101;
+  }
+  if (!findMesh(mapping, 0, 0, 1, 1, screen, mesh, g_verbose)) {
+    std::cerr << "testAlgorithms(): Could not find mesh" << std::endl;
+    return 102;
   }
 
   // Make sure the screen has the expected behavior.
@@ -498,9 +567,13 @@ static int testAlgorithms()
   // Find the screen associated with this mapping.
   ScreenDescription rscreen;
   MeshDescription rmesh;
-  if (!findScreenAndMesh(rmapping, 0, 0, 1, 1, rscreen, rmesh, g_verbose)) {
+  if (!findScreen(rmapping, 0, 0, 1, 1, rscreen, g_verbose)) {
     std::cerr << "testAlgorithms(): Could not find rotated screen" << std::endl;
     return 600;
+  }
+  if (!findMesh(rmapping, 0, 0, 1, 1, rscreen, rmesh, g_verbose)) {
+    std::cerr << "testAlgorithms(): Could not find rotated mesh" << std::endl;
+    return 601;
   }
 
   // Make sure the screen has the expected behavior.
@@ -618,7 +691,7 @@ static int testAlgorithms()
       std::cerr << "testAlgorithms(): Distorted X coord mismatch for element: " << entry
         << " (found " << ndmapping[entry].xyLatLong.x
         << ", expected " << dExpectedXIn[entry] << ")"
-      << std::endl;
+        << std::endl;
       return 1103 + 3*entry;
     }
     if (!small(ndmapping[entry].xyLatLong.y - dExpectedYIn[entry])) {
@@ -633,9 +706,13 @@ static int testAlgorithms()
   // Find the screen associated with this mapping.
   ScreenDescription dscreen;
   MeshDescription dmesh;
-  if (!findScreenAndMesh(ndmapping, 0, 0, 1, 1, dscreen, dmesh, g_verbose)) {
+  if (!findScreen(ndmapping, 0, 0, 1, 1, dscreen, g_verbose)) {
     std::cerr << "testAlgorithms(): Could not find distorted screen" << std::endl;
     return 1200;
+  }
+  if (!findMesh(ndmapping, 0, 0, 1, 1, dscreen, dmesh, g_verbose)) {
+    std::cerr << "testAlgorithms(): Could not find distorted mesh" << std::endl;
+    return 1201;
   }
 
   // Make sure the screen has the expected behavior.

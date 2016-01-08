@@ -37,7 +37,11 @@ extern bool convert_to_normalized_and_meters(
   double left, double bottom, double right, double top,
   bool useFieldAngles = false);
 
-extern bool findScreenAndMesh(const std::vector<Mapping> &mapping,
+extern bool findScreen(const std::vector<Mapping> &mapping,
   double left, double bottom, double right, double top,
-  ScreenDescription &screen, MeshDescription &mesh, bool verbose = false);
+  ScreenDescription &screen, bool verbose = false);
+
+extern bool findMesh(const std::vector<Mapping> &mapping,
+  double left, double bottom, double right, double top,
+  ScreenDescription const &screen, MeshDescription &mesh, bool verbose = false);
 
