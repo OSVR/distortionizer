@@ -353,15 +353,7 @@ int main(int argc, char *argv[])
   // Parse the angle-configuration information from standard input.  Expect white-space
   // separation between numbers and also between entries (which may be on separate
   // lines).
-  std::vector<Mapping> mapping;
-  while (!std::cin.eof()) {
-    // Read the mapping info from the input file.
-    Mapping map;
-    std::cin >> map.xyLatLong.longitude >> map.xyLatLong.latitude >> map.xyLatLong.x >> map.xyLatLong.y;
-    mapping.push_back(map);
-  }
-  // There will have been one extra added, when running into EOF.
-  mapping.pop_back();
+  std::vector<Mapping> mapping = read_from_infile(std::cin);
   if (mapping.size() == 0) {
     std::cerr << "Error: No input points found" << std::endl;
     return 2;

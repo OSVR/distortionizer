@@ -26,6 +26,11 @@
 #pragma once
 
 #include "types.h"
+#include <iostream>
+#include <vector>
+
+// Returns empty mapping if it fails to read anything.
+extern std::vector<Mapping> read_from_infile(std::istream &in);
 
 extern bool convert_to_normalized_and_meters(
   std::vector<Mapping> &mapping, double toMeters, double depth,

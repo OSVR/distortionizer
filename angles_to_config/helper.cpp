@@ -29,10 +29,25 @@
 
 // Standard includes
 #include <string>
-#include <iostream>
 #include <iomanip>
 #include <cmath>
-#include <vector>
+
+std::vector<Mapping> read_from_infile(std::istream &in)
+{
+  std::vector<Mapping> mapping;
+
+  while (!in.eof()) {
+    // Read the mapping info from the input file.
+    Mapping map;
+    in >> map.xyLatLong.longitude >> map.xyLatLong.latitude >> map.xyLatLong.x >> map.xyLatLong.y;
+    mapping.push_back(map);
+  }
+  // There will have been one extra added, when running into EOF.
+  mapping.pop_back();
+
+  return mapping;
+}
+
 
 bool convert_to_normalized_and_meters(
   std::vector<Mapping> &mapping, double toMeters, double depth,
