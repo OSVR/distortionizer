@@ -119,6 +119,13 @@ int main(int argc, char *argv[])
     } else if (std::string("-mono") == argv[i]) {
       if (++i >= argc) { Usage(argv[0]); }
       inputFileNames.push_back(argv[i]);
+    } else if (std::string("-rgb") == argv[i]) {
+      if (++i >= argc) { Usage(argv[0]); }
+      inputFileNames.push_back(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      inputFileNames.push_back(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      inputFileNames.push_back(argv[i]);
     }
     else if (std::string("-screen") == argv[i]) {
       computeBounds = false;
@@ -161,10 +168,10 @@ int main(int argc, char *argv[])
   }
 
   //====================================================================
-  // The output screens and meshes.
-  // @todo Make the meshes into vectors.
+  // The output screens and meshes.  There is one mesh per color, so one
+  // for mono and three for RGB.
   ScreenDescription leftScreen, rightScreen;
-  MeshDescription leftMesh, rightMesh;
+  std::vector<MeshDescription> leftMeshes, rightMeshes;
 
   //====================================================================
   // Parse the angle-configuration information from standard or from the set
@@ -182,7 +189,7 @@ int main(int argc, char *argv[])
       std::ifstream *inFile = new std::ifstream;
       inFile->open(inputFileNames[i].c_str(), std::ifstream::in);
       if (!inFile->good()) {
-        std::cerr << "Error: Could not open" << inputFileNames[i] << std::endl;
+        std::cerr << "Error: Could not open " << inputFileNames[i] << std::endl;
         return 1;
       }
       inFiles.push_back(inFile);
@@ -266,7 +273,10 @@ int main(int argc, char *argv[])
     //====================================================================
     // Determine the screen description and distortion mesh based on the
     // input points and screen parameters.
+    // This will re-compute the screen each time, but it will get the same
+    // answer because we're using the same bounds for each of them.
     // @todo Figure out the screens based on all inputs.
+    MeshDescription leftMesh, rightMesh;
     if (!findScreenAndMesh(leftMapping, leftScreenLeft, leftScreenBottom,
       leftScreenRight, leftScreenTop, leftScreen, leftMesh, g_verbose)) {
       std::cerr << "Error: Could not find left screen or mesh" << std::endl;
@@ -277,6 +287,7 @@ int main(int argc, char *argv[])
         << " does not match mapping size" << mapping.size() << std::endl;
       return 4;
     }
+    leftMeshes.push_back(leftMesh);
     if (!findScreenAndMesh(rightMapping, rightScreenLeft, rightScreenBottom,
       rightScreenRight, rightScreenTop, rightScreen, rightMesh, g_verbose)) {
       std::cerr << "Error: Could not find right screen or mesh" << std::endl;
@@ -287,6 +298,7 @@ int main(int argc, char *argv[])
         << " does not match mapping size" << mapping.size() << std::endl;
       return 6;
     }
+    rightMeshes.push_back(rightMesh);
   }
 
   //====================================================================
@@ -312,13 +324,40 @@ int main(int argc, char *argv[])
   std::cout << "   }," << std::endl; // field_of_view
 
   std::cout << "   \"distortion\": {" << std::endl;
-  std::cout << "    \"type\": \"mono_point_samples\"," << std::endl;
-  std::cout << "    \"mono_point_samples\": [" << std::endl;
-  writeMesh(std::cout, leftMesh);
-  std::cout << "," << std::endl;
-  writeMesh(std::cout, rightMesh);
-  std::cout << "    ]" << std::endl; // mono_point_samples
-  std::cout << "   }," << std::endl; // distortion
+  switch (leftMeshes.size()) {
+  case 1:
+    std::cout << "    \"type\": \"mono_point_samples\"," << std::endl;
+    std::cout << "    \"mono_point_samples\": [" << std::endl;
+    writeMesh(std::cout, leftMeshes[0]);
+    std::cout << "," << std::endl;
+    writeMesh(std::cout, rightMeshes[0]);
+    std::cout << "    ]" << std::endl; // mono_point_samples
+    std::cout << "   }," << std::endl; // distortion
+    break;
+  case 3:
+    std::cout << "    \"type\": \"rgb_point_samples\"," << std::endl;
+    std::cout << "    \"red_point_samples\": [" << std::endl;
+      writeMesh(std::cout, leftMeshes[0]);
+      std::cout << "," << std::endl;
+      writeMesh(std::cout, rightMeshes[0]);
+    std::cout << "    ]," << std::endl; // red_point_samples
+    std::cout << "    \"green_point_samples\": [" << std::endl;
+      writeMesh(std::cout, leftMeshes[1]);
+      std::cout << "," << std::endl;
+      writeMesh(std::cout, rightMeshes[1]);
+    std::cout << "    ]," << std::endl; // green_point_samples
+    std::cout << "    \"blue_point_samples\": [" << std::endl;
+      writeMesh(std::cout, leftMeshes[2]);
+      std::cout << "," << std::endl;
+      writeMesh(std::cout, rightMeshes[2]);
+    std::cout << "    ]" << std::endl; // blue_point_samples
+    std::cout << "   }," << std::endl; // distortion
+    break;
+  default:
+    std::cerr << "Error: Unexpected number of meshes: " << leftMeshes.size()
+      << std::endl;
+    return 3;
+  }
 
   std::cout << "   \"eyes\": [" << std::endl;
   std::cout << "    {" << std::endl;
