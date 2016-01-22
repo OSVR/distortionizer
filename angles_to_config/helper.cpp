@@ -31,6 +31,7 @@
 #include <string>
 #include <iomanip>
 #include <cmath>
+#include <map>
 
 std::vector<Mapping> read_from_infile(std::istream &in)
 {
@@ -372,4 +373,147 @@ bool findMesh(const std::vector<Mapping> &mapping,
   }
 
   return true;
+}
+
+static void normalize(std::array<double, 2> &v)
+{
+  double len = sqrt(v[0] * v[0] + v[1] * v[1]);
+  if (len > 0) {
+    v[0] /= len;
+    v[1] /= len;
+  }
+}
+
+/// Finds out whether the neighbor of the specified index
+/// in the mapping violates the strictures of the
+/// remove_invalid_points_based_on_angle function.
+/// @return True if the neighbor angle difference is too large.
+static bool neighbor_error(
+  const std::vector<Mapping> &mapping,
+  size_t index0, size_t index1,
+  double xx, double xy,
+  double yx, double yy, double minDotProduct)
+{
+  // Map the difference in angle space between the point and
+  // its neighbor into screen space.
+  std::array<double, 2> angleVec;
+  angleVec[0] = mapping[index1].xyLatLong.longitude -
+    mapping[index0].xyLatLong.longitude;
+  angleVec[1] = mapping[index1].xyLatLong.latitude -
+    mapping[index0].xyLatLong.latitude;
+  std::array<double, 2> screenMappedVec;
+  screenMappedVec[0] = angleVec[0] * xx + angleVec[1] * yx;
+  screenMappedVec[1] = angleVec[0] * xy + angleVec[1] * yy;
+
+  // Find the screen-space difference between the point and its
+  // neighbor.
+  std::array<double, 2> screenVec;
+  screenVec[0] = mapping[index1].xyLatLong.x -
+    mapping[index0].xyLatLong.x;
+  screenVec[1] = mapping[index1].xyLatLong.y -
+    mapping[index0].xyLatLong.y;
+
+  // Normalize the two vectors
+  normalize(screenMappedVec);
+  normalize(screenVec);
+
+  // Find the dot product between the two vectors.
+  double dotProduct = screenMappedVec[0] * screenVec[0] +
+    screenMappedVec[1] * screenVec[1];
+
+  // If the dot product is too small, the angle is too large
+  // and so we fail.
+  return dotProduct < minDotProduct;
+}
+
+static double point_distance(double x1, double y1, double x2, double y2) {
+  return std::sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
+
+/// Finds out how many neighbors of the specified index
+/// in the mapping violate the strictures of the
+/// remove_invalid_points_based_on_angle function.
+/// Checks up to 8 nearest neighbors in angle space.
+/// @return How many neighbor angle differences are too large.
+static size_t neighbor_errors(
+  const std::vector<Mapping> &mapping, size_t index,
+  double xx, double xy,
+  double yx, double yy, double minDotProduct)
+{
+  // Sort all points other than the one we're looking for
+  // based on distance from the one we are looking for.
+  typedef std::multimap<double, size_t> PointDistanceIndexMap;
+  PointDistanceIndexMap map;
+  for (size_t i = 0; (i < mapping.size()) && (i != index); i++) {
+    map.insert(std::make_pair(
+      point_distance(
+        mapping[index].xyLatLong.longitude,
+        mapping[index].xyLatLong.latitude,
+        mapping[i].xyLatLong.longitude,
+        mapping[i].xyLatLong.latitude
+      ), i));
+  }
+
+  // Check the first 8 points on the list (if there are that many)
+  // and count up how many violate the angle condition.
+  size_t ret = 0;
+  PointDistanceIndexMap::const_iterator it = map.begin();
+  for (size_t i = 0; (i < map.size()) && (i < 8); i++) {
+    if (neighbor_error(mapping, index, it->second,
+        xx, xy, yx, yy, minDotProduct)) {
+      ret++;
+    }
+    it++;
+  }
+  return ret;
+}
+
+/// Looks through the mapping to see if there is a point whose
+/// neighbor angles violate the strictures of the
+/// remove_invalid_points_based_on_angle function.
+/// @return index of the point that has the largest number
+/// of invalid neighbor angles if one is found, size of mapping
+/// if not.
+static size_t find_index_of_angle_worst_offender(
+  std::vector<Mapping> &mapping, double xx, double xy,
+  double yx, double yy, double minDotProduct)
+{
+  size_t worstIndex = 0;
+  size_t worstCount = neighbor_errors(mapping, 0,
+    xx, xy, yx, yy, minDotProduct);
+  for (size_t i = 1; i < mapping.size(); i++) {
+
+  }
+  if (worstCount == 0) { return mapping.size(); }
+  return worstIndex;
+}
+
+int remove_invalid_points_based_on_angle(
+  std::vector<Mapping> &mapping, double xx, double xy,
+  double yx, double yy, double maxAngleDegrees)
+{
+  int ret = 0;  // No points yet removed from the mesh.
+
+  // Find the dot product associated with two unit vectors
+  // separated by the angle specified.  This is the cosine
+  // of the angle.
+  double minDotProduct = cos(maxAngleDegrees / 180.0 * MY_PI);
+
+  // We remove the worst offender from the list each time,
+  // then re-start.  Assuming that we get the actual outlier,
+  // as opposed to one of its neighbors, this avoids trimming
+  // too many points from the vector.
+  bool foundOutlier;
+  do {
+    foundOutlier = false;
+    size_t off = find_index_of_angle_worst_offender(
+      mapping, xx, xy, yx, yy, minDotProduct);
+    if (off < mapping.size()) {
+      mapping.erase(mapping.begin() + off);
+      foundOutlier = true;
+      ret++;
+    }
+  } while (foundOutlier);
+
+  return ret;
 }

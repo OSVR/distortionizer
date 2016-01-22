@@ -32,6 +32,19 @@
 // Returns empty mapping if it fails to read anything.
 extern std::vector<Mapping> read_from_infile(std::istream &in);
 
+/// This removes invalid points from the mesh if the angle
+/// between the vector from a point to its neighbor in lat/long
+/// space (when transformed by the specified mapping into screen
+/// space) is more than the maximum specified number of degrees
+/// different than the vector to that same neighbor in screen
+/// space.  The mapping: +longitude (left) points in (xx, xy) in screen
+/// space and +latitude (up) points in (yx, yy) in screen space.
+///   @return -1 on error, the number of points that were
+/// removed from the mesh otherwise.
+extern int remove_invalid_points_based_on_angle(
+  std::vector<Mapping> &mapping, double xx, double xy,
+  double yx, double yy, double maxAngleDegrees);
+
 extern bool convert_to_normalized_and_meters(
   std::vector<Mapping> &mapping, double toMeters, double depth,
   double left, double bottom, double right, double top,

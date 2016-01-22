@@ -81,6 +81,10 @@ void Usage(std::string name)
     << " [-verbose] (default is not)"
     << " [-screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters]"
     <<   " (default auto-compute based on ranges seen)"
+    << " [-verify_angles xx xy yx yy max_degrees]"
+    << "   The vector (xx, xy) points in screen space in the direction of +longitude (left)"
+    << "   The vector (yx, yy) points in screen space in the direction of +latitude (up)"
+    << "   The max_degrees tells how far the screen-space neighbor vector can differ from it corresponding angle-space vector"
     << " [-mono in_config_mono_file_name ] (default standard input)"
     << " [-rgb in_config_red_file_name in_config_green_file_name in_config_blue_file_name]"
     << std::endl
@@ -102,6 +106,9 @@ int main(int argc, char *argv[])
   bool useRightEye = true;
   bool computeBounds = true;
   bool useFieldAngles = true;
+  bool verifyAngles = false;
+  double xx, xy, yx, yy;
+  double maxAngleDiffDegrees;
   double left, right, bottom, top;
   double depth = 2.0;
   double toMeters = 1.0;
@@ -126,9 +133,8 @@ int main(int argc, char *argv[])
       inputFileNames.push_back(argv[i]);
       if (++i >= argc) { Usage(argv[0]); }
       inputFileNames.push_back(argv[i]);
-    }
-    else if (std::string("-screen") == argv[i]) {
-      computeBounds = false;
+    } else if (std::string("-screen") == argv[i]) {
+      verifyAngles = true;
       if (++i >= argc) { Usage(argv[0]); }
       left = atof(argv[i]);
       if (++i >= argc) { Usage(argv[0]); }
@@ -148,7 +154,20 @@ int main(int argc, char *argv[])
         std::cerr << "Bad value for -eye: " << eye << ", expected left or right" << std::endl;
         Usage(argv[0]);
       }
-    } else if ((argv[i][0] == '-') && (atof(argv[i]) == 0.0) ) {
+    } else if (std::string("-verify_angles") == argv[i]) {
+      computeBounds = false;
+      if (++i >= argc) { Usage(argv[0]); }
+      xx = atof(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      xy = atof(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      yx = atof(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      yy = atof(argv[i]);
+      if (++i >= argc) { Usage(argv[0]); }
+      maxAngleDiffDegrees = atof(argv[i]);
+    }
+    else if ((argv[i][0] == '-') && (atof(argv[i]) == 0.0)) {
       Usage(argv[0]);
     }
     else switch (++realParams) {
@@ -207,6 +226,29 @@ int main(int argc, char *argv[])
       return 2;
     }
     mappings.push_back(mapping);
+  }
+
+  //====================================================================
+  // If we've been asked to verify the angles on the meshes, do so now.
+  // This makes sure that the direction between neighbors in angle space
+  // is consistent with their direction in screen space, removing points
+  // that don't satisfy the criterion.  This removes inconsistent points
+  // from the simulation (caused by multiple ray bounces or other
+  // singularities in the simulation).
+  if (verifyAngles) {
+    for (size_t m = 0; m < mappings.size(); m++) {
+      int ret = remove_invalid_points_based_on_angle(
+        mappings[m], xx, yy, yx, yy, maxAngleDiffDegrees);
+      if (ret < 0) {
+        std::cerr << "Error verifying angles for mesh "
+          << m << std::endl;
+        return 60;
+      }
+      if (g_verbose) {
+        std::cerr << "Removed " << ret
+          << " points from mesh " << m << std::endl;
+      }
+    }
   }
 
   //====================================================================
