@@ -482,7 +482,12 @@ static size_t find_index_of_angle_worst_offender(
   size_t worstCount = neighbor_errors(mapping, 0,
     xx, xy, yx, yy, minDotProduct);
   for (size_t i = 1; i < mapping.size(); i++) {
-
+    size_t count = neighbor_errors(mapping, i,
+      xx, xy, yx, yy, minDotProduct);
+    if (count > worstCount) {
+      worstCount = count;
+      worstIndex = i;
+    }
   }
   if (worstCount == 0) { return mapping.size(); }
   return worstIndex;
