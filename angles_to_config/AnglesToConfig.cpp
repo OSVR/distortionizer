@@ -199,6 +199,7 @@ int main(int argc, char *argv[])
   std::vector<std::istream *> inFiles;
   if (inputFileNames.size() == 0) {
     inFiles.push_back(&std::cin);
+    inputFileNames.push_back("standard input");
   } else {
     for (size_t i = 0; i < inputFileNames.size(); i++) {
       if (g_verbose) {
