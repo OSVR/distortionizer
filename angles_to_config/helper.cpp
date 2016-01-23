@@ -444,14 +444,16 @@ static size_t neighbor_errors(
   // based on distance from the one we are looking for.
   typedef std::multimap<double, size_t> PointDistanceIndexMap;
   PointDistanceIndexMap map;
-  for (size_t i = 0; (i < mapping.size()) && (i != index); i++) {
-    map.insert(std::make_pair(
-      point_distance(
+  for (size_t i = 0; i < mapping.size(); i++) {
+    if (i != index) {
+      map.insert(std::make_pair(
+        point_distance(
         mapping[index].xyLatLong.longitude,
         mapping[index].xyLatLong.latitude,
         mapping[i].xyLatLong.longitude,
         mapping[i].xyLatLong.latitude
-      ), i));
+        ), i));
+    }
   }
 
   // Check the first 8 points on the list (if there are that many)
