@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
   if (verifyAngles) {
     for (size_t m = 0; m < mappings.size(); m++) {
       int ret = remove_invalid_points_based_on_angle(
-        mappings[m], xx, yy, yx, yy, maxAngleDiffDegrees);
+        mappings[m], xx, xy, yx, yy, maxAngleDiffDegrees);
       if (ret < 0) {
         std::cerr << "Error verifying angles for mesh "
           << m << std::endl;
