@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
       if (++i >= argc) { Usage(argv[0]); }
       inputFileNames.push_back(argv[i]);
     } else if (std::string("-screen") == argv[i]) {
-      verifyAngles = true;
+      computeBounds = false;
       if (++i >= argc) { Usage(argv[0]); }
       left = atof(argv[i]);
       if (++i >= argc) { Usage(argv[0]); }
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
         Usage(argv[0]);
       }
     } else if (std::string("-verify_angles") == argv[i]) {
-      computeBounds = false;
+      verifyAngles = true;
       if (++i >= argc) { Usage(argv[0]); }
       xx = atof(argv[i]);
       if (++i >= argc) { Usage(argv[0]); }
