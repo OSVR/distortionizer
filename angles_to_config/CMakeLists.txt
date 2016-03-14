@@ -18,6 +18,7 @@ endif()
 
 #-----------------------------------------------------------------------------
 add_executable(AnglesToConfig AnglesToConfig.cpp helper.cpp)
+add_executable(MakeExampleMesh MakeExampleMesh.cpp)
 
 if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND)
   include_directories(${OSVRRENDERMANAGER_INCLUDE_DIRS})
