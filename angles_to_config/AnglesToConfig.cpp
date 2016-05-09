@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
     leftScreenRight = right;
 
     rightScreenLeft = -right;
-    rightScreenBottom = -left;
+    rightScreenRight = -left;
   }
 
   //====================================================================
