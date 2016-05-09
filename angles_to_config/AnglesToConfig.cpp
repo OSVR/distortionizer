@@ -370,8 +370,6 @@ int main(int argc, char *argv[])
   //====================================================================
   // Compute the three colored mappings based on the screen boundaries
   // we found above.
-  // @todo HOw to keep the screen bounds and normalization from changing
-  // per color?
   for (size_t i = 0; i < mappings.size(); i++) {
     // Do each pair of mappings in turn, one per color.
     std::vector<Mapping> &leftMapping = leftMappings[i];
@@ -382,7 +380,6 @@ int main(int argc, char *argv[])
     // input points and screen parameters.
     // This will re-compute the screen each time, but it will get the same
     // answer because we're using the same bounds for each of them.
-    // @todo Figure out the screens based on all inputs.
     MeshDescription leftMesh, rightMesh;
     if (!findMesh(leftMapping, leftScreenLeft, leftScreenBottom,
       leftScreenRight, leftScreenTop, leftScreen, leftMesh, g_verbose)) {
