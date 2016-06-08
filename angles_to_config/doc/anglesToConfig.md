@@ -20,23 +20,33 @@ The _**forward-gaze direction**_ is the direction forward from the eye, as if lo
 ## Step 2: Compute the unstructured distortion mesh and canonical screen
 
 **AnglesToConfig** reads in the table of unordered mappings from angles to locations on the physical display and produces a distortion map and canonical screen description for use in OSVR server configuration files.  The program is run as a filter, reading in the table on standard input and writing the resulting Json-formatted configuration file to standard output.  It can be run without command-line arguments, but there are optional arguments:
-* **–screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters** lets you specify the actual boundaries of the screen in case there are not points recorded at the actual boundaries.  This argument takes four parameters, each in meters: the left, bottom, top, and right location of the four corners of the screen with respect to the forward-gaze point.  The default is to determine these boundaries by finding the minimum and maximum x and y coordinate in the file.
-* **-mm** specifies that the screen-position entries in the file are in millimeters.  The –screen parameters, if present, are still in meters.  The default is meters.
-* **-eye right|left** specifies which eye, and has one parameter (left or right).  The default it right.
-* **-depth_meters D** specifies the focal depth of the screen.  Larger distances reduce the impact of changes in IPD.  Note that the distortion is dependent on IPD.  The default is 2m.
-* **-latlong** tells that the angles specified are in longitude and latitude, rather than field angles.  Field angles is the default.
-* **-verify_angles xx xy yx yy max_degrees** tests each mesh point to ensure that the change between the vectors point to each of its neighbors in angle space, when transformed into screen space, does not differ by more than max_degrees.  The transformation is specified: The vector (xx, xy) points in screen space in the direction of +longitude (left).  The vector (yx, yy) points in screen space in the direction of +latitude (up).
-* **-mono infile** takes the name of a file to read from rather than standard input, producing a monochromatic distortion function.
-* **-rgb redfile greenfile bluefile** takes three file name arguments, one each for red, green, and blue.
 
-**OSVR HDK 1.3 Examples:** A number of single-color simulations of the OSVR HDK with version 1.3 lenses was run for various eye posistions.  These can be found [here](https://github.com/OSVR/distortionizer/tree/master/angles_to_config/HDK13/2016_02_29).  The corresponding display range for the right eye in millimeters was -32.0 to 28.48 in X and -34.02 to 34.02 in Y.  **Note:** In this case, the simulated region goes past the edge of the screen in the nasal direction.  This will cause a warning to be printed when the program is run and will produce out-of-bounds grid points that will go unused in the mesh.  **Note:** There are rays in the simulation whose trajectories are degenerate, so we need to use the -verify_angles option to remove them.  The command line to support this file is:
-* AnglesToConfig –mm -screen -0.032 -0.03402 0.02848 0.03402 –mono 11_mm_Eye_Relief_trimmed.txt -verify_angles 1 0 0 1 80 > HDK13_11mm_client.json
+* **`–screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters`** lets you specify the actual boundaries of the screen in case there are not points recorded at the actual boundaries.  This argument takes four parameters, each in meters: the left, bottom, top, and right location of the four corners of the screen with respect to the forward-gaze point.  The default is to determine these boundaries by finding the minimum and maximum x and y coordinate in the file.
+* **`-mm`** specifies that the screen-position entries in the file are in millimeters.  The –screen parameters, if present, are still in meters.  The default is meters.
+* **`-eye right|left`** specifies which eye, and has one parameter (left or right).  The default it right.
+* **`-depth_meters D`** specifies the focal depth of the screen.  Larger distances reduce the impact of changes in IPD.  Note that the distortion is dependent on IPD.  The default is 2m.
+* **`-latlong`** tells that the angles specified are in longitude and latitude, rather than field angles.  Field angles is the default.
+* **`-verify_angles xx xy yx yy max_degrees`** tests each mesh point to ensure that the change between the vectors point to each of its neighbors in angle space, when transformed into screen space, does not differ by more than max_degrees.  The transformation is specified: The vector (xx, xy) points in screen space in the direction of +longitude (left).  The vector (yx, yy) points in screen space in the direction of +latitude (up).
+* **`-mono infile`** takes the name of a file to read from rather than standard input, producing a monochromatic distortion function.
+* **`-rgb redfile greenfile bluefile`** takes three file name arguments, one each for red, green, and blue.
 
-**OSVR HDK 2.0 Example:** The HDK 2.0 uses the same lens as the HDK 1.3.  Its screens are 72mm tall and 64.8mm wide and the lenses align 2.2mm towards the nose (to the right of center on the left display and to the left of center on the right display).  The corresponding display range in millimeters on the right eye is -30.2 to 34.6 in X and -36mm to 36mm in Y; the lens offset here is in the opposite direction from the one for the HDK 1.3 design.  We can re-run the above HDK 1.3 example with different parameters for this case.  The command line to support this is:
-* AnglesToConfig –mm -screen -0.0302 -0.036 0.0346 0.036 –mono 11_mm_Eye_Relief_trimmed.txt -verify_angles 1 0 0 1 80 > HDK20_11mm_client.json
+**OSVR HDK 1.3 Examples:** A number of single-color simulations of the OSVR HDK with version 1.3 lenses was run for various eye posistions.  These can be found [here](https://github.com/OSVR/distortionizer/tree/master/angles_to_config/HDK13/2016_02_29).  The corresponding display range for the right eye in millimeters was -32.0 to 28.48 in X and -34.02 to 34.02 in Y.  **Note:** In this case, the simulated region goes past the edge of the screen in the nasal direction.  This will cause a warning to be printed when the program is run and will produce out-of-bounds grid points that will go unused in the mesh.  **Note:** There are rays in the simulation whose trajectories are degenerate, so we need to use the `-verify_angles` option to remove them.  The command line to support this file is:
 
-**RGB Example:** One prototype display had a simulation run that produced three colored output files with angles from -40 degrees to 75 degrees in X for a right-eye display (-65 to 65 in Y).  The corresponding range in millimeters varied by color, but was near -27.3 to 73.3 in X and -33.4 to 33.4 in Y.  This meant that the size in X of the screen that was covered by simulation was less than the actual screen size.  The actual screen size was 120.96mm in X and 68.04mm in Y.  *Note:** In this case, the simulated region goes past the edge of the screen in the nasal direction.  This will cause a warning to be printed when the program is run and will produce out-of-bounds grid points that will go unused in the mesh.  The Y area was reported to be symmetric around the forward-gaze point, making the range of the screen -34.02mm to 34.02mm.  The X location of the forward-gaze point was reported to be 25.34mm from the left edge of the display.  This implies that the screen left edge is actually -25.34mm, and the right edge is 120.96mm from there, at 95.62mm.  The command line to support this file is (running with this file will produce a warning message):
-* AnglesToConfig –mm –screen -0.02534 -0.03402 0.09562 0.03402 –rgb red_in.dat green_in.dat blue_in.dat > out.json
+```
+AnglesToConfig –mm -screen -0.032 -0.03402 0.02848 0.03402 –mono 11_mm_Eye_Relief_trimmed.txt -verify_angles 1 0 0 1 80 > HDK13_11mm_client.json
+```
+
+**OSVR HDK Variant Example:** Consider a variant HMD that uses the same lens as the HDK 1.3.  Its screens are 72mm tall and 64.8mm wide and the lenses align 2.2mm towards the nose (to the right of center on the left display and to the left of center on the right display).  The corresponding display range in millimeters on the right eye is -30.2 to 34.6 in X and -36mm to 36mm in Y; the lens offset here is in the opposite direction from the one for the HDK 1.3 design.  We can re-run the above HDK 1.3 example with different parameters for this case.  The command line to support this is:
+
+```
+AnglesToConfig –mm -screen -0.0302 -0.036 0.0346 0.036 –mono 11_mm_Eye_Relief_trimmed.txt -verify_angles 1 0 0 1 80 > HDKvar_11mm_client.json
+```
+
+**RGB Example:** One prototype display had a simulation run that produced three colored output files with angles from -40 degrees to 75 degrees in X for a right-eye display (-65 to 65 in Y).  The corresponding range in millimeters varied by color, but was near -27.3 to 73.3 in X and -33.4 to 33.4 in Y.  This meant that the size in X of the screen that was covered by simulation was less than the actual screen size.  The actual screen size was 120.96mm in X and 68.04mm in Y.  **Note:** In this case, the simulated region goes past the edge of the screen in the nasal direction.  This will cause a warning to be printed when the program is run and will produce out-of-bounds grid points that will go unused in the mesh.  The Y area was reported to be symmetric around the forward-gaze point, making the range of the screen -34.02mm to 34.02mm.  The X location of the forward-gaze point was reported to be 25.34mm from the left edge of the display.  This implies that the screen left edge is actually -25.34mm, and the right edge is 120.96mm from there, at 95.62mm.  The command line to support this file is (running with this file will produce a warning message):
+
+```
+AnglesToConfig –mm –screen -0.02534 -0.03402 0.09562 0.03402 –rgb red_in.dat green_in.dat blue_in.dat > out.json
+```
 
 ## Step 3: Constructing configuration files
 
@@ -48,14 +58,14 @@ Several sections of this example file should be modified based on the informatio
 
     "distortion": {
         "type": "mono_point_samples",
-     "mono_point_samples_external_file": "C:/OSVR/Distortion_client.json"
+        "mono_point_samples_external_file": "C:/OSVR/Distortion_client.json"
     },
 
 For an RGB configuration file, use:
 
     "distortion": {
         "type": "rgb_point_samples",
-     "rgb_point_samples_external_file": "C:/OSVR/Distortion_client.json"
+        "rgb_point_samples_external_file": "C:/OSVR/Distortion_client.json"
     },
 
 This can be copy-pasted over the distortion section in the main configuration file.
