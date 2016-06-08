@@ -173,6 +173,8 @@ int main(int argc, char *argv[])
     else switch (++realParams) {
     case 1:
     default:
+      std::cerr << "Error: Expected no non-flag parameters, got "
+        << argv[i] << std::endl;
       Usage(argv[0]);
     }
   }
@@ -361,6 +363,7 @@ int main(int argc, char *argv[])
     std::cerr << "Error: Could not find left screen" << std::endl;
     return 3;
   }
+
   if (!findScreen(rightFullMapping, rightScreenLeft, rightScreenBottom,
     rightScreenRight, rightScreenTop, rightScreen, g_verbose)) {
     std::cerr << "Error: Could not find right screen" << std::endl;
