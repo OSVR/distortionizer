@@ -161,7 +161,7 @@ void setParams(void *userdata, const OSVR_TimeValue * /*timestamp*/,
     // from the read-in values.
 
     // Get the original distortion correction
-    osvr::renderkit::RenderManager::DistortionParameters distortionLeft;
+    osvr::renderkit::DistortionParameters distortionLeft;
     distortionLeft.m_desiredTriangles = 200 * 64;
     std::vector<float> Ds;
     Ds.push_back(1.0);
@@ -175,7 +175,7 @@ void setParams(void *userdata, const OSVR_TimeValue * /*timestamp*/,
     distortionLeft.m_distortionCOP[1] =
       static_cast<float>(displayConfiguration->getEyes()[0].m_CenterProjY);
 
-    osvr::renderkit::RenderManager::DistortionParameters distortionRight;
+    osvr::renderkit::DistortionParameters distortionRight;
     distortionRight = distortionLeft;
     distortionRight.m_distortionCOP[0] =
       static_cast<float>(displayConfiguration->getEyes()[1].m_CenterProjX);
@@ -183,12 +183,12 @@ void setParams(void *userdata, const OSVR_TimeValue * /*timestamp*/,
       static_cast<float>(displayConfiguration->getEyes()[1].m_CenterProjY);
 
     // Push the same distortion back for each eye.
-    std::vector<osvr::renderkit::RenderManager::DistortionParameters> distortionParams;
+    std::vector<osvr::renderkit::DistortionParameters> distortionParams;
     distortionParams.push_back(distortionLeft);
     distortionParams.push_back(distortionRight);
 
     // Send a new set of parameters to construct a distortion mesh.
-    render->UpdateDistortionMeshes(osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
+    render->UpdateDistortionMeshes(osvr::renderkit::DistortionMeshType::SQUARE,
       distortionParams);
 
     // Print the parameters to the console, so we can know what was set.

@@ -560,9 +560,9 @@ int main(int argc, char *argv[])
     // distortion correction so that we draw the sphere directly into
     // screen coordinates.
     if (testingForwards) {
-      osvr::renderkit::RenderManager::DistortionParameters distortionLeft;
+      osvr::renderkit::DistortionParameters distortionLeft;
       distortionLeft.m_desiredTriangles = 200 * 64;
-      distortionLeft.m_type = osvr::renderkit::RenderManager::DistortionParameters
+      distortionLeft.m_type = osvr::renderkit::DistortionParameters
         ::rgb_symmetric_polynomials;
       std::vector<float> params;  //< Distortion parameters
       params.push_back(0);
@@ -579,7 +579,7 @@ int main(int argc, char *argv[])
       distortionLeft.m_distortionCOP[1] =
         static_cast<float>(displayConfiguration.getEyes()[0].m_CenterProjY);
 
-      osvr::renderkit::RenderManager::DistortionParameters distortionRight;
+      osvr::renderkit::DistortionParameters distortionRight;
       distortionRight = distortionLeft;
       distortionRight.m_distortionCOP[0] =
         static_cast<float>(displayConfiguration.getEyes()[1].m_CenterProjX);
@@ -587,12 +587,12 @@ int main(int argc, char *argv[])
         static_cast<float>(displayConfiguration.getEyes()[1].m_CenterProjY);
 
       // Push the same distortion back for each eye.
-      std::vector<osvr::renderkit::RenderManager::DistortionParameters> distortionParams;
+      std::vector<osvr::renderkit::DistortionParameters> distortionParams;
       distortionParams.push_back(distortionLeft);
       distortionParams.push_back(distortionRight);
 
       render->UpdateDistortionMeshes(
-        osvr::renderkit::RenderManager::DistortionMeshType::SQUARE,
+        osvr::renderkit::DistortionMeshType::SQUARE,
         distortionParams);
     }
 
