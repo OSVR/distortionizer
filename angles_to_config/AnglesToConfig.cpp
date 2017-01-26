@@ -363,6 +363,12 @@ int main(int argc, char *argv[])
     std::cerr << "Error: Could not find left screen" << std::endl;
     return 3;
   }
+  if (g_verbose) {
+    std::cerr << "Left screen L B R T: " << leftScreenLeft
+      << ", " << leftScreenBottom
+      << ", " << leftScreenRight
+      << ", " << leftScreenTop << std::endl;
+  }
 
   if (!findScreen(rightFullMapping, rightScreenLeft, rightScreenBottom,
     rightScreenRight, rightScreenTop, rightScreen, g_verbose)) {
