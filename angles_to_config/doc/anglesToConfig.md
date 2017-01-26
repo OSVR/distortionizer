@@ -4,7 +4,7 @@ The theory behind the operation of this program is described in the [distortion 
 
 ## Step 1: Determine angle-to-screen mapping
 
-Produce a whitespace-separated file with entries, four entries per line, with no header in the file.  The four columns represent: (1) the longitudinal angle in degrees from the forward gaze direction (positive angles towards the right), (2) the latitudinal angle in degrees from the forward gaze direction (positive angles up), (3) meters (or, with a command-line option, millimeters) from the forward-gaze point on the screen, positive towards the right, (4) meters (or, with a command-line option, millimeters) from the forward-gaze point on the screen, positive up.  The first few lines from an example file follow:
+Produce a whitespace-separated file with entries, four entries per line, with no header in the file.  The four columns represent: (1) the horizontal angle in degrees from the forward gaze direction (positive angles towards the right), (2) the vertical angle in degrees from the forward gaze direction (positive angles up), (3) meters (or, with a command-line option, millimeters) from the forward-gaze point on the screen, positive towards the right, (4) meters (or, with a command-line option, millimeters) from the forward-gaze point on the screen, positive up.  The first few lines from an example file follow:
 
     -35	-45	-21.203		-30.274
     -30	-45	-17.754		-30.901
