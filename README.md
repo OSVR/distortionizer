@@ -24,7 +24,7 @@ Distortionizer tool that allows estimating the optical and chromatic distortion 
 10. In menu header, click on Project -> Properties (or Alt+F7) and in "Configuration Properties" -> Debugging set "Environment" to something like `PATH=$(PATH);C:\Qt\Qt5.4.0-gl\5.4\msvc2013_opengl\bin` otherwise it will complain about missing `Qt5OpenGL.dll` file
 
 
-##Instructions on how to use Distortionizer
+## Instructions on how to use Distortionizer
 Distortion estimation for HMD using K1 (quadratic) term
 
 The program always runs on the last screen, full screen
@@ -42,6 +42,14 @@ Keyboard controls:
 - v/V:    Reset distortion values to 0
 - ESC/Q: Quit the application
 
+To judge the results, pull the HMD out of DirectMode so that it shows up as a second display.  Put it into Landscape mode.  Move the distortion window onto the HMD's display and then use F to toggle fullscreen on.  Look through the HMD and adjust the values to make red, green and blue line up and to make all of the lines straight.  This is an optimization in a high-dimensional space, so be prepared for some frustration.
+
 ## License
 
 This project: Licensed under the Apache License, Version 2.0.
+
+# angles_to_config
+
+This is a stand-alone program that provides a more principled approach to distortion correction than the "adjust until it looks right" method described above.
+
+It reads in the results of measurements of display positions with respect to angles from the eye position when looking through the display and produces either one mesh (for mono) or three (for RGB) distortion maps.
