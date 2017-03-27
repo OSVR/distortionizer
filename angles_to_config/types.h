@@ -107,7 +107,7 @@ class Mapping {
         xyLatLong = ll;
         xyz = x;
     }
-    Mapping(){};
+    Mapping() = default;
 };
 
 // Description of a screen
