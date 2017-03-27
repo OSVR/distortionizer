@@ -539,11 +539,7 @@ static int testAlgorithms() {
     Mapping p2(XYLatLong(1, 0, -phi, theta), XYZ(1, -1, -1));
     Mapping p3(XYLatLong(1, 1, phi, theta), XYZ(1, 1, -1));
     Mapping p4(XYLatLong(0, 1, phi, -theta), XYZ(-1, 1, -1));
-    std::vector<Mapping> mapping;
-    mapping.push_back(p1);
-    mapping.push_back(p2);
-    mapping.push_back(p3);
-    mapping.push_back(p4);
+    std::vector<Mapping> mapping{p1, p2, p3, p4};
 
     // Find the screen associated with this mapping.
     if (!convert_to_normalized_and_meters(mapping, 1, depth, 0, 0, 1, 1)) {
@@ -607,15 +603,11 @@ static int testAlgorithms() {
     // distortion correction, but which is rotated 45 degrees with respect to straight
     // ahead.
     // In this case, the distance to the points is sqrt(2).
-    Mapping rp1(XYLatLong(0, 0, 0, -theta), XYZ(0, -1, -sqrt(2)));
-    Mapping rp2(XYLatLong(1, 0, 90, -theta), XYZ(sqrt(2), -1, 0));
-    Mapping rp3(XYLatLong(1, 1, 90, theta), XYZ(sqrt(2), 1, 0));
-    Mapping rp4(XYLatLong(0, 1, 0, theta), XYZ(0, 1, -sqrt(2)));
-    std::vector<Mapping> rmapping;
-    rmapping.push_back(rp1);
-    rmapping.push_back(rp2);
-    rmapping.push_back(rp3);
-    rmapping.push_back(rp4);
+    Mapping rp1(XYLatLong(0, 0, 0, -theta), XYZ(0, -1, -std::sqrt(2)));
+    Mapping rp2(XYLatLong(1, 0, 90, -theta), XYZ(std::sqrt(2), -1, 0));
+    Mapping rp3(XYLatLong(1, 1, 90, theta), XYZ(std::sqrt(2), 1, 0));
+    Mapping rp4(XYLatLong(0, 1, 0, theta), XYZ(0, 1, -std::sqrt(2)));
+    std::vector<Mapping> rmapping = {rp1, rp2, rp3, rp4};
 
     // Find the screen associated with this mapping.
     ScreenDescription rscreen;
@@ -710,12 +702,7 @@ static int testAlgorithms() {
     dExpectedYIn.push_back(0.3);
     dExpectedXOut.push_back(0.5);
     dExpectedYOut.push_back(0.5);
-    std::vector<Mapping> dmapping;
-    dmapping.push_back(dp1);
-    dmapping.push_back(dp2);
-    dmapping.push_back(dp3);
-    dmapping.push_back(dp4);
-    dmapping.push_back(dp5);
+    std::vector<Mapping> dmapping{dp1, dp2, dp3, dp4, dp5};
 
     // Normalize the mapping and make sure the results are as expected.
     std::vector<Mapping> ndmapping = dmapping;
