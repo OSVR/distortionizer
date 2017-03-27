@@ -31,6 +31,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -225,25 +226,26 @@ int main(int argc, char* argv[]) {
     // Parse the angle-configuration information from standard or from the set
     // of input files specified.  Expect white-space separation between numbers
     // and also between entries (which may be on separate lines).
-    std::vector<std::istream*> inFiles;
-    if (inputFileNames.size() == 0) {
-        inFiles.push_back(&std::cin);
-        inputFileNames.push_back("standard input");
+    std::vector<std::shared_ptr<std::istream>> inFiles;
+    if (inputFileNames.empty()) {
+        std::shared_ptr<std::istream> stdinNullDeleter(&std::cin, [](std::istream*) {});
+        inFiles.emplace_back(std::move(stdinNullDeleter));
+        inputFileNames.emplace_back("standard input");
     } else {
-        for (size_t i = 0; i < inputFileNames.size(); i++) {
+        for (auto& inputFileName : inputFileNames) {
             if (g_verbose) {
-                std::cerr << "Opening file " << inputFileNames[i] << std::endl;
+                std::cerr << "Opening file " << inputFileName << std::endl;
             }
-            std::ifstream* inFile = new std::ifstream;
-            inFile->open(inputFileNames[i].c_str(), std::ifstream::in);
+            std::shared_ptr<std::ifstream> inFile = std::make_shared<std::ifstream>();
+            inFile->open(inputFileName.c_str(), std::ifstream::in);
             if (!inFile->good()) {
-                std::cerr << "Error: Could not open " << inputFileNames[i] << std::endl;
+                std::cerr << "Error: Could not open " << inputFileName << std::endl;
                 return 1;
             }
-            inFiles.push_back(inFile);
+            inFiles.emplace_back(std::move(inFile));
         }
     }
-    std::vector<std::vector<Mapping> > mappings;
+    std::vector<std::vector<Mapping>> mappings;
     for (size_t i = 0; i < inFiles.size(); i++) {
         std::vector<Mapping> mapping = read_from_infile(*inFiles[i]);
         if (g_verbose) {
