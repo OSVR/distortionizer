@@ -30,7 +30,7 @@
 #include <vector>
 
 // Returns empty mapping if it fails to read anything.
-extern std::vector<Mapping> read_from_infile(std::istream &in);
+extern std::vector<Mapping> read_from_infile(std::istream& in);
 
 /// This removes invalid points from the mesh if the angle
 /// between the vector from a point to its neighbor in lat/long
@@ -41,20 +41,14 @@ extern std::vector<Mapping> read_from_infile(std::istream &in);
 /// space and +latitude (up) points in (yx, yy) in screen space.
 ///   @return -1 on error, the number of points that were
 /// removed from the mesh otherwise.
-extern int remove_invalid_points_based_on_angle(
-  std::vector<Mapping> &mapping, double xx, double xy,
-  double yx, double yy, double maxAngleDegrees);
+extern int remove_invalid_points_based_on_angle(std::vector<Mapping>& mapping, double xx, double xy, double yx,
+                                                double yy, double maxAngleDegrees);
 
-extern bool convert_to_normalized_and_meters(
-  std::vector<Mapping> &mapping, double toMeters, double depth,
-  double left, double bottom, double right, double top,
-  bool useFieldAngles = false);
+extern bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
+                                             double bottom, double right, double top, bool useFieldAngles = false);
 
-extern bool findScreen(const std::vector<Mapping> &mapping,
-  double left, double bottom, double right, double top,
-  ScreenDescription &screen, bool verbose = false);
+extern bool findScreen(const std::vector<Mapping>& mapping, double left, double bottom, double right, double top,
+                       ScreenDescription& screen, bool verbose = false);
 
-extern bool findMesh(const std::vector<Mapping> &mapping,
-  double left, double bottom, double right, double top,
-  ScreenDescription const &screen, MeshDescription &mesh, bool verbose = false);
-
+extern bool findMesh(const std::vector<Mapping>& mapping, double left, double bottom, double right, double top,
+                     ScreenDescription const& screen, MeshDescription& mesh, bool verbose = false);

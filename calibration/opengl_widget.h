@@ -25,8 +25,8 @@
 
 #pragma once
 #include "opengl_widget.h"
-#include <QGLWidget>
 #include "undistort_shader.h"
+#include <QGLWidget>
 
 // There are three different indices of refraction for the three
 // different wavelengths in the head-mounted display (R, G, B).
@@ -65,26 +65,25 @@
 // (K2 and above), the result is a fourth-order polynomial that
 // is challenging to invert analytically.
 
-class OpenGL_Widget : public QGLWidget
-{
+class OpenGL_Widget : public QGLWidget {
     Q_OBJECT
 
-public:
-    OpenGL_Widget(QWidget *parent = 0);
+  public:
+    OpenGL_Widget(QWidget* parent = 0);
     ~OpenGL_Widget();
 
-public slots:
+  public slots:
 
-signals:
+  signals:
 
-protected:
+  protected:
     //------------------------------------------------------
     void initializeGL();
     void paintGL();
     void resizeGL(int width, int height);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
+    void keyPressEvent(QKeyEvent* event);
 
     //------------------------------------------------------
     bool saveConfigToJson(QString filename);
@@ -106,10 +105,8 @@ protected:
     // to each segment endpoint.  The color index tells whether
     // we use red (0), green (1), or blue (2) correction factors.
     // It uses the specified center of projection.
-    void drawCorrectedLine(QPoint begin, QPoint end,
-                           QPoint cop, unsigned color);
-    void drawCorrectedCircle(QPoint center, float radius,
-                           QPoint cop, unsigned color);
+    void drawCorrectedLine(QPoint begin, QPoint end, QPoint cop, unsigned color);
+    void drawCorrectedCircle(QPoint center, float radius, QPoint cop, unsigned color);
 
     /// Draw a set of 3 colored lines from the specified begin
     // point to the specified end, doing distortion correcton.
@@ -127,17 +124,17 @@ protected:
     // Also used to reset center during execution to default values
     void setDeftCOPVals();
 
-    //Convert point from pixels to relative
+    // Convert point from pixels to relative
     QPointF pixelToRelative(QPointF cop);
     QPoint relativeToPixel(QPointF cop);
 
-private:
-    int d_width, d_height;  //< Size of the window we're rendering into
-    QPoint d_cop_l;         //< Center of projection for the left eye
-    QPoint d_cop_r;         //< Center of projection for the right eye
-    QPoint d_cop;            //< Center of projection for the fullscreen
-    float  d_k1_red;        //< Quadratic term for distortion of red
-    float  d_k1_green;      //< Quadratic term for distortion of green
-    float  d_k1_blue;       //< Quadratic term for distortion of blue
+  private:
+    int d_width, d_height; //< Size of the window we're rendering into
+    QPoint d_cop_l;        //< Center of projection for the left eye
+    QPoint d_cop_r;        //< Center of projection for the right eye
+    QPoint d_cop;          //< Center of projection for the fullscreen
+    float d_k1_red;        //< Quadratic term for distortion of red
+    float d_k1_green;      //< Quadratic term for distortion of green
+    float d_k1_blue;       //< Quadratic term for distortion of blue
     bool fullscreen;
 };

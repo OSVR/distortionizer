@@ -23,11 +23,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <QApplication>
 #include "mainwindow.h"
+#include <QApplication>
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char* argv[]) {
 
     QApplication a(argc, argv);
     MainWindow w;

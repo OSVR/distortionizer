@@ -27,10 +27,7 @@
 #include "ui_mainwindow.h"
 #include <QDesktopWidget>
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
-{
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
     // Make the central widget have no margins, so we fill the whole region.
@@ -48,7 +45,4 @@ MainWindow::MainWindow(QWidget *parent) :
     this->resize(screenres.width(), screenres.height());
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
+MainWindow::~MainWindow() { delete ui; }

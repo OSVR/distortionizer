@@ -30,12 +30,10 @@
 // #include conflicts with other source code.
 class Undistort_Shader_Private;
 
-class Undistort_Shader
-{
-public:
-    Undistort_Shader(
-        std::string vert_shader_file_name = "./quadratic_tri_color_vert.glsl",
-        std::string frag_shader_file_name = "./quadratic_tri_color_frag.glsl");
+class Undistort_Shader {
+  public:
+    Undistort_Shader(std::string vert_shader_file_name = "./quadratic_tri_color_vert.glsl",
+                     std::string frag_shader_file_name = "./quadratic_tri_color_frag.glsl");
     ~Undistort_Shader();
 
     // Use the shader for rendering.
@@ -55,14 +53,14 @@ public:
     // No shader yet loaded.
     static const int NO_SHADER = 9999;
 
-protected:
+  protected:
     // Read a shader string from a file into a string.  Returns an empty
     // string on failure.
     std::string readShaderFromFile(std::string filename);
 
     // Load, compile, and link the shaders.
-    static int loadShaders(const char *vertexShader, const char *fragmentShader);
+    static int loadShaders(const char* vertexShader, const char* fragmentShader);
 
-private:
-    Undistort_Shader_Private   *d_p;  //< Private objects requiring GL/GLEW
+  private:
+    Undistort_Shader_Private* d_p; //< Private objects requiring GL/GLEW
 };
