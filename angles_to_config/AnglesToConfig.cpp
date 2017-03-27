@@ -447,21 +447,21 @@ int main(int argc, char* argv[]) {
     // to control the printed precision of the numbers to avoid making
     // a huge file.
     std::cout << "{" << std::endl;
-    std::cout << " \"display\": {" << std::endl;
-    std::cout << "  \"hmd\": {" << std::endl;
+    std::cout << R"( "display": {)" << std::endl;
+    std::cout << R"(  "hmd": {)" << std::endl;
 
-    std::cout << "   \"field_of_view\": {" << std::endl;
-    std::cout << "    \"monocular_horizontal\": " << rightScreen.hFOVDegrees << "," << std::endl;
-    std::cout << "    \"monocular_vertical\": " << rightScreen.vFOVDegrees << "," << std::endl;
-    std::cout << "    \"overlap_percent\": " << rightScreen.overlapPercent << "," << std::endl;
-    std::cout << "    \"pitch_tilt\": 0" << std::endl;
+    std::cout << R"(   "field_of_view": {)" << std::endl;
+    std::cout << R"(    "monocular_horizontal": )" << rightScreen.hFOVDegrees << "," << std::endl;
+    std::cout << R"(    "monocular_vertical": )" << rightScreen.vFOVDegrees << "," << std::endl;
+    std::cout << R"(    "overlap_percent": )" << rightScreen.overlapPercent << "," << std::endl;
+    std::cout << R"(    "pitch_tilt": 0)" << std::endl;
     std::cout << "   }," << std::endl; // field_of_view
 
-    std::cout << "   \"distortion\": {" << std::endl;
+    std::cout << R"(   "distortion": {)" << std::endl;
     switch (leftMeshes.size()) {
     case 1:
         std::cout << R"(    "type": "mono_point_samples",)" << std::endl;
-        std::cout << "    \"mono_point_samples\": [" << std::endl;
+        std::cout << R"(    "mono_point_samples": [)" << std::endl;
         writeMesh(std::cout, leftMeshes[0]);
         std::cout << "," << std::endl;
         writeMesh(std::cout, rightMeshes[0]);
@@ -470,17 +470,17 @@ int main(int argc, char* argv[]) {
         break;
     case 3:
         std::cout << R"(    "type": "rgb_point_samples",)" << std::endl;
-        std::cout << "    \"red_point_samples\": [" << std::endl;
+        std::cout << R"(    "red_point_samples": [)" << std::endl;
         writeMesh(std::cout, leftMeshes[0]);
         std::cout << "," << std::endl;
         writeMesh(std::cout, rightMeshes[0]);
         std::cout << "    ]," << std::endl; // red_point_samples
-        std::cout << "    \"green_point_samples\": [" << std::endl;
+        std::cout << R"(    "green_point_samples": [)" << std::endl;
         writeMesh(std::cout, leftMeshes[1]);
         std::cout << "," << std::endl;
         writeMesh(std::cout, rightMeshes[1]);
         std::cout << "    ]," << std::endl; // green_point_samples
-        std::cout << "    \"blue_point_samples\": [" << std::endl;
+        std::cout << R"(    "blue_point_samples": [)" << std::endl;
         writeMesh(std::cout, leftMeshes[2]);
         std::cout << "," << std::endl;
         writeMesh(std::cout, rightMeshes[2]);
@@ -492,16 +492,16 @@ int main(int argc, char* argv[]) {
         return 3;
     }
 
-    std::cout << "   \"eyes\": [" << std::endl;
+    std::cout << R"(   "eyes": [)" << std::endl;
     std::cout << "    {" << std::endl;
-    std::cout << "     \"center_proj_x\": " << leftScreen.xCOP << "," << std::endl;
-    std::cout << "     \"center_proj_y\": " << leftScreen.yCOP << "," << std::endl;
-    std::cout << "     \"rotate_180\": 0" << std::endl;
+    std::cout << R"(     "center_proj_x": )" << leftScreen.xCOP << "," << std::endl;
+    std::cout << R"(     "center_proj_y": )" << leftScreen.yCOP << "," << std::endl;
+    std::cout << R"(     "rotate_180": 0)" << std::endl;
     std::cout << "    }," << std::endl;
     std::cout << "    {" << std::endl;
-    std::cout << "     \"center_proj_x\": " << rightScreen.xCOP << "," << std::endl;
-    std::cout << "     \"center_proj_y\": " << rightScreen.yCOP << "," << std::endl;
-    std::cout << "     \"rotate_180\": 0" << std::endl;
+    std::cout << R"(     "center_proj_x": )" << rightScreen.xCOP << "," << std::endl;
+    std::cout << R"(     "center_proj_y": )" << rightScreen.yCOP << "," << std::endl;
+    std::cout << R"(     "rotate_180": 0)" << std::endl;
     std::cout << "    }" << std::endl;
     std::cout << "   ]" << std::endl; // eyes
 
