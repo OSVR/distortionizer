@@ -251,7 +251,7 @@ int main(int argc, char* argv[]) {
         if (g_verbose) {
             std::cerr << "Found " << mapping.size() << " points in " << inputFileNames[i] << std::endl;
         }
-        if (mapping.size() == 0) {
+        if (mapping.empty()) {
             std::cerr << "Error: No input points found in " << inputFileNames[i] << std::endl;
             return 2;
         }
@@ -285,10 +285,10 @@ int main(int argc, char* argv[]) {
     if (computeBounds) {
         left = right = mappings[0][0].xyLatLong.x;
         bottom = top = mappings[0][0].xyLatLong.y;
-        for (size_t m = 0; m < mappings.size(); m++) {
-            for (size_t i = 1; i < mappings[m].size(); i++) {
-                double x = mappings[m][i].xyLatLong.x;
-                double y = mappings[m][i].xyLatLong.y;
+        for (auto& mapping : mappings) {
+            for (size_t i = 1; i < mapping.size(); i++) {
+                double x = mapping[i].xyLatLong.x;
+                double y = mapping[i].xyLatLong.y;
                 if (x < left) {
                     left = x;
                 }
@@ -337,12 +337,10 @@ int main(int argc, char* argv[]) {
     //====================================================================
     // Compute a left- and right-eye mappings that are mirrors of each
     // other, so that we can produce distortion maps for both eyes.
-    std::vector<std::vector<Mapping> > leftMappings;
-    std::vector<std::vector<Mapping> > rightMappings;
-    for (size_t i = 0; i < mappings.size(); i++) {
+    std::vector<std::vector<Mapping>> leftMappings;
+    std::vector<std::vector<Mapping>> rightMappings;
+    for (auto& mapping : mappings) {
         // Do each mapping in turn, one per color.
-        std::vector<Mapping>& mapping = mappings[i];
-
         //====================================================================
         // Make an inverse mapping for the opposite eye.  Invert around X in
         // angle and viewing direction.  Depending on whether we are using the
@@ -381,11 +379,11 @@ int main(int argc, char* argv[]) {
     // encompasses all of them.
     std::vector<Mapping> leftFullMapping, rightFullMapping;
     for (size_t i = 0; i < mappings.size(); i++) {
-        for (size_t j = 0; j < leftMappings[i].size(); j++) {
-            leftFullMapping.push_back(leftMappings[i][j]);
+        for (const auto& j : leftMappings[i]) {
+            leftFullMapping.push_back(j);
         }
-        for (size_t j = 0; j < rightMappings[i].size(); j++) {
-            rightFullMapping.push_back(rightMappings[i][j]);
+        for (const auto& j : rightMappings[i]) {
+            rightFullMapping.push_back(j);
         }
     }
     if (!findScreen(leftFullMapping, leftScreenLeft, leftScreenBottom, leftScreenRight, leftScreenTop, leftScreen,
@@ -462,7 +460,7 @@ int main(int argc, char* argv[]) {
     std::cout << "   \"distortion\": {" << std::endl;
     switch (leftMeshes.size()) {
     case 1:
-        std::cout << "    \"type\": \"mono_point_samples\"," << std::endl;
+        std::cout << R"(    "type": "mono_point_samples",)" << std::endl;
         std::cout << "    \"mono_point_samples\": [" << std::endl;
         writeMesh(std::cout, leftMeshes[0]);
         std::cout << "," << std::endl;
@@ -471,7 +469,7 @@ int main(int argc, char* argv[]) {
         std::cout << "   }," << std::endl; // distortion
         break;
     case 3:
-        std::cout << "    \"type\": \"rgb_point_samples\"," << std::endl;
+        std::cout << R"(    "type": "rgb_point_samples",)" << std::endl;
         std::cout << "    \"red_point_samples\": [" << std::endl;
         writeMesh(std::cout, leftMeshes[0]);
         std::cout << "," << std::endl;

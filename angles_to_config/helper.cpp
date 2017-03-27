@@ -50,36 +50,37 @@ std::vector<Mapping> read_from_infile(std::istream& in) {
 
 bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
                                       double bottom, double right, double top, bool useFieldAngles) {
-    for (size_t i = 0; i < mapping.size(); i++) {
+    for (auto& thisMapping : mapping) {
         //  Convert the input coordinates from its input space into meters
-        // and then convert (using the screen dimensions) into normalized screen units.
-        mapping[i].xyLatLong.x *= toMeters;
-        mapping[i].xyLatLong.x = (mapping[i].xyLatLong.x - left) / (right - left);
-        mapping[i].xyLatLong.y *= toMeters;
-        mapping[i].xyLatLong.y = (mapping[i].xyLatLong.y - bottom) / (top - bottom);
+        // and then convert (using the screen dimensions) into normalized screen
+        // units.
+        thisMapping.xyLatLong.x *= toMeters;
+        thisMapping.xyLatLong.x = (thisMapping.xyLatLong.x - left) / (right - left);
+        thisMapping.xyLatLong.y *= toMeters;
+        thisMapping.xyLatLong.y = (thisMapping.xyLatLong.y - bottom) / (top - bottom);
 
         // Convert the input latitude and longitude from degrees to radians.
-        mapping[i].xyLatLong.latitude *= MY_PI / 180;
-        mapping[i].xyLatLong.longitude *= MY_PI / 180;
+        thisMapping.xyLatLong.latitude *= MY_PI / 180;
+        thisMapping.xyLatLong.longitude *= MY_PI / 180;
 
         if (useFieldAngles) {
             // These are expressed as angles with respect to a screen that is
             // straight ahead, independent in X and Y.  The -Z axis is straight
             // ahead.  Positive rotation in longitude points towards +X,
             // positive rotation in latitude points towards +Y.
-            mapping[i].xyz.x = depth * tan(mapping[i].xyLatLong.longitude);
-            mapping[i].xyz.y = depth * tan(mapping[i].xyLatLong.latitude);
-            mapping[i].xyz.z = -depth;
+            thisMapping.xyz.x = depth * tan(thisMapping.xyLatLong.longitude);
+            thisMapping.xyz.y = depth * tan(thisMapping.xyLatLong.latitude);
+            thisMapping.xyz.z = -depth;
         } else {
             // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
             // longitude = 0, latitude = 0 points along the -Z axis in eye space.
             // Positive rotation in longitude is towards -X and positive rotation in
             // latitude points towards +Y.
-            double theta = mapping[i].xyLatLong.longitude;
-            double phi = MY_PI / 2 - mapping[i].xyLatLong.latitude;
-            mapping[i].xyz.y = depth * cos(phi);
-            mapping[i].xyz.z = -depth * cos(theta) * sin(phi);
-            mapping[i].xyz.x = -depth * (-sin(theta)) * sin(phi);
+            double theta = thisMapping.xyLatLong.longitude;
+            double phi = MY_PI / 2 - thisMapping.xyLatLong.latitude;
+            thisMapping.xyz.y = depth * cos(phi);
+            thisMapping.xyz.z = -depth * cos(theta) * sin(phi);
+            thisMapping.xyz.x = -depth * (-sin(theta)) * sin(phi);
         }
     }
 
@@ -100,9 +101,9 @@ bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMe
     return true;
 }
 
-bool findScreen(const std::vector<Mapping>& mapping, double left, double bottom, double right, double top,
-                ScreenDescription& screen, bool verbose) {
-    if (mapping.size() == 0) {
+bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*bottom*/, double /*right*/,
+                double /*top*/, ScreenDescription& screen, bool verbose) {
+    if (mapping.empty()) {
         std::cerr << "findScreen(): Error: No points in mapping" << std::endl;
         return false;
     }
@@ -111,14 +112,16 @@ bool findScreen(const std::vector<Mapping>& mapping, double left, double bottom,
     // Figure out the X screen-space extents.
     // The X screen-space extents are defined by the lines perpendicular to the
     // Y axis passing through:
-    //  left: the point location whose reprojection into the Y = 0 plane has the most -
+    //  left: the point location whose reprojection into the Y = 0 plane has the
+    //  most -
     //        positive angle(note that this may not be the point with the largest
-    //        longitudinal coordinate, because of the impact of changing latitude on
-    //        X - Z position).
-    //  right : the point location whose reprojection into the Y = 0 plane has the most -
+    //        longitudinal coordinate, because of the impact of changing latitude
+    //        on X - Z position).
+    //  right : the point location whose reprojection into the Y = 0 plane has the
+    //  most -
     //        negative angle(note that this may not be the point with the smallest
-    //        longitudinal coordinate, because of the impact of changing latitude on
-    //        X - Z position).
+    //        longitudinal coordinate, because of the impact of changing latitude
+    //        on X - Z position).
     XYZ& screenLeft = screen.screenLeft;
     XYZ& screenRight = screen.screenRight;
     ;
@@ -127,12 +130,12 @@ bool findScreen(const std::vector<Mapping>& mapping, double left, double bottom,
         std::cerr << "First point rotation about Y (degrees): " << screenLeft.rotationAboutY() * 180 / MY_PI
                   << std::endl;
     }
-    for (size_t i = 0; i < mapping.size(); i++) {
-        if (mapping[i].xyz.rotationAboutY() > screenLeft.rotationAboutY()) {
-            screenLeft = mapping[i].xyz;
+    for (const auto& i : mapping) {
+        if (i.xyz.rotationAboutY() > screenLeft.rotationAboutY()) {
+            screenLeft = i.xyz;
         }
-        if (mapping[i].xyz.rotationAboutY() < screenRight.rotationAboutY()) {
-            screenRight = mapping[i].xyz;
+        if (i.xyz.rotationAboutY() < screenRight.rotationAboutY()) {
+            screenRight = i.xyz;
         }
     }
     if (verbose) {
@@ -179,9 +182,11 @@ bool findScreen(const std::vector<Mapping>& mapping, double left, double bottom,
 
     //====================================================================
     // Figure out the Y screen-space extents.
-    // The Y screen-space extents are symmetric and correspond to the lines parallel
-    //  to the screen X axis that are within the plane of the X line specifying the
-    //  axis extents at the largest magnitude angle up or down from the horizontal.
+    // The Y screen-space extents are symmetric and correspond to the lines
+    // parallel
+    //  to the screen X axis that are within the plane of the X line specifying
+    //  the axis extents at the largest magnitude angle up or down from the
+    //  horizontal.
     // Find the highest-magnitude Y value of all points when they are
     // projected into the plane of the screen.
     double& maxY = screen.maxY;
@@ -297,9 +302,9 @@ bool findScreen(const std::vector<Mapping>& mapping, double left, double bottom,
     return true;
 }
 
-bool findMesh(const std::vector<Mapping>& mapping, double left, double bottom, double right, double top,
-              ScreenDescription const& screen, MeshDescription& mesh, bool verbose) {
-    if (mapping.size() == 0) {
+bool findMesh(const std::vector<Mapping>& mapping, double /*left*/, double /*bottom*/, double /*right*/, double /*top*/,
+              ScreenDescription const& screen, MeshDescription& mesh, bool /*verbose*/) {
+    if (mapping.empty()) {
         std::cerr << "findMesh(): Error: No points in mapping" << std::endl;
         return false;
     }
@@ -330,11 +335,11 @@ bool findMesh(const std::vector<Mapping>& mapping, double left, double bottom, d
     double yOutOffset = screen.maxY; // Negative of negative maxY is maxY
     double yOutScale = 1 / (2 * screen.maxY);
 
-    for (size_t i = 0; i < mapping.size(); i++) {
+    for (const auto& i : mapping) {
 
         // Input point coordinates are already normalized.
-        double xNormIn = mapping[i].xyLatLong.x;
-        double yNormIn = mapping[i].xyLatLong.y;
+        double xNormIn = i.xyLatLong.x;
+        double yNormIn = i.xyLatLong.y;
         std::array<double, 2> in;
         in[0] = xNormIn;
         in[1] = yNormIn;
@@ -343,7 +348,7 @@ bool findMesh(const std::vector<Mapping>& mapping, double left, double bottom, d
         // the normalized coordinates in the coordinate system with the lower left
         // corner at (0,0) and the upper right at (1,1).  Because we oversized the
         // screen, these will all be in this range.  Otherwise, they might not be.
-        XYZ onScreen = mapping[i].xyz.projectOntoPlane(A, B, C, D);
+        XYZ onScreen = i.xyz.projectOntoPlane(A, B, C, D);
         double xNormOut = (onScreen.x + xOutOffset) * xOutScale;
         double yNormOut = (onScreen.y + yOutOffset) * yOutScale;
         std::array<double, 2> out;

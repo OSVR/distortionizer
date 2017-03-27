@@ -27,10 +27,10 @@
 
 // Standard includes
 #include <cmath>
+#include <cstdlib> // For exit()
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <stdlib.h> // For exit()
 #include <string>
 #include <vector>
 
@@ -38,7 +38,7 @@
 static bool g_verbose = false;
 #define MY_PI (4.0 * atan(1.0))
 
-void Usage(std::string name) {
+void Usage(const std::string& name) {
     std::cerr << "Usage: " << name << std::endl
               << "  This program produces on standard output an example angles"
               << " to display location file with a 90 degree field of view and."
@@ -60,12 +60,13 @@ int main(int argc, char* argv[]) {
             g_verbose = true;
         } else if ((argv[i][0] == '-') && (atof(argv[i]) == 0.0)) {
             Usage(argv[0]);
-        } else
+        } else {
             switch (++realParams) {
             case 1:
             default:
                 Usage(argv[0]);
             }
+        }
     }
     if (realParams != 0) {
         Usage(argv[0]);
