@@ -1,10 +1,15 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.1.0)
 project(distortionizer)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 ###
 # Configuration Options
 ###
+
+option(BUILD_WITH_RENDERMANAGER "Build apps that use RM" OFF)
 
 ###
 # CMake Modules
@@ -34,8 +39,7 @@ endif()
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Instruct CMake to run moc automatically when needed.
 set(CMAKE_AUTOMOC ON)
-find_package(Qt5Widgets REQUIRED)
-find_package(Qt5OpenGL REQUIRED)
+find_package(Qt5 COMPONENTS Widgets OpenGL)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
