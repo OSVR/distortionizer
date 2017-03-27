@@ -1,28 +1,36 @@
 cmake_minimum_required(VERSION 3.1.0)
 project(AnglesToConfig)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 #-----------------------------------------------------------------------------
 # Local CMake Modules
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake" "${CMAKE_CURRENT_SOURCE_DIR}/../cmake-local")
+###
+# Configuration Options
+###
+
+option(BUILD_WITH_RENDERMANAGER "Build apps that use RM" OFF)
 
 find_package(OpenGL)
 find_package(GLEW)
-find_package(SDL2)
+#find_package(SDL2)
 find_package(osvrRenderManager)
 find_package(osvr)
-find_package(jsoncpp)
-if(TARGET jsoncpp_lib_static AND NOT TARGET jsoncpp_lib)
-    add_library(jsoncpp_lib INTERFACE)
-    target_link_libraries(jsoncpp_lib INTERFACE jsoncpp_lib_static)
-endif()
+find_package(JsonCpp)
 
 #-----------------------------------------------------------------------------
-add_executable(AnglesToConfig AnglesToConfig.cpp helper.cpp)
+add_executable(AnglesToConfig
+    AnglesToConfig.cpp
+    helper.cpp
+    helper.h
+    types.h)
 add_executable(MakeExampleMesh MakeExampleMesh.cpp)
 
-if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND)
-  include_directories(${OSVRRENDERMANAGER_INCLUDE_DIRS})
+if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND AND BUILD_WITH_RENDERMANAGER AND OSVRRENDERMANAGER_FOUND)
+    include_directories(${OSVRRENDERMANAGER_INCLUDE_DIRS})
 
-  add_executable(DebugAnglesToConfig DebugAnglesToConfig.cpp helper.cpp)
-  target_link_libraries(DebugAnglesToConfig PRIVATE ${OSVRRENDERMANAGER_LIBRARIES} osvr::osvrClientKitCpp osvr::osvrClient osvr::osvrCommon ${OPENGL_LIBRARY} GLEW::GLEW SDL2::SDL2 jsoncpp_lib)
+    add_executable(DebugAnglesToConfig DebugAnglesToConfig.cpp helper.cpp)
+    target_link_libraries(DebugAnglesToConfig PRIVATE osvrRenderManager::osvrRenderManagerCpp osvr::osvrClientKitCpp osvr::osvrClient osvr::osvrCommon ${OPENGL_LIBRARY} GLEW::GLEW SDL2::SDL2 JsonCpp::JsonCpp)
 endif()
