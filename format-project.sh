@@ -12,23 +12,17 @@ run_clang_format_on_input_lines() {
 (
 cd $(dirname $0)
 
-for dir in angles_to_config calibration  shaders; do
+for dir in angles_to_config calibration shaders; do
 (
     cd $dir
     ls *.h *.cpp | run_clang_format_on_input_lines
 )
 done
 
+for dir in RenderManager_image_based RenderManager_xbox; do
 (
-    # RenderManager_image_based directory
     cd RenderManager_image_based
     ls *.cpp | run_clang_format_on_input_lines
-)
-
-(
-    # RenderManager_image_based directory
-    cd RenderManager_xbox
-    ls *.cpp *.h *.c | run_clang_format_on_input_lines
 )
 
 )
