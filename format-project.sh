@@ -24,5 +24,6 @@ for dir in RenderManager_image_based RenderManager_xbox; do
     cd RenderManager_image_based
     ls *.cpp | run_clang_format_on_input_lines
 )
+done
 
 )
