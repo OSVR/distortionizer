@@ -160,7 +160,7 @@ int Undistort_Shader::loadShaders(const char* vertexShader, const char* fragment
 }
 
 // Undistort_Shader Constructor
-Undistort_Shader::Undistort_Shader(std::string vert_shader_file_name, std::string frag_shader_file_name)
+Undistort_Shader::Undistort_Shader(const std::string& vert_shader_file_name, const std::string& frag_shader_file_name)
     : d_p(new Undistort_Shader_Private) {
 
     // Read the vertex shader and the fragment shader from the specified

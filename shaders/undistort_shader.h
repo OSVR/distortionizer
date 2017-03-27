@@ -32,8 +32,8 @@ class Undistort_Shader_Private;
 
 class Undistort_Shader {
   public:
-    Undistort_Shader(std::string vert_shader_file_name = "./quadratic_tri_color_vert.glsl",
-                     std::string frag_shader_file_name = "./quadratic_tri_color_frag.glsl");
+    Undistort_Shader(const std::string& vert_shader_file_name = "./quadratic_tri_color_vert.glsl",
+                     const std::string& frag_shader_file_name = "./quadratic_tri_color_frag.glsl");
     ~Undistort_Shader();
 
     // Use the shader for rendering.
