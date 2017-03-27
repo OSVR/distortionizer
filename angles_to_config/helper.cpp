@@ -60,8 +60,8 @@ bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMe
         thisMapping.xyLatLong.y = (thisMapping.xyLatLong.y - bottom) / (top - bottom);
 
         // Convert the input latitude and longitude from degrees to radians.
-        thisMapping.xyLatLong.latitude *= MY_PI / 180;
-        thisMapping.xyLatLong.longitude *= MY_PI / 180;
+        thisMapping.xyLatLong.latitude *= MY_PI / 180.;
+        thisMapping.xyLatLong.longitude *= MY_PI / 180.;
 
         if (useFieldAngles) {
             // These are expressed as angles with respect to a screen that is
@@ -77,7 +77,7 @@ bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMe
             // Positive rotation in longitude is towards -X and positive rotation in
             // latitude points towards +Y.
             double theta = thisMapping.xyLatLong.longitude;
-            double phi = MY_PI / 2 - thisMapping.xyLatLong.latitude;
+            double phi = MY_PI / 2. - thisMapping.xyLatLong.latitude;
             thisMapping.xyz.y = depth * cos(phi);
             thisMapping.xyz.z = -depth * cos(theta) * sin(phi);
             thisMapping.xyz.x = -depth * (-sin(theta)) * sin(phi);
@@ -112,19 +112,17 @@ bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*b
     // Figure out the X screen-space extents.
     // The X screen-space extents are defined by the lines perpendicular to the
     // Y axis passing through:
-    //  left: the point location whose reprojection into the Y = 0 plane has the
-    //  most -
+    //  left: the point location whose reprojection into the Y = 0 plane has the most -
     //        positive angle(note that this may not be the point with the largest
-    //        longitudinal coordinate, because of the impact of changing latitude
-    //        on X - Z position).
-    //  right : the point location whose reprojection into the Y = 0 plane has the
-    //  most -
+    //        longitudinal coordinate, because of the impact of changing latitude on
+    //        X - Z position).
+    //  right : the point location whose reprojection into the Y = 0 plane has the most -
     //        negative angle(note that this may not be the point with the smallest
-    //        longitudinal coordinate, because of the impact of changing latitude
-    //        on X - Z position).
+    //        longitudinal coordinate, because of the impact of changing latitude on
+    //        X - Z position).
     XYZ& screenLeft = screen.screenLeft;
     XYZ& screenRight = screen.screenRight;
-    ;
+
     screenLeft = screenRight = mapping[0].xyz;
     if (verbose) {
         std::cerr << "First point rotation about Y (degrees): " << screenLeft.rotationAboutY() * 180 / MY_PI
@@ -171,7 +169,7 @@ bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*b
     A = -dz;
     B = 0;
     C = dx;
-    double len = sqrt(A * A + B * B + C * C);
+    double len = std::sqrt(A * A + B * B + C * C);
     A /= len;
     B /= len;
     C /= len;
@@ -182,17 +180,15 @@ bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*b
 
     //====================================================================
     // Figure out the Y screen-space extents.
-    // The Y screen-space extents are symmetric and correspond to the lines
-    // parallel
-    //  to the screen X axis that are within the plane of the X line specifying
-    //  the axis extents at the largest magnitude angle up or down from the
-    //  horizontal.
+    // The Y screen-space extents are symmetric and correspond to the lines parallel
+    //  to the screen X axis that are within the plane of the X line specifying the
+    //  axis extents at the largest magnitude angle up or down from the horizontal.
     // Find the highest-magnitude Y value of all points when they are
     // projected into the plane of the screen.
     double& maxY = screen.maxY;
-    maxY = fabs(mapping[0].xyz.projectOntoPlane(A, B, C, D).y);
+    maxY = std::abs(mapping[0].xyz.projectOntoPlane(A, B, C, D).y);
     for (size_t i = 1; i < mapping.size(); i++) {
-        double Y = fabs(mapping[i].xyz.projectOntoPlane(A, B, C, D).y);
+        double Y = std::abs(mapping[i].xyz.projectOntoPlane(A, B, C, D).y);
         if (Y > maxY) {
             maxY = Y;
         }
@@ -218,7 +214,7 @@ bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*b
     if (verbose) {
         std::cerr << "Screen width: " << screenWidth << std::endl;
     }
-    double hFOVRadians = 2 * atan((screenWidth / 2) / fabs(D));
+    double hFOVRadians = 2 * std::atan((screenWidth / 2) / std::abs(D));
     double hFOVDegrees = hFOVRadians * 180 / MY_PI;
     if (verbose) {
         std::cerr << "Horizontal field of view (degrees): " << hFOVDegrees << std::endl;
@@ -228,7 +224,7 @@ bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*b
     // Figure out the monocular vertical field of view for the screen.
     // The FOV is twice the arctangent of half of the Y
     // distance divided by the distance to the screen.
-    double vFOVRadians = 2 * atan(maxY / fabs(D));
+    double vFOVRadians = 2 * std::atan(maxY / std::abs(D));
     double vFOVDegrees = vFOVRadians * 180 / MY_PI;
     if (verbose) {
         std::cerr << "Vertical field of view (degrees): " << vFOVDegrees << std::endl;
@@ -261,7 +257,7 @@ bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*b
     //  2 * rotateEyesApart = (hfov - (hfov * overlapFrac));
     //  2 * rotateEyesApart - hfov = - hfov * overlapFrac;
     //  1 - 2*rotateEyesApart/hfov = overlapFrac
-    double angleRadians = fabs(atan2(A, C));
+    double angleRadians = std::abs(atan2(A, C));
     if (verbose) {
         std::cerr << "Angle degrees: " << angleRadians * 180 / MY_PI << std::endl;
     }
@@ -367,7 +363,7 @@ bool findMesh(const std::vector<Mapping>& mapping, double /*left*/, double /*bot
 }
 
 static void normalize(std::array<double, 2>& v) {
-    double len = sqrt(v[0] * v[0] + v[1] * v[1]);
+    double len = std::sqrt(v[0] * v[0] + v[1] * v[1]);
     if (len > 0) {
         v[0] /= len;
         v[1] /= len;
@@ -474,7 +470,7 @@ int remove_invalid_points_based_on_angle(std::vector<Mapping>& mapping, double x
     // Find the dot product associated with two unit vectors
     // separated by the angle specified.  This is the cosine
     // of the angle.
-    double minDotProduct = cos(maxAngleDegrees / 180.0 * MY_PI);
+    double minDotProduct = std::cos(maxAngleDegrees / 180.0 * MY_PI);
 
     // We remove the worst offender from the list each time,
     // then re-start.  Assuming that we get the actual outlier,

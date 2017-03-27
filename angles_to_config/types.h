@@ -34,7 +34,7 @@
 #include <vector>
 
 // Global constants and variables
-#define MY_PI (4.0 * atan(1.0))
+#define MY_PI (4.0 * std::atan(1.0))
 
 // Screen-space to/from angle-space map entry
 class XYLatLong {
@@ -71,7 +71,7 @@ class XYZ {
     // the -Z axis and positive rotation heads towards the -X axis.
     // The X axis in atan space corresponds to the -z axis in head space,
     // and the Y axis in atan space corresponds to the -x axis in head space.
-    double rotationAboutY() const { return atan2(-x, -z); }
+    double rotationAboutY() const { return std::atan2(-x, -z); }
 
     /// Project from the origin through our point onto a plane whose
     // equation is specified.
@@ -93,7 +93,7 @@ class XYZ {
 
     /// Return the rotation distance from another point.
     double distanceFrom(const XYZ& p) const {
-        return sqrt((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) + (z - p.z) * (z - p.z));
+        return std::sqrt((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) + (z - p.z) * (z - p.z));
     }
 };
 
@@ -103,15 +103,12 @@ class Mapping {
     XYLatLong xyLatLong;
     XYZ xyz;
 
-    Mapping(XYLatLong const& ll, XYZ const& x) {
-        xyLatLong = ll;
-        xyz = x;
-    }
+    Mapping(XYLatLong const& ll, XYZ const& x) : xyLatLong(ll), xyz(x) {}
     Mapping() = default;
 };
 
 // Description of a screen
-typedef struct {
+struct ScreenDescription {
     double hFOVDegrees;
     double vFOVDegrees;
     double overlapPercent;
@@ -125,13 +122,12 @@ typedef struct {
     double A, B, C, D;           //!< Ax + By + Cz + D = 0 screen plane
     XYZ screenLeft, screenRight; //!< Left-most and right-most points on screen
     double maxY;                 //!< Maximum absolute value of Y for points on screen
-} ScreenDescription;
+};
 
 /// Holds a list of mappings from physical-display normalized
 /// coordinates to canonical-display normalized coordinates.
 typedef std::vector<          //!< Vector of mappings
     std::array<               //!< 2-vector of from, to coordinates
-        std::array<double, 2> //!< 2-vector of unit coordinates (x,y)
-        ,
+        std::array<double, 2>, //!< 2-vector of unit coordinates (x,y)
         2> >
     MeshDescription;

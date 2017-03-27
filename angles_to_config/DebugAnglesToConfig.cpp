@@ -45,8 +45,8 @@
 
 // Standard includes
 #include <chrono>
+#include <cstdlib> // For exit()
 #include <iostream>
-#include <stdlib.h> // For exit()
 #include <string>
 #include <thread>
 
@@ -69,10 +69,10 @@ static osvr::renderkit::RenderManager* render = nullptr;
 static GLUquadric* sphere = nullptr;
 
 // X,Y location
-typedef struct {
+struct XY {
     double x;
     double y;
-} XY;
+};
 
 static std::string osvrGetString(OSVR_ClientContext context, const std::string& path) {
     size_t len;
@@ -256,7 +256,7 @@ void RenderView(size_t whichEye,                                                
     // Draw into the original viewport space, not the oversized viewport.
     glColor3d(0, 0, 0);
     glBegin(GL_LINES);
-    if (whichEye == 1)
+    if (whichEye == 1) {
         for (double ofs = -width; ofs <= width; ofs += width / 50) {
             glVertex2d(-width, ofs);
             glVertex2d(width, ofs);
@@ -264,10 +264,11 @@ void RenderView(size_t whichEye,                                                
             glVertex2d(ofs, -width);
             glVertex2d(ofs, width);
         }
+    }
     glEnd();
 }
 
-void Usage(std::string name) {
+void Usage(const std::string& name) {
     std::cerr << "Usage: " << name << " [-eye right|left] (default is right)"
               << " [-depth_meters D] (default is 2.0)"
               << " [-latlong] (use latitude/longitude angles, default is field angles)"
@@ -336,12 +337,13 @@ int main(int argc, char* argv[]) {
             }
         } else if ((argv[i][0] == '-') && (atof(argv[i]) == 0.0)) {
             Usage(argv[0]);
-        } else
+        } else {
             switch (++realParams) {
             case 1:
             default:
                 Usage(argv[0]);
             }
+    }
     }
     if (realParams != 0) {
         Usage(argv[0]);
@@ -417,7 +419,7 @@ int main(int argc, char* argv[]) {
             start = end;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    } while (displayInfo.size() == 0);
+    } while (displayInfo.empty());
 
     // Get the display information from the context.
     OSVRDisplayConfiguration displayConfiguration(displayInfo);
@@ -557,7 +559,8 @@ int main(int argc, char* argv[]) {
     if (testingForwards) {
         osvr::renderkit::DistortionParameters distortionLeft;
         distortionLeft.m_desiredTriangles = 200 * 64;
-        distortionLeft.m_type = osvr::renderkit::DistortionParameters ::rgb_symmetric_polynomials;
+
+        distortionLeft.m_type = osvr::renderkit::DistortionParameters::rgb_symmetric_polynomials;
         std::vector<float> params; //< Distortion parameters
         params.push_back(0);
         params.push_back(1);
