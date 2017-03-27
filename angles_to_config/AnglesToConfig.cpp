@@ -266,7 +266,7 @@ int main(int argc, char* argv[]) {
     // from the simulation (caused by multiple ray bounces or other
     // singularities in the simulation).
     if (verifyAngles) {
-        for (size_t m = 0; m < mappings.size(); m++) {
+        for (std::size_t m = 0; m < mappings.size(); m++) {
             int ret = remove_invalid_points_based_on_angle(mappings[m], xx, xy, yx, yy, maxAngleDiffDegrees);
             if (ret < 0) {
                 std::cerr << "Error verifying angles for mesh " << m << std::endl;
@@ -523,14 +523,14 @@ static int testAlgorithms() {
     // cube.  Wolfram's online calculator reports it as the arcsine of
     // the square root of 2/3, but that is the angle down from Pi/2, so
     // we convert it here to that coordinate system and to degrees.
-    double phi = 90 - (180 / MY_PI * asin(sqrt(2.0 / 3.0)));
+    double phi = 90. - (180. / MY_PI * std::asin(std::sqrt(2.0 / 3.0)));
 
     // The longitude of the corners of the cube is 45 degrees.
-    double theta = 45;
+    double theta = 45.;
 
     // The distance to the corners of the unit cube is the square root
     // of the sum of the squares of the distance.
-    double depth = sqrt(3);
+    double depth = std::sqrt(3.0);
 
     // Construct a set of points that should make a square screen with no distortion
     // that has a 90 degree horizontal and vertical field of view and the identity
@@ -588,7 +588,7 @@ static int testAlgorithms() {
         std::cerr << "testAlgorithms(): Mesh size does not match mapping size: " << mesh.size() << std::endl;
         return 301;
     }
-    for (int entry = 0; entry < mesh.size(); entry++) {
+    for (std::size_t entry = 0; entry < mesh.size(); entry++) {
         size_t outIndex = 1;
         if (!small(mesh[entry][outIndex][0] - mapping[entry].xyLatLong.x)) {
             std::cerr << "testAlgorithms(): X normalized mesh mismatch for element: " << entry << " (got "
@@ -656,7 +656,7 @@ static int testAlgorithms() {
         std::cerr << "testAlgorithms(): Rotated mesh size does not match mapping size: " << mesh.size() << std::endl;
         return 801;
     }
-    for (int entry = 0; entry < rmesh.size(); entry++) {
+    for (std::size_t entry = 0; entry < rmesh.size(); entry++) {
         size_t outIndex = 1;
         if (!small(rmesh[entry][outIndex][0] - rmapping[entry].xyLatLong.x)) {
             std::cerr << "testAlgorithms(): Rotated X normalized mesh mismatch for element: " << entry << std::endl;
@@ -723,7 +723,7 @@ static int testAlgorithms() {
         std::cerr << "testAlgorithms(): Could not normalize distorted points" << std::endl;
         return 1100;
     }
-    for (int entry = 0; entry < ndmapping.size(); entry++) {
+    for (std::size_t entry = 0; entry < ndmapping.size(); entry++) {
         size_t outIndex = 1;
 
         if (!small(ndmapping[entry].xyz.x - dmapping[entry].xyz.x)) {
@@ -795,7 +795,7 @@ static int testAlgorithms() {
         return 1301;
     }
     // @todo Why do we get coordinates (0,1) for the fifth element, when we expect (1/3, 2/3)?
-    for (int entry = 0; entry < dmesh.size(); entry++) {
+    for (std::size_t entry = 0; entry < dmesh.size(); entry++) {
         size_t outIndex = 1;
         if (!small(dmesh[entry][outIndex][0] - dExpectedXOut[entry])) {
             std::cerr << "testAlgorithms(): Distorted X normalized mesh mismatch for element: " << entry << " (found "
