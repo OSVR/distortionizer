@@ -31,6 +31,7 @@
 #include <GL/gl.h>
 #include <cstdio>
 #include <cstdlib>
+#include <utility>
 
 class Undistort_Shader_Private {
   public:
@@ -65,7 +66,7 @@ struct shader_bind_attribute_list {
 };
 
 const shader_bind_attribute_list sbal_undistort[] = {
-    {0, "vVertex"}, {1, "vNormal"}, {2, "vTexture0"}, {3, "vVaryingColor"}, {0, NULL}};
+    {0, "vVertex"}, {1, "vNormal"}, {2, "vTexture0"}, {3, "vVaryingColor"}, {0, nullptr}};
 
 // Handle a shader error
 // Input
@@ -77,7 +78,7 @@ static int shaderError(GLuint shader, const char* name) {
     glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
     if (status == GL_FALSE) {
         char message[2000];
-        glGetShaderInfoLog(shader, sizeof(message), NULL, message);
+        glGetShaderInfoLog(shader, sizeof(message), nullptr, message);
         fprintf(stderr, "Error in %s shader:\n%s\n", name, message);
         return -1;
     }
@@ -86,19 +87,19 @@ static int shaderError(GLuint shader, const char* name) {
 
 // Read a shader program string from a file.
 // Returns an empty string on failure.
-std::string Undistort_Shader::readShaderFromFile(std::string filename) {
+std::string Undistort_Shader::readShaderFromFile(const std::string& filename) {
     std::string ret;
 
     // TODO: Convert this to using only standard library calls.
     FILE* f = fopen(filename.c_str(), "r");
-    if (f == NULL) {
+    if (f == nullptr) {
         printf("No shader file with name %s found;", filename.c_str());
         return ret;
     }
 
     // Read each line of the file and append it to the string.
     char line[4096];
-    while (fgets(line, sizeof(line), f) != NULL) {
+    while (fgets(line, sizeof(line), f) != nullptr) {
         ret += line;
     }
 
@@ -121,13 +122,13 @@ int Undistort_Shader::loadShaders(const char* vertexShader, const char* fragment
     GLuint vertexShaderHandle = glCreateShader(GL_VERTEX_SHADER);
     GLuint fragmentShaderHandle = glCreateShader(GL_FRAGMENT_SHADER);
 
-    glShaderSource(vertexShaderHandle, 1, &vertexShader, NULL);
-    glShaderSource(fragmentShaderHandle, 1, &fragmentShader, NULL);
+    glShaderSource(vertexShaderHandle, 1, &vertexShader, nullptr);
+    glShaderSource(fragmentShaderHandle, 1, &fragmentShader, nullptr);
 
     glCompileShader(vertexShaderHandle);
     glCompileShader(fragmentShaderHandle);
 
-    if (shaderError(vertexShaderHandle, "vertex") || shaderError(fragmentShaderHandle, "fragment")) {
+    if ((shaderError(vertexShaderHandle, "vertex") != 0) || (shaderError(fragmentShaderHandle, "fragment") != 0)) {
         glDeleteShader(vertexShaderHandle);
         glDeleteShader(fragmentShaderHandle);
         return NO_SHADER;
@@ -138,8 +139,8 @@ int Undistort_Shader::loadShaders(const char* vertexShader, const char* fragment
     glAttachShader(program, fragmentShaderHandle);
 
     const shader_bind_attribute_list* sbal = sbal_undistort;
-    if (sbal != NULL) {
-        while (sbal->name != NULL) {
+    if (sbal != nullptr) {
+        while (sbal->name != nullptr) {
             glBindAttribLocation(program, sbal->index, sbal->name);
             sbal++;
         }
@@ -166,7 +167,7 @@ Undistort_Shader::Undistort_Shader(std::string vert_shader_file_name, std::strin
     // files.  Bail if we can't get them.
     std::string vertexProgram = readShaderFromFile(vert_shader_file_name);
     std::string fragmentProgram = readShaderFromFile(frag_shader_file_name);
-    if ((vertexProgram.size() == 0) || (fragmentProgram.size() == 0)) {
+    if ((vertexProgram.empty()) || (fragmentProgram.empty())) {
         return;
     }
     glewInit();
@@ -185,7 +186,7 @@ Undistort_Shader::Undistort_Shader(std::string vert_shader_file_name, std::strin
 }
 
 // Set the Default Values for the Color Processing
-void Undistort_Shader::SetDefaultValues(void) {
+void Undistort_Shader::SetDefaultValues() {
     setK1Red(0.0f);
     setK1Green(0.0f);
     setK1Blue(0.0f);

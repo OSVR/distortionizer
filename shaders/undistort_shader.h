@@ -56,7 +56,7 @@ class Undistort_Shader {
   protected:
     // Read a shader string from a file into a string.  Returns an empty
     // string on failure.
-    std::string readShaderFromFile(std::string filename);
+    std::string readShaderFromFile(const std::string& filename);
 
     // Load, compile, and link the shaders.
     static int loadShaders(const char* vertexShader, const char* fragmentShader);
