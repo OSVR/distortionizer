@@ -126,8 +126,8 @@ struct ScreenDescription {
 
 /// Holds a list of mappings from physical-display normalized
 /// coordinates to canonical-display normalized coordinates.
-typedef std::vector<          //!< Vector of mappings
-    std::array<               //!< 2-vector of from, to coordinates
+typedef std::vector<           //!< Vector of mappings
+    std::array<                //!< 2-vector of from, to coordinates
         std::array<double, 2>, //!< 2-vector of unit coordinates (x,y)
         2> >
     MeshDescription;
