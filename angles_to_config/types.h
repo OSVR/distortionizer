@@ -39,10 +39,10 @@
 // Screen-space to/from angle-space map entry
 class XYLatLong {
   public:
-    double x;
-    double y;
-    double latitude;
-    double longitude;
+    double x = 0;
+    double y = 0;
+    double latitude = 0;
+    double longitude = 0;
 
     XYLatLong(double px, double py, double plat, double plong) {
         x = px;
