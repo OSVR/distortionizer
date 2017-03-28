@@ -6,14 +6,16 @@ The theory behind the operation of this program is described in the [distortion 
 
 Produce a whitespace-separated file with entries, four entries per line, with no header in the file.  The four columns represent: (1) the horizontal angle in degrees from the forward gaze direction (positive angles towards the right), (2) the vertical angle in degrees from the forward gaze direction (positive angles up), (3) meters (or, with a command-line option, millimeters) from the forward-gaze point on the screen, positive towards the right, (4) meters (or, with a command-line option, millimeters) from the forward-gaze point on the screen, positive up.  The first few lines from an example file follow:
 
-    -35	-45	-21.203		-30.274
-    -30	-45	-17.754		-30.901
-    -25	-45	-14.506		-31.304
-    -20	-45	-11.451		-31.581
+    -35 -45 -21.203 -30.274
+    -30 -45 -17.754 -30.901
+    -25 -45 -14.506 -31.304
+    -20 -45 -11.451 -31.581
 
 The _**forward-gaze direction**_ is the direction forward from the eye, as if looking at an object at infinity right in front of the eye.  The _**forward-gaze point**_ is the location view on the display that is seen at the center of the eye’s fovea when looking in the forward gaze direction.  Unless the corners of the screen are specified as a command-line argument, the program will use the range of X and Y values found within the file to implicitly determine the screen dimensions and the location of the forward-gaze point within the screen.
 
-**Note:** The angles are field angles, which differ from latitude/longitude.  Each specifies the angle of a plane that tilts from the origin to pass through the specified point.  The longitude point is the YZ plane tilted towards the X axis (positive is towards +X) and the latitude point is the XZ plane tilted towards the Y axis (positive is towards +Y).  Earlier versions of the program uses lat/long spherical coordinates to determine the points, which produced extra distortions in the vertical direction.
+**Note:** The space in which the screen coordinates and screen boundaries are specified do not have to be either millimeters or meters, but they must be specified in some consistent space.  They are normalized to find the relative location of the in-file coordinates with respect to the command-line-specified screen corners.  If the command-line arguments are not used then any consistent spacing (pixels, etc) within the file are okay.  Because the command-line arguments are assumed to be the same as the in-screen values (both in meters), all that is needed to use pixel coordinates is to specify those both in the file and as arguments to the _-screen_ option and then not specify the _-mm_ option on the command line.  Then file and command-line values will be in the same space (this is technically lying to the program and telling it that everything is in meters, but the normalization will take care of this).
+
+**Note:** The angles are field angles, which differ from latitude/longitude.  Each specifies the angle of a plane that tilts from the origin to pass through the specified point.  The longitude value is amount of rotation for the YZ vertical plane towards the X axis (positive is towards +X) and the latitude point is the angle of the cone around the Y axis up from horizontal towards the Y axis (positive is towards +Y) passing through the point.  Earlier versions of the program uses lat/long spherical coordinates to determine the points, which produced extra distortions in the vertical direction.
 
 **Note:** There can be a separate file for red, green and blue to enable chromatic distortion correction or there can be a single file that handles all colors for monochromatic distortion correction.
 
