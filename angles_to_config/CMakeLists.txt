@@ -21,16 +21,25 @@ find_package(osvr)
 find_package(JsonCpp)
 
 #-----------------------------------------------------------------------------
-add_executable(AnglesToConfig
-    AnglesToConfig.cpp
+add_library(AnglesToConfig-core STATIC
+    GenerateOutput.cpp
+    GenerateOutput.h
     helper.cpp
     helper.h
     types.h)
-add_executable(MakeExampleMesh MakeExampleMesh.cpp)
+
+add_executable(AnglesToConfig
+    AnglesToConfig.cpp)
+
+target_link_libraries(AnglesToConfig PRIVATE AnglesToConfig-core)
+
+
+add_executable(MakeExampleMesh
+    MakeExampleMesh.cpp)
 
 if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND AND BUILD_WITH_RENDERMANAGER AND OSVRRENDERMANAGER_FOUND)
     include_directories(${OSVRRENDERMANAGER_INCLUDE_DIRS})
 
-    add_executable(DebugAnglesToConfig DebugAnglesToConfig.cpp helper.cpp)
-    target_link_libraries(DebugAnglesToConfig PRIVATE osvrRenderManager::osvrRenderManagerCpp osvr::osvrClientKitCpp osvr::osvrClient osvr::osvrCommon ${OPENGL_LIBRARY} GLEW::GLEW SDL2::SDL2 JsonCpp::JsonCpp)
+    add_executable(DebugAnglesToConfig DebugAnglesToConfig.cpp)
+    target_link_libraries(DebugAnglesToConfig PRIVATE AnglesToConfig-core osvrRenderManager::osvrRenderManagerCpp osvr::osvrClientKitCpp osvr::osvrClient osvr::osvrCommon ${OPENGL_LIBRARY} GLEW::GLEW SDL2::SDL2 JsonCpp::JsonCpp)
 endif()

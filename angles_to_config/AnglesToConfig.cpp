@@ -24,6 +24,9 @@
 // limitations under the License.
 
 // Internal Includes
+#include "GenerateOutput.h"
+#include "helper.h"
+#include "types.h"
 
 // Standard includes
 #include <cmath>
@@ -40,36 +43,6 @@ static bool g_verbose = false;
 
 // Forward declarations
 static int testAlgorithms();
-
-#include "helper.h"
-#include "types.h"
-
-static void writeMesh(std::ostream& s, MeshDescription const& mesh) {
-    s << "[" << std::endl;
-    for (size_t i = 0; i < mesh.size(); i++) {
-        if (i == 0) {
-            s << " ";
-        } else {
-            s << ",";
-        }
-        s << std::setprecision(4) << "[ [" << mesh[i][0][0] << "," << mesh[i][0][1] << "], [" << mesh[i][1][0] << ","
-          << mesh[i][1][1] << "] ]" << std::endl;
-    }
-    s << "]" << std::endl;
-}
-
-// Produce a mapping that is reflected around X=0 in both angles and
-// screen coordinates.
-static std::vector<Mapping> reflect_mapping(std::vector<Mapping> mapping) {
-    std::vector<Mapping> ret;
-    for (size_t i = 0; i < mapping.size(); i++) {
-        ret.push_back(mapping[i]);
-        ret[i].xyLatLong.longitude *= -1;
-        ret[i].xyLatLong.x *= -1;
-    }
-
-    return ret;
-}
 
 void Usage(const std::string& name) {
     std::cerr << "Usage: " << name << " [-eye right|left] (default is right)\n"

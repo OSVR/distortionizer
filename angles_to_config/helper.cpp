@@ -489,3 +489,14 @@ int remove_invalid_points_based_on_angle(std::vector<Mapping>& mapping, double x
 
     return ret;
 }
+
+std::vector<Mapping> reflect_mapping(std::vector<Mapping> const& mapping) {
+    std::vector<Mapping> ret;
+    for (size_t i = 0; i < mapping.size(); i++) {
+        ret.push_back(mapping[i]);
+        ret[i].xyLatLong.longitude *= -1;
+        ret[i].xyLatLong.x *= -1;
+    }
+
+    return ret;
+}
