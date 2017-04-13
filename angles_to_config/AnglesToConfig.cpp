@@ -457,6 +457,19 @@ int main(int argc, char* argv[]) {
     std::cout << R"(    "pitch_tilt": 0)" << std::endl;
     std::cout << "   }," << std::endl; // field_of_view
 
+    std::cout << R"(   "eyes": [)" << std::endl;
+    std::cout << "    {" << std::endl;
+    std::cout << R"(     "center_proj_x": )" << leftScreen.xCOP << "," << std::endl;
+    std::cout << R"(     "center_proj_y": )" << leftScreen.yCOP << "," << std::endl;
+    std::cout << R"(     "rotate_180": 0)" << std::endl;
+    std::cout << "    }," << std::endl;
+    std::cout << "    {" << std::endl;
+    std::cout << R"(     "center_proj_x": )" << rightScreen.xCOP << "," << std::endl;
+    std::cout << R"(     "center_proj_y": )" << rightScreen.yCOP << "," << std::endl;
+    std::cout << R"(     "rotate_180": 0)" << std::endl;
+    std::cout << "    }" << std::endl;
+    std::cout << "   ]," << std::endl; // eyes
+
     std::cout << R"(   "distortion": {)" << std::endl;
     switch (leftMeshes.size()) {
     case 1:
@@ -466,7 +479,7 @@ int main(int argc, char* argv[]) {
         std::cout << "," << std::endl;
         writeMesh(std::cout, rightMeshes[0]);
         std::cout << "    ]" << std::endl; // mono_point_samples
-        std::cout << "   }," << std::endl; // distortion
+        std::cout << "   }" << std::endl; // distortion
         break;
     case 3:
         std::cout << R"(    "type": "rgb_point_samples",)" << std::endl;
@@ -485,25 +498,12 @@ int main(int argc, char* argv[]) {
         std::cout << "," << std::endl;
         writeMesh(std::cout, rightMeshes[2]);
         std::cout << "    ]" << std::endl; // blue_point_samples
-        std::cout << "   }," << std::endl; // distortion
+        std::cout << "   }" << std::endl; // distortion
         break;
     default:
         std::cerr << "Error: Unexpected number of meshes: " << leftMeshes.size() << std::endl;
         return 3;
     }
-
-    std::cout << R"(   "eyes": [)" << std::endl;
-    std::cout << "    {" << std::endl;
-    std::cout << R"(     "center_proj_x": )" << leftScreen.xCOP << "," << std::endl;
-    std::cout << R"(     "center_proj_y": )" << leftScreen.yCOP << "," << std::endl;
-    std::cout << R"(     "rotate_180": 0)" << std::endl;
-    std::cout << "    }," << std::endl;
-    std::cout << "    {" << std::endl;
-    std::cout << R"(     "center_proj_x": )" << rightScreen.xCOP << "," << std::endl;
-    std::cout << R"(     "center_proj_y": )" << rightScreen.yCOP << "," << std::endl;
-    std::cout << R"(     "rotate_180": 0)" << std::endl;
-    std::cout << "    }" << std::endl;
-    std::cout << "   ]" << std::endl; // eyes
 
     std::cout << "  }" << std::endl; // hmd
     std::cout << " }" << std::endl;  // display
