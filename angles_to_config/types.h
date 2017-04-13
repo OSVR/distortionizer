@@ -36,6 +36,30 @@
 // Global constants and variables
 #define MY_PI (4.0 * std::atan(1.0))
 
+template <typename T> struct RectBounds {
+    using value_type = T;
+    value_type left;
+    value_type right;
+    value_type top;
+    value_type bottom;
+    RectBounds<T> reflectedHorizontally() const { return RectBounds<T>{-right, -left, top, bottom}; }
+};
+using RectBoundsd = RectBounds<double>;
+
+struct Config {
+    bool useRightEye = false;
+    bool computeScreenBounds = true;
+    RectBoundsd suppliedScreenBounds;
+    bool useFieldAngles = true;
+    double toMeters = 1.0;
+    double depth = 2.0;
+    bool verifyAngles = false;
+    /// parameters to verify_angles
+    double xx, xy, yx, yy, maxAngleDiffDegrees;
+
+    bool verbose = false;
+};
+
 // Screen-space to/from angle-space map entry
 class XYLatLong {
   public:

@@ -26,6 +26,8 @@ add_library(AnglesToConfig-core STATIC
     GenerateOutput.h
     helper.cpp
     helper.h
+    Process.cpp
+    Process.h
     types.h)
 
 add_executable(AnglesToConfig
