@@ -72,20 +72,20 @@ static std::vector<Mapping> reflect_mapping(std::vector<Mapping> mapping) {
 }
 
 void Usage(const std::string& name) {
-    std::cerr << "Usage: " << name << " [-eye right|left] (default is right)"
-              << " [-depth_meters D] (default is 2.0)"
-              << " [-latlong] (use latitude/longitude angles, default is field angles)"
-              << " [-mm] (screen distance units in the config file, default is meters)"
-              << " [-verbose] (default is not)"
-              << " [-screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters]"
-              << " (default auto-compute based on ranges seen)"
-              << " [-verify_angles xx xy yx yy max_degrees]"
-              << "   The vector (xx, xy) points in screen space in the direction of +longitude (left)"
-              << "   The vector (yx, yy) points in screen space in the direction of +latitude (up)"
+    std::cerr << "Usage: " << name << " [-eye right|left] (default is right)\n"
+              << " [-depth_meters D] (default is 2.0)\n"
+              << " [-latlong] (use latitude/longitude angles, default is field angles)\n"
+              << " [-mm] (screen distance units in the config file, default is meters)\n"
+              << " [-verbose] (default is not)\n"
+              << " [-screen screen_left_meters screen_bottom_meters screen_right_meters screen_top_meters]\n"
+              << " (default auto-compute based on ranges seen)\n"
+              << " [-verify_angles xx xy yx yy max_degrees]\n"
+              << "   The vector (xx, xy) points in screen space in the direction of +longitude (left)\n"
+              << "   The vector (yx, yy) points in screen space in the direction of +latitude (up)\n"
               << "   The max_degrees tells how far the screen-space neighbor vector can differ from it corresponding "
-                 "angle-space vector"
-              << " [-mono in_config_mono_file_name ] (default standard input)"
-              << " [-rgb in_config_red_file_name in_config_green_file_name in_config_blue_file_name]" << std::endl
+                 "angle-space vector\n"
+              << " [-mono in_config_mono_file_name ] (default standard input)\n"
+              << " [-rgb in_config_red_file_name in_config_green_file_name in_config_blue_file_name]\n" << std::endl
               << "  This program reads one or three configurations with lists of" << std::endl
               << "x,y screen coordinates in meters followed by long,lat angles in" << std::endl
               << "degrees where (0,0) is straight ahead from the eye, positive" << std::endl
