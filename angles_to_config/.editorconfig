@@ -1,0 +1,5 @@
+# http://editorconfig.org
+
+# CMake files
+[*.{txt,cmake}]
+indent_style = space
