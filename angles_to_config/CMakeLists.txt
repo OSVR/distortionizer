@@ -20,6 +20,8 @@ find_package(osvrRenderManager)
 find_package(osvr)
 find_package(JsonCpp)
 
+include(GNUInstallDirs)
+
 #-----------------------------------------------------------------------------
 add_library(AnglesToConfig-core STATIC
     GenerateOutput.cpp
@@ -35,9 +37,11 @@ add_executable(AnglesToConfig
 
 target_link_libraries(AnglesToConfig PRIVATE AnglesToConfig-core)
 
-
 add_executable(MakeExampleMesh
     MakeExampleMesh.cpp)
+
+install(TARGETS AnglesToConfig MakeExampleMesh
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND AND BUILD_WITH_RENDERMANAGER AND OSVRRENDERMANAGER_FOUND)
     include_directories(${OSVRRENDERMANAGER_INCLUDE_DIRS})
