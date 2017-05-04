@@ -43,9 +43,9 @@ add_executable(MakeExampleMesh
 install(TARGETS AnglesToConfig MakeExampleMesh
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND AND BUILD_WITH_RENDERMANAGER AND OSVRRENDERMANAGER_FOUND)
-    include_directories(${OSVRRENDERMANAGER_INCLUDE_DIRS})
 
+if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND AND BUILD_WITH_RENDERMANAGER AND OSVRRENDERMANAGER_FOUND)
     add_executable(DebugAnglesToConfig DebugAnglesToConfig.cpp)
+    target_include_directories(DebugAnglesToConfig PRIVATE ${OSVRRENDERMANAGER_INCLUDE_DIRS})
     target_link_libraries(DebugAnglesToConfig PRIVATE AnglesToConfig-core osvrRenderManager::osvrRenderManagerCpp osvr::osvrClientKitCpp osvr::osvrClient osvr::osvrCommon ${OPENGL_LIBRARY} GLEW::GLEW SDL2::SDL2 JsonCpp::JsonCpp)
 endif()
