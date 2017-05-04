@@ -22,6 +22,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define SENSICS_ENABLE_MESH_DEBUG
+
 // Internal Includes
 #include "GenerateOutput.h"
 
@@ -32,9 +34,23 @@
 #include <iomanip>
 #include <iostream>
 
+#ifdef SENSICS_ENABLE_MESH_DEBUG
+#include <fstream>
+#include <sstream>
+#endif // SENSICS_ENABLE_MESH_DEBUG
+
 static const auto PRECISION = 4;
 
 void writeMesh(std::ostream& s, MeshDescription const& mesh) {
+#ifdef SENSICS_ENABLE_MESH_DEBUG
+    static int num = 0;
+    num++;
+    std::ostringstream ss;
+    ss << "debugmesh" << num << ".csv";
+    std::cerr << "Additionally writing mesh data to " << ss.str() << std::endl;
+    std::ofstream debugCsv(ss.str());
+    debugCsv << "u1,v1,u2,v2" << std::endl;
+#endif // SENSICS_ENABLE_MESH_DEBUG
     s << "[" << std::endl;
     for (size_t i = 0; i < mesh.size(); i++) {
         if (i == 0) {
@@ -44,6 +60,10 @@ void writeMesh(std::ostream& s, MeshDescription const& mesh) {
         }
         s << std::setprecision(PRECISION) << "[ [" << mesh[i][0][0] << "," << mesh[i][0][1] << "], [" << mesh[i][1][0]
           << "," << mesh[i][1][1] << "] ]" << std::endl;
+#ifdef SENSICS_ENABLE_MESH_DEBUG
+        debugCsv << std::setprecision(PRECISION) << mesh[i][0][0] << "," << mesh[i][0][1] << "," << mesh[i][1][0] << ","
+                 << mesh[i][1][1] << std::endl;
+#endif // SENSICS_ENABLE_MESH_DEBUG
     }
     s << "]" << std::endl;
 }
