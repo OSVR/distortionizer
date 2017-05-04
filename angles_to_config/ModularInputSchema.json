@@ -1,0 +1,82 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "definitions": {
+        "eyeInput": {
+            "description": "Input for one eye",
+            "anyOf": [
+                {
+                    "description": "Monochromatic distortion ray traces in a whitespace-separated file.",
+                    "type": "string"
+                },
+                {
+                    "description": "Per-color distortion ray traces in whitespace-separated data files",
+                    "type": "object",
+                    "properties": {
+                        "red": {
+                            "title": "Whitespace-separated data file for red channel",
+                            "type": "string"
+                        },
+                        "green": {
+                            "title": "Whitespace-separated data file for green channel",
+                            "type": "string"
+                        },
+                        "blue": {
+                            "title": "Whitespace-separated data file for blue channel",
+                            "type": "string"
+                        }
+                    },
+                    "required": [ "red", "green", "blue" ]
+                }
+            ]
+        }
+    },
+    "type": "object",
+    "properties": {
+        "depth": {
+            "title": "Simulated screen depth (meters)",
+            "type": "number",
+            "default": 2
+        },
+        "inputType": {
+            "title": "Input angle type",
+            "type": "string",
+            "enum": [ "fieldAngles", "latitudeLongitude" ],
+            "default": "fieldAngles"
+        },
+        "screen": {
+            "title": "Explicit screen-space edges",
+            "description": "If not specified, auto-computed from input data. If you specify one side, must specify them all.",
+            "type": "object",
+            "properties": {
+                "top": { "type": "number" },
+                "right": { "type": "number" },
+                "left": { "type": "number" },
+                "bottom": { "type": "number" }
+            },
+            "required": [ "bottom", "top", "right", "left" ]
+        },
+        "verbose": {
+            "title": "Verbose output",
+            "type": "boolean",
+            "default": false
+        },
+        "input": {
+            "type": "object",
+            "properties": {
+                "left": {
+                    "allOf": [
+                        { "title": "Left eye data" },
+                        { "$ref": "#/definitions/eyeInput" }
+                    ]
+                },
+                "right": {
+                    "allOf": [
+                        { "title": "Right eye data" },
+                        { "$ref": "#/definitions/eyeInput" }
+                    ]
+                }
+            },
+            "minItems": 1
+        }
+    }
+}

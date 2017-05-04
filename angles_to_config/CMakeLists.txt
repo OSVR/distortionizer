@@ -43,6 +43,13 @@ add_executable(MakeExampleMesh
 install(TARGETS AnglesToConfig MakeExampleMesh
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+if(JSONCPP_FOUND)
+    add_executable(AnglesToConfigModular
+        AnglesToConfigModular.cpp)
+    target_link_libraries(AnglesToConfigModular PRIVATE AnglesToConfig-core JsonCpp::JsonCpp)
+    install(TARGETS AnglesToConfigModular
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
 if (OPENGL_FOUND AND GLEW_FOUND AND SDL2_FOUND AND BUILD_WITH_RENDERMANAGER AND OSVRRENDERMANAGER_FOUND)
     add_executable(DebugAnglesToConfig DebugAnglesToConfig.cpp)
