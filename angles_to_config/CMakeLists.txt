@@ -22,6 +22,8 @@ find_package(JsonCpp)
 
 include(GNUInstallDirs)
 
+add_subdirectory(../vendor vendorlibs)
+
 #-----------------------------------------------------------------------------
 add_library(AnglesToConfig-core STATIC
     GenerateOutput.cpp
@@ -31,6 +33,8 @@ add_library(AnglesToConfig-core STATIC
     Process.cpp
     Process.h
     types.h)
+
+target_link_libraries(AnglesToConfig-core PUBLIC distort-eigen-vendored)
 
 add_executable(AnglesToConfig
     AnglesToConfig.cpp)

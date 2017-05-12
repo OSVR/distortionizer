@@ -27,6 +27,8 @@
 #include "helper.h"
 #include "types.h"
 
+#include <Eigen/Core>
+
 // Standard includes
 #include <cmath>
 #include <iomanip>
