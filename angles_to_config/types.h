@@ -30,6 +30,8 @@
 // Standard includes
 #include <array>
 #include <cmath>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -118,6 +120,17 @@ class XYZ {
     /// Return the rotation distance from another point.
     double distanceFrom(const XYZ& p) const {
         return std::sqrt((x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) + (z - p.z) * (z - p.z));
+    }
+
+    void debugPrint(std::ostream& os) const {
+        static const auto PRECISION = 4;
+        static const auto WIDTH = PRECISION + 3;
+        std::ostringstream ss;
+        ss << std::setprecision(PRECISION);
+        ss << "(" << std::setw(WIDTH) << x;
+        ss << ", " << std::setw(WIDTH) << y;
+        ss << ", " << std::setw(WIDTH) << z << ")";
+        os << ss.str();
     }
 };
 
