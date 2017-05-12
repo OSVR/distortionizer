@@ -66,6 +66,11 @@ int AnglesToConfigSingleEyeProcess::supplyInputMapping(std::vector<Mapping>&& ma
     }
     return 0;
 }
+
+void AnglesToConfigSingleEyeProcess::supplyAdditionalAngles(std::vector<LongLat> const& additionalAngles) {
+    additionalAnglePoints_ = convertAdditionalAngles(additionalAngles, config_.depth, config_.useFieldAngles);
+}
+
 void AnglesToConfigSingleEyeProcess::computeBounds() {
     assert(status_ == Status::HasSomeMapping &&
            "Should only call this function after one or more calls to supplyInputMapping()");
@@ -138,6 +143,7 @@ AnglesToConfigSingleEyeProcess AnglesToConfigSingleEyeProcess::reflectedHorizont
     for (auto& mapping : mappings_) {
         ret.mappings_.push_back(myReflect(mapping));
     }
+    ret.additionalAnglePoints_ = reflectPoints(additionalAnglePoints_);
     ret.screenBounds_ = screenBounds_.reflectedHorizontally();
 
     ret.fullMapping_ = myReflect(fullMapping_);

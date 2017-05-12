@@ -44,6 +44,9 @@ class AnglesToConfigSingleEyeProcess {
     AnglesToConfigSingleEyeProcess(Config const& c);
     /// Call this as many times as you have input mappings (1 for mono, 3 for RGB)
     int supplyInputMapping(std::vector<Mapping>&& mapping);
+    /// Optional: call at most once with additional angles (in degrees, and same type as the input mapping angles) that
+    /// should be considered visible even though there isn't a mapping to screen space known for them.
+    void supplyAdditionalAngles(std::vector<LongLat> const& additionalAngles);
     /// Call this after finishing all calls to supplyInputMapping() - even if the config contains a supplied bounds.
     void computeBounds();
     /// Call after computeBounds()
@@ -62,6 +65,7 @@ class AnglesToConfigSingleEyeProcess {
 
     Status status_ = Status::Empty;
     std::vector<std::vector<Mapping>> mappings_;
+    XYZList additionalAnglePoints_;
     RectBoundsd screenBounds_;
     /// only populated when more than one element in mappings_
     std::vector<Mapping> fullMapping_;
