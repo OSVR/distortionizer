@@ -48,11 +48,10 @@ int remove_invalid_points_based_on_angle(std::vector<Mapping>& mapping, double x
 bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
                                       double bottom, double right, double top, bool useFieldAngles = false);
 
-bool findScreen(const std::vector<Mapping>& mapping, double left, double bottom, double right, double top,
-                ScreenDescription& screen, bool verbose = false);
+bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, bool verbose = false);
 
-bool findMesh(const std::vector<Mapping>& mapping, double left, double bottom, double right, double top,
-              ScreenDescription const& screen, MeshDescription& mesh, bool verbose = false);
+bool findMesh(const std::vector<Mapping>& mapping, ScreenDescription const& screen, MeshDescription& mesh,
+              bool verbose = false);
 
 // Produce a mapping that is reflected around X=0 in both angles and
 // screen coordinates.

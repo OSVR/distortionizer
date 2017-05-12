@@ -104,15 +104,13 @@ void AnglesToConfigSingleEyeProcess::normalizeMappings() {
 }
 
 int AnglesToConfigSingleEyeProcess::computeScreenAndMeshes(SingleEyeOutput& outResults) const {
-    if (!::findScreen(getFullMapping(), screenBounds_.left, screenBounds_.bottom, screenBounds_.right,
-                      screenBounds_.top, outResults.screen, config_.verbose)) {
+    if (!::findScreen(getFullMapping(), outResults.screen, config_.verbose)) {
         std::cerr << "Error: Could not find screen" << std::endl;
         return 3;
     }
     for (auto& mapping : mappings_) {
         MeshDescription mesh;
-        if (!findMesh(mapping, screenBounds_.left, screenBounds_.bottom, screenBounds_.right, screenBounds_.top,
-                      outResults.screen, mesh, config_.verbose)) {
+        if (!findMesh(mapping, outResults.screen, mesh, config_.verbose)) {
 
             std::cerr << "Error: Could not find mesh" << std::endl;
             return 30;

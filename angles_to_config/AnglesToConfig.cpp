@@ -359,8 +359,7 @@ int main(int argc, char* argv[]) {
             rightFullMapping.push_back(j);
         }
     }
-    if (!findScreen(leftFullMapping, leftScreenLeft, leftScreenBottom, leftScreenRight, leftScreenTop, leftScreen,
-                    g_verbose)) {
+    if (!findScreen(leftFullMapping, leftScreen, g_verbose)) {
         std::cerr << "Error: Could not find left screen" << std::endl;
         return 3;
     }
@@ -369,8 +368,7 @@ int main(int argc, char* argv[]) {
                   << ", " << leftScreenTop << std::endl;
     }
 
-    if (!findScreen(rightFullMapping, rightScreenLeft, rightScreenBottom, rightScreenRight, rightScreenTop, rightScreen,
-                    g_verbose)) {
+    if (!findScreen(rightFullMapping, rightScreen, g_verbose)) {
         std::cerr << "Error: Could not find right screen" << std::endl;
         return 5;
     }
@@ -389,8 +387,7 @@ int main(int argc, char* argv[]) {
         // This will re-compute the screen each time, but it will get the same
         // answer because we're using the same bounds for each of them.
         MeshDescription leftMesh, rightMesh;
-        if (!findMesh(leftMapping, leftScreenLeft, leftScreenBottom, leftScreenRight, leftScreenTop, leftScreen,
-                      leftMesh, g_verbose)) {
+        if (!findMesh(leftMapping, leftScreen, leftMesh, g_verbose)) {
             std::cerr << "Error: Could not find left mesh" << std::endl;
             return 30;
         }
@@ -401,8 +398,7 @@ int main(int argc, char* argv[]) {
         }
         leftMeshes.push_back(leftMesh);
 
-        if (!findMesh(rightMapping, rightScreenLeft, rightScreenBottom, rightScreenRight, rightScreenTop, rightScreen,
-                      rightMesh, g_verbose)) {
+        if (!findMesh(rightMapping, rightScreen, rightMesh, g_verbose)) {
             std::cerr << "Error: Could not find right mesh" << std::endl;
             return 50;
         }
@@ -521,11 +517,11 @@ static int testAlgorithms() {
     }
     ScreenDescription screen;
     MeshDescription mesh;
-    if (!findScreen(mapping, 0, 0, 1, 1, screen, g_verbose)) {
+    if (!findScreen(mapping, screen, g_verbose)) {
         std::cerr << "testAlgorithms(): Could not find screen" << std::endl;
         return 101;
     }
-    if (!findMesh(mapping, 0, 0, 1, 1, screen, mesh, g_verbose)) {
+    if (!findMesh(mapping, screen, mesh, g_verbose)) {
         std::cerr << "testAlgorithms(): Could not find mesh" << std::endl;
         return 102;
     }
@@ -585,11 +581,11 @@ static int testAlgorithms() {
     // Find the screen associated with this mapping.
     ScreenDescription rscreen;
     MeshDescription rmesh;
-    if (!findScreen(rmapping, 0, 0, 1, 1, rscreen, g_verbose)) {
+    if (!findScreen(rmapping, rscreen, g_verbose)) {
         std::cerr << "testAlgorithms(): Could not find rotated screen" << std::endl;
         return 600;
     }
-    if (!findMesh(rmapping, 0, 0, 1, 1, rscreen, rmesh, g_verbose)) {
+    if (!findMesh(rmapping, rscreen, rmesh, g_verbose)) {
         std::cerr << "testAlgorithms(): Could not find rotated mesh" << std::endl;
         return 601;
     }
@@ -717,11 +713,11 @@ static int testAlgorithms() {
     // Find the screen associated with this mapping.
     ScreenDescription dscreen;
     MeshDescription dmesh;
-    if (!findScreen(ndmapping, 0, 0, 1, 1, dscreen, g_verbose)) {
+    if (!findScreen(ndmapping, dscreen, g_verbose)) {
         std::cerr << "testAlgorithms(): Could not find distorted screen" << std::endl;
         return 1200;
     }
-    if (!findMesh(ndmapping, 0, 0, 1, 1, dscreen, dmesh, g_verbose)) {
+    if (!findMesh(ndmapping, dscreen, dmesh, g_verbose)) {
         std::cerr << "testAlgorithms(): Could not find distorted mesh" << std::endl;
         return 1201;
     }

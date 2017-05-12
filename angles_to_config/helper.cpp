@@ -103,8 +103,7 @@ bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMe
     return true;
 }
 
-bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*bottom*/, double /*right*/,
-                double /*top*/, ScreenDescription& screen, bool verbose) {
+bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, bool verbose) {
     if (mapping.empty()) {
         std::cerr << "findScreen(): Error: No points in mapping" << std::endl;
         return false;
@@ -300,8 +299,8 @@ bool findScreen(const std::vector<Mapping>& mapping, double /*left*/, double /*b
     return true;
 }
 
-bool findMesh(const std::vector<Mapping>& mapping, double /*left*/, double /*bottom*/, double /*right*/, double /*top*/,
-              ScreenDescription const& screen, MeshDescription& mesh, bool /*verbose*/) {
+bool findMesh(const std::vector<Mapping>& mapping, ScreenDescription const& screen, MeshDescription& mesh,
+              bool /*verbose*/) {
     if (mapping.empty()) {
         std::cerr << "findMesh(): Error: No points in mapping" << std::endl;
         return false;
