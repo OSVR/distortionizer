@@ -267,6 +267,7 @@ int outputClientMeshData(std::ostream& os, SingleEyeOutput const& left, SingleEy
 }
 
 int main(int argc, char* argv[]) {
+    std::cerr << "Using config file " << argv[1] << std::endl;
     Json::Value root;
     {
         Json::Reader reader;
