@@ -514,13 +514,62 @@ int remove_invalid_points_based_on_angle(std::vector<Mapping>& mapping, double x
     return ret;
 }
 
+XYZ reflect(XYZ input) {
+    input.x *= -1;
+    return input;
+}
+
+XYLatLong reflect(XYLatLong input) {
+    input.longitude *= -1;
+    input.x *= -1;
+    return input;
+}
+
+XYLatLong reflect_normalized(XYLatLong input) {
+    input.longitude *= -1;
+    input.x = 1 - input.x;
+    return input;
+}
+
+Mapping reflect(Mapping const& entry) {
+    Mapping ret;
+    ret.xyLatLong = reflect(entry.xyLatLong);
+    ret.xyz = reflect(entry.xyz);
+    return ret;
+}
+
+Mapping reflect_normalized(Mapping const& entry) {
+    Mapping ret;
+    ret.xyLatLong = reflect_normalized(entry.xyLatLong);
+    ret.xyz = reflect(entry.xyz);
+    return ret;
+}
+
 std::vector<Mapping> reflect_mapping(std::vector<Mapping> const& mapping) {
     std::vector<Mapping> ret;
-    for (size_t i = 0; i < mapping.size(); i++) {
-        ret.push_back(mapping[i]);
-        ret[i].xyLatLong.longitude *= -1;
-        ret[i].xyLatLong.x *= -1;
+    ret.reserve(mapping.size());
+    for (auto& thisMapping : mapping) {
+        ret.push_back(reflect(thisMapping));
     }
 
+    return ret;
+}
+
+std::vector<Mapping> reflect_normalized_mapping(std::vector<Mapping> const& mapping) {
+    std::vector<Mapping> ret;
+    ret.reserve(mapping.size());
+    for (auto& thisMapping : mapping) {
+        ret.push_back(reflect_normalized(thisMapping));
+    }
+
+    return ret;
+}
+
+XYZList reflectPoints(XYZList const& input) {
+    XYZList ret;
+    ret.reserve(input.size());
+    for (auto& pt : input) {
+        ret.push_back(reflect(pt));
+    }
     return ret;
 }

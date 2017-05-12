@@ -57,6 +57,28 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, 
 bool findMesh(const std::vector<Mapping>& mapping, ScreenDescription const& screen, MeshDescription& mesh,
               bool verbose = false);
 
-// Produce a mapping that is reflected around X=0 in both angles and
-// screen coordinates.
+/// Reflect a point around X=0
+XYZ reflect(XYZ input);
+
+/// Reflect a (non-normalized) screen location and angles around X=0
+XYLatLong reflect(XYLatLong input);
+
+/// Reflect a (normalized) screen location and angles around X=0
+XYLatLong reflect_normalized(XYLatLong input);
+
+/// Produce a mapping that is reflected around X=0 in both angles and
+/// screen coordinates.
+Mapping reflect(Mapping const& entry);
+
+/// Same as above except for mappings that have already gone through convert_to_normalized_and_meters()
+Mapping reflect_normalized(Mapping const& entry);
+
+/// Produce a mapping that is reflected around X=0 in both angles and
+/// screen coordinates.
 std::vector<Mapping> reflect_mapping(std::vector<Mapping> const& mapping);
+
+/// Same as reflect_mapping except for mappings that have already gone through convert_to_normalized_and_meters()
+std::vector<Mapping> reflect_normalized_mapping(std::vector<Mapping> const& mapping);
+
+/// Reflect a list of points around X=0
+XYZList reflectPoints(XYZList const& input);

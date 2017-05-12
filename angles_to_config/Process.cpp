@@ -126,29 +126,21 @@ int AnglesToConfigSingleEyeProcess::computeScreenAndMeshes(SingleEyeOutput& outR
     return 0;
 }
 
-std::vector<Mapping> reflect_normalized_mapping(std::vector<Mapping> const& mapping) {
-    std::vector<Mapping> ret;
-    for (size_t i = 0; i < mapping.size(); i++) {
-        ret.push_back(mapping[i]);
-        ret[i].xyLatLong.longitude = 1 - ret[i].xyLatLong.longitude;
-        ret[i].xyLatLong.x = 1 - ret[i].xyLatLong.x;
-    }
-
-    return ret;
-}
-
 AnglesToConfigSingleEyeProcess AnglesToConfigSingleEyeProcess::reflectedHorizontally() const {
     AnglesToConfigSingleEyeProcess ret(config_);
     ret.status_ = status_;
-    auto reflect = &reflect_mapping;
+
+    /// pick the right reflection function based on whether or not we've normalized the mapping.
+    auto myReflect = &reflect_mapping;
     if (status_ == Status::HasMappingsNormalized) {
-        reflect = &reflect_normalized_mapping;
+        myReflect = &reflect_normalized_mapping;
     }
     for (auto& mapping : mappings_) {
-        ret.mappings_.push_back(reflect(mapping));
+        ret.mappings_.push_back(myReflect(mapping));
     }
     ret.screenBounds_ = screenBounds_.reflectedHorizontally();
-    ret.fullMapping_ = reflect(fullMapping_);
+
+    ret.fullMapping_ = myReflect(fullMapping_);
 
     return ret;
 }
