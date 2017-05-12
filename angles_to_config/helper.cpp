@@ -50,13 +50,13 @@ std::vector<Mapping> read_from_infile(std::istream& in) {
     return mapping;
 }
 
-std::vector<Point2d> readAdditionalAngles(std::istream& in) {
-    std::vector<Point2d> ret;
+std::vector<LongLat> readAdditionalAngles(std::istream& in) {
+    std::vector<LongLat> ret;
 
     while (!in.eof()) {
         // Read the data in from the file.
-        Point2d elt;
-        in >> elt[0] >> elt[1];
+        LongLat elt;
+        in >> elt.longitude() >> elt.latitude();
         ret.push_back(elt);
     }
     if (!ret.empty()) {

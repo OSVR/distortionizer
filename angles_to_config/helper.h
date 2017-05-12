@@ -35,7 +35,7 @@ std::vector<Mapping> read_from_infile(std::istream& in);
 
 /// Reads a two-column whitespace-delimited file of additional angles
 /// Returns empty if it fails to read anything.
-std::vector<Point2d> readAdditionalAngles(std::istream& in)
+std::vector<LongLat> readAdditionalAngles(std::istream& in);
 
 /// This removes invalid points from the mesh if the angle
 /// between the vector from a point to its neighbor in lat/long
