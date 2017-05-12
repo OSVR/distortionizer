@@ -48,6 +48,8 @@ std::vector<LongLat> readAdditionalAngles(std::istream& in);
 /// removed from the mesh otherwise.
 int remove_invalid_points_based_on_angle(std::vector<Mapping>& mapping, double xx, double xy, double yx, double yy,
                                          double maxAngleDegrees);
+/// Converts angles (in degrees) to eye-space 3d points.
+XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, double depth, bool useFieldAngles);
 
 bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
                                       double bottom, double right, double top, bool useFieldAngles = false);

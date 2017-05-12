@@ -66,6 +66,44 @@ std::vector<LongLat> readAdditionalAngles(std::istream& in) {
 
     return ret;
 }
+/// takes in angles (long/lat or field angles) in degrees, returns
+inline XYZ longLatToWorldSpace(LongLat longLat, bool useFieldAngles, double depth) {
+    using std::sin;
+    using std::cos;
+    using std::tan;
+    // Convert the input latitude and longitude from degrees to radians.
+    Eigen::Vector2d::Map(longLat.data()) *= MY_PI / 180.;
+    XYZ ret;
+    if (useFieldAngles) {
+        // These are expressed as angles with respect to a screen that is
+        // straight ahead, independent in X and Y.  The -Z axis is straight
+        // ahead.  Positive rotation in longitude points towards +X,
+        // positive rotation in latitude points towards +Y.
+        ret = XYZ{depth * tan(longLat.longitude()), // X
+                  depth * tan(longLat.latitude()),  // Y
+                  -depth};                          // Z
+    } else {
+        // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
+        // longitude = 0, latitude = 0 points along the -Z axis in eye space.
+        // Positive rotation in longitude is towards -X and positive rotation in
+        // latitude points towards +Y.
+        double theta = longLat.longitude();
+        double phi = MY_PI / 2. - longLat.latitude();
+        ret = XYZ{-depth * (-sin(theta)) * sin(phi), // X
+                  depth * std::cos(phi),             // Y
+                  -depth * cos(theta) * sin(phi)};   // Z
+    }
+    return ret;
+}
+
+XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, double depth, bool useFieldAngles) {
+    XYZList ret;
+
+    for (auto& additionalLongLat : additionalAngles) {
+        ret.push_back(longLatToWorldSpace(additionalLongLat, useFieldAngles, depth));
+    }
+    return ret;
+}
 
 bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
                                       double bottom, double right, double top, bool useFieldAngles) {
@@ -78,29 +116,10 @@ bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMe
         thisMapping.xyLatLong.y *= toMeters;
         thisMapping.xyLatLong.y = (thisMapping.xyLatLong.y - bottom) / (top - bottom);
 
+        LongLat tempLongLat = {thisMapping.xyLatLong.longitude, thisMapping.xyLatLong.latitude};
         // Convert the input latitude and longitude from degrees to radians.
-        thisMapping.xyLatLong.latitude *= MY_PI / 180.;
-        thisMapping.xyLatLong.longitude *= MY_PI / 180.;
-
-        if (useFieldAngles) {
-            // These are expressed as angles with respect to a screen that is
-            // straight ahead, independent in X and Y.  The -Z axis is straight
-            // ahead.  Positive rotation in longitude points towards +X,
-            // positive rotation in latitude points towards +Y.
-            thisMapping.xyz.x = depth * tan(thisMapping.xyLatLong.longitude);
-            thisMapping.xyz.y = depth * tan(thisMapping.xyLatLong.latitude);
-            thisMapping.xyz.z = -depth;
-        } else {
-            // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
-            // longitude = 0, latitude = 0 points along the -Z axis in eye space.
-            // Positive rotation in longitude is towards -X and positive rotation in
-            // latitude points towards +Y.
-            double theta = thisMapping.xyLatLong.longitude;
-            double phi = MY_PI / 2. - thisMapping.xyLatLong.latitude;
-            thisMapping.xyz.y = depth * cos(phi);
-            thisMapping.xyz.z = -depth * cos(theta) * sin(phi);
-            thisMapping.xyz.x = -depth * (-sin(theta)) * sin(phi);
-        }
+        // Then, compute 3d coordinates of a point.
+        thisMapping.xyz = longLatToWorldSpace(tempLongLat, useFieldAngles, depth);
     }
 
     // Make sure that the normalized screen coordinates are all within the range 0 to 1.
