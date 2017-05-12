@@ -29,7 +29,8 @@
 #include <iostream>
 #include <vector>
 
-// Returns empty mapping if it fails to read anything.
+/// Reads the four-column whitespace-delimited mapping file.
+/// Returns empty mapping if it fails to read anything.
 std::vector<Mapping> read_from_infile(std::istream& in);
 
 /// This removes invalid points from the mesh if the angle

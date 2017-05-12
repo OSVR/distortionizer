@@ -42,8 +42,10 @@ std::vector<Mapping> read_from_infile(std::istream& in) {
         in >> map.xyLatLong.longitude >> map.xyLatLong.latitude >> map.xyLatLong.x >> map.xyLatLong.y;
         mapping.push_back(map);
     }
-    // There will have been one extra added, when running into EOF.
-    mapping.pop_back();
+    if (!mapping.empty()) {
+        // There will have been one extra added, when running into EOF.
+        mapping.pop_back();
+    }
 
     return mapping;
 }
