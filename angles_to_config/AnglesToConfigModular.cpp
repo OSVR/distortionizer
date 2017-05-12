@@ -156,9 +156,10 @@ bool processMappingElement(Json::Value const& mapping, AnglesToConfigSingleEyePr
     }
     return withDataJsonSchemaError();
 }
+
 bool attemptSingleEyeProcessing(Json::Value const& inputData, AnglesToConfigSingleEyeProcess& process) {
     if (inputData.isNull()) {
-        return false;
+        return withDataJsonSchemaError();
     }
     if (!inputData.isObject() || inputData["mapping"].isNull()) {
         /// OK, so this is the old schema, where the "mapping" level didn't exist.
@@ -173,6 +174,19 @@ bool attemptSingleEyeProcessing(Json::Value const& inputData, AnglesToConfigSing
             return false;
         }
     }
+    auto& additionalFile = inputData["additionalVisibleAngles"];
+    if (json_is<std::string>(additionalFile)) {
+        auto newFn = json_cast<std::string>(additionalFile);
+        auto stream = std::ifstream(newFn);
+        auto addAngles = readAdditionalAngles(stream);
+        if (addAngles.empty()) {
+            std::cerr << "Warning: additionalVisibleAngles filename " << newFn
+                      << " supplied but no pairs of angles could be read." << std::endl;
+        } else {
+            process.supplyAdditionalAngles(addAngles);
+        }
+    }
+
     // OK, if we made it here we have at least one file loaded in properly.
     process.computeBounds();
     process.normalizeMappings();
