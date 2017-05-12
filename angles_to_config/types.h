@@ -92,13 +92,13 @@ class XYZ {
     XYZ() { x = y = z = 0; }
 
     /// Return the rotation about the Y axis, where 0 rotation points along
-    // the -Z axis and positive rotation heads towards the -X axis.
-    // The X axis in atan space corresponds to the -z axis in head space,
-    // and the Y axis in atan space corresponds to the -x axis in head space.
+    /// the -Z axis and positive rotation heads towards the -X axis.
+    /// The X axis in atan space corresponds to the -z axis in head space,
+    /// and the Y axis in atan space corresponds to the -x axis in head space.
     double rotationAboutY() const { return std::atan2(-x, -z); }
 
     /// Project from the origin through our point onto a plane whose
-    // equation is specified.
+    /// equation is specified.
     XYZ projectOntoPlane(double A, double B, double C, double D) const {
         XYZ ret;
 
@@ -121,7 +121,7 @@ class XYZ {
     }
 };
 
-// Mapping entry, along with its associated 3D coordinate
+/// Mapping entry, along with its associated 3D coordinate
 class Mapping {
   public:
     XYLatLong xyLatLong;
