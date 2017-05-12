@@ -140,6 +140,12 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, 
     if (verbose) {
         std::cerr << "Horizontal angular range: "
                   << 180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY()) << std::endl;
+        std::cerr << "Screen left: ";
+        screenLeft.debugPrint(std::cerr);
+        std::cerr << std::endl;
+        std::cerr << "Screen right: ";
+        screenRight.debugPrint(std::cerr);
+        std::cerr << std::endl;
     }
     if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
         std::cerr << "findScreen(): Error: Field of view > 180 degrees: found "
