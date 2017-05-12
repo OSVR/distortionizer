@@ -50,6 +50,24 @@ using RectBoundsd = RectBounds<double>;
 
 using Point2d = std::array<double, 2>;
 
+/// Gentle wrapper around Point2d assigning longitude and latitude meaning (respectively) to the elements.
+struct LongLat {
+    Point2d longLat;
+    /// angle in x
+    double & longitude() { return longLat[0]; }
+    /// angle in x (read-only)
+    double longitude() const { return longLat[0]; }
+
+    /// angle in y
+    double & latitude() { return longLat[1]; }
+    /// angle in y (read-only)
+    double latitude() const { return longLat[1]; }
+
+    /// Access underlying array for things like Eigen::Map
+    double * data() { return longLat.data(); }
+    /// Access underlying array for things like Eigen::Map (read-only)
+    const double * data() const { return longLat.data(); }
+};
 struct Config {
     bool useRightEye = false;
     bool computeScreenBounds = true;
@@ -135,6 +153,8 @@ class XYZ {
         os << ss.str();
     }
 };
+
+using XYZList = std::vector<XYZ>;
 
 /// Mapping entry, along with its associated 3D coordinate
 class Mapping {
