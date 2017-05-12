@@ -3,31 +3,42 @@
     "definitions": {
         "eyeInput": {
             "description": "Input for one eye",
-            "anyOf": [
-                {
-                    "description": "Monochromatic distortion ray traces in a whitespace-separated file.",
-                    "type": "string"
-                },
-                {
-                    "description": "Per-color distortion ray traces in whitespace-separated data files",
-                    "type": "object",
-                    "properties": {
-                        "red": {
-                            "title": "Whitespace-separated data file for red channel",
+            "type": "object",
+            "properties": {
+                "mapping": {
+                    "anyOf": [
+                        {
+                            "description": "Monochromatic distortion ray traces in a whitespace-separated file.",
                             "type": "string"
                         },
-                        "green": {
-                            "title": "Whitespace-separated data file for green channel",
-                            "type": "string"
-                        },
-                        "blue": {
-                            "title": "Whitespace-separated data file for blue channel",
-                            "type": "string"
+                        {
+                            "description": "Per-color distortion ray traces in whitespace-separated data files",
+                            "type": "object",
+                            "properties": {
+                                "red": {
+                                    "title": "Whitespace-separated data file for red channel",
+                                    "type": "string"
+                                },
+                                "green": {
+                                    "title": "Whitespace-separated data file for green channel",
+                                    "type": "string"
+                                },
+                                "blue": {
+                                    "title": "Whitespace-separated data file for blue channel",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [ "red", "green", "blue" ]
                         }
-                    },
-                    "required": [ "red", "green", "blue" ]
+                    ]
                 }
-            ]
+
+            },
+            "additionalVisibleAngles": {
+                "type": "string",
+                "title": "File of additional visible angles without screen mapping",
+                "description": "Whitespace-separated two-column data file of additional visible angles"
+            }
         }
     },
     "type": "object",

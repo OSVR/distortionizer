@@ -121,33 +121,57 @@ bool supplySingleFileData(std::string const& fn, AnglesToConfigSingleEyeProcess&
     }
     return true;
 }
+bool withDataJsonSchemaError() {
+    std::cerr << "Warning: Elements of 'input' must include a 'mapping' property containing either be a string or an "
+                 "object with red, green, blue as keys, and may include an 'additionalVisibleAngles' property"
+              << std::endl;
+    return false;
+}
 
-bool attemptSingleEyeProcessing(Json::Value const& inputData, AnglesToConfigSingleEyeProcess& process) {
-    auto withJsonSchemaError = [] {
-        std::cerr << "Warning: Elements of 'input' must either be a string or an object with red, green, blue as keys."
-                  << std::endl;
-        return false;
-    };
-    if (inputData.isNull()) {
-        return false;
-    } else if (json_is<std::string>(inputData)) {
-        // OK this is a mono channel.
-        auto fn = json_cast<std::string>(inputData);
-        if (!supplySingleFileData(fn, process)) {
+static const auto RED_STR = "red";
+static const auto GREEN_STR = "green";
+static const auto BLUE_STR = "blue";
+static const auto CHANNELS_STRS = {RED_STR, GREEN_STR, BLUE_STR};
+
+bool processMappingElement(Json::Value const& mapping, AnglesToConfigSingleEyeProcess& process) {
+    if (json_is<std::string>(mapping)) {
+        // OK this is a mono channel
+        auto fn = json_cast<std::string>(mapping);
+        if (supplySingleFileData(fn, process)) {
             return false;
         }
-    } else if (inputData.isObject()) {
-        for (auto& channel : {"red", "green", "blue"}) {
-            auto chanFnVal = inputData[channel];
+        return true;
+    }
+    if (mapping.isObject()) {
+        for (auto& channel : CHANNELS_STRS) {
+            auto chanFnVal = mapping[channel];
             if (!json_is<std::string>(chanFnVal)) {
-                return withJsonSchemaError();
+                return withDataJsonSchemaError();
             }
             if (!supplySingleFileData(json_cast<std::string>(chanFnVal), process)) {
                 return false;
             }
         }
+        return true;
+    }
+    return withDataJsonSchemaError();
+}
+bool attemptSingleEyeProcessing(Json::Value const& inputData, AnglesToConfigSingleEyeProcess& process) {
+    if (inputData.isNull()) {
+        return false;
+    }
+    if (!inputData.isObject() || inputData["mapping"].isNull()) {
+        /// OK, so this is the old schema, where the "mapping" level didn't exist.
+        /// Deal with it, as a fall back.
+        if (!processMappingElement(inputData, process)) {
+            std::cerr << "Failed loading mapping data." << std::endl;
+            return false;
+        }
     } else {
-        return withJsonSchemaError();
+        if (!processMappingElement(inputData["mapping"], process)) {
+            std::cerr << "Failed loading mapping data." << std::endl;
+            return false;
+        }
     }
     // OK, if we made it here we have at least one file loaded in properly.
     process.computeBounds();
