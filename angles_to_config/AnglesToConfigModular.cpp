@@ -137,7 +137,7 @@ bool processMappingElement(Json::Value const& mapping, AnglesToConfigSingleEyePr
     if (json_is<std::string>(mapping)) {
         // OK this is a mono channel
         auto fn = json_cast<std::string>(mapping);
-        if (supplySingleFileData(fn, process)) {
+        if (!supplySingleFileData(fn, process)) {
             return false;
         }
         return true;
@@ -159,13 +159,13 @@ bool processMappingElement(Json::Value const& mapping, AnglesToConfigSingleEyePr
 
 bool attemptSingleEyeProcessing(Json::Value const& inputData, AnglesToConfigSingleEyeProcess& process) {
     if (inputData.isNull()) {
-        return withDataJsonSchemaError();
+        return false;
     }
     if (!inputData.isObject() || inputData["mapping"].isNull()) {
         /// OK, so this is the old schema, where the "mapping" level didn't exist.
         /// Deal with it, as a fall back.
-        if (!processMappingElement(inputData, process)) {
-            std::cerr << "Failed loading mapping data." << std::endl;
+        if (!processMappingElement(inputData["mapping"], process)) {
+            std::cerr << "Failed loading mapping data in fallback-schema path." << std::endl;
             return false;
         }
     } else {
@@ -174,6 +174,7 @@ bool attemptSingleEyeProcessing(Json::Value const& inputData, AnglesToConfigSing
             return false;
         }
     }
+
     auto& additionalFile = inputData["additionalVisibleAngles"];
     if (json_is<std::string>(additionalFile)) {
         auto newFn = json_cast<std::string>(additionalFile);
