@@ -48,6 +48,8 @@ template <typename T> struct RectBounds {
 };
 using RectBoundsd = RectBounds<double>;
 
+using Point2d = std::array<double, 2>;
+
 struct Config {
     bool useRightEye = false;
     bool computeScreenBounds = true;

@@ -50,6 +50,23 @@ std::vector<Mapping> read_from_infile(std::istream& in) {
     return mapping;
 }
 
+std::vector<Point2d> readAdditionalAngles(std::istream& in) {
+    std::vector<Point2d> ret;
+
+    while (!in.eof()) {
+        // Read the data in from the file.
+        Point2d elt;
+        in >> elt[0] >> elt[1];
+        ret.push_back(elt);
+    }
+    if (!ret.empty()) {
+        // There will have been one extra added, when running into EOF.
+        ret.pop_back();
+    }
+
+    return ret;
+}
+
 bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
                                       double bottom, double right, double top, bool useFieldAngles) {
     for (auto& thisMapping : mapping) {
