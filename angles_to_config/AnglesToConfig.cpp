@@ -58,7 +58,8 @@ void Usage(const std::string& name) {
               << "   The max_degrees tells how far the screen-space neighbor vector can differ from it corresponding "
                  "angle-space vector\n"
               << " [-mono in_config_mono_file_name ] (default standard input)\n"
-              << " [-rgb in_config_red_file_name in_config_green_file_name in_config_blue_file_name]\n" << std::endl
+              << " [-rgb in_config_red_file_name in_config_green_file_name in_config_blue_file_name]\n"
+              << std::endl
               << "  This program reads one or three configurations with lists of" << std::endl
               << "x,y screen coordinates in meters followed by long,lat angles in" << std::endl
               << "degrees where (0,0) is straight ahead from the eye, positive" << std::endl
@@ -448,7 +449,7 @@ int main(int argc, char* argv[]) {
         std::cout << "," << std::endl;
         writeMesh(std::cout, rightMeshes[0]);
         std::cout << "    ]" << std::endl; // mono_point_samples
-        std::cout << "   }" << std::endl; // distortion
+        std::cout << "   }" << std::endl;  // distortion
         break;
     case 3:
         std::cout << R"(    "type": "rgb_point_samples",)" << std::endl;
@@ -467,7 +468,7 @@ int main(int argc, char* argv[]) {
         std::cout << "," << std::endl;
         writeMesh(std::cout, rightMeshes[2]);
         std::cout << "    ]" << std::endl; // blue_point_samples
-        std::cout << "   }" << std::endl; // distortion
+        std::cout << "   }" << std::endl;  // distortion
         break;
     default:
         std::cerr << "Error: Unexpected number of meshes: " << leftMeshes.size() << std::endl;
