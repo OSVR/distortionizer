@@ -54,7 +54,13 @@ XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, do
 bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
                                       double bottom, double right, double top, bool useFieldAngles = false);
 
-bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, bool verbose = false);
+bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
+                XYZList const& additionalPointsFromAngles, bool verbose = false);
+
+/// Compatibility wrapping.
+inline bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, bool verbose = false) {
+    return findScreen(mapping, screen, XYZList(), verbose);
+}
 
 bool findMesh(const std::vector<Mapping>& mapping, ScreenDescription const& screen, MeshDescription& mesh,
               bool verbose = false);

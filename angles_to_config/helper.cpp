@@ -141,7 +141,8 @@ bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMe
     return true;
 }
 
-bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, bool verbose) {
+bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
+                XYZList const& additionalPointsFromAngles, bool verbose) {
     if (mapping.empty()) {
         std::cerr << "findScreen(): Error: No points in mapping" << std::endl;
         return false;
@@ -167,24 +168,37 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, 
         std::cerr << "First point rotation about Y (degrees): " << screenLeft.rotationAboutY() * 180 / MY_PI
                   << std::endl;
     }
+    /// Debug print functor.
+    auto horizontalAngleDebugPrint = [&](const char* when) {
+        if (verbose) {
+            std::cerr << "[" << when << "] Horizontal angular range: "
+                      << 180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY()) << std::endl;
+            std::cerr << "Screen left: ";
+            screenLeft.debugPrint(std::cerr);
+            std::cerr << std::endl;
+            std::cerr << "Screen right: ";
+            screenRight.debugPrint(std::cerr);
+            std::cerr << std::endl;
+        }
+    };
+    /// Little utility functor so we can go through both the mappings as well as the points that came from bare angles
+    /// with the same code.
+    auto considerXYZForScreenBound = [&](XYZ const& xyz) {
+        if (xyz.rotationAboutY() > screenLeft.rotationAboutY()) {
+            screenLeft = xyz;
+        }
+        if (xyz.rotationAboutY() < screenRight.rotationAboutY()) {
+            screenRight = xyz;
+        }
+    };
     for (const auto& i : mapping) {
-        if (i.xyz.rotationAboutY() > screenLeft.rotationAboutY()) {
-            screenLeft = i.xyz;
-        }
-        if (i.xyz.rotationAboutY() < screenRight.rotationAboutY()) {
-            screenRight = i.xyz;
-        }
+        considerXYZForScreenBound(i.xyz);
     }
-    if (verbose) {
-        std::cerr << "Horizontal angular range: "
-                  << 180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY()) << std::endl;
-        std::cerr << "Screen left: ";
-        screenLeft.debugPrint(std::cerr);
-        std::cerr << std::endl;
-        std::cerr << "Screen right: ";
-        screenRight.debugPrint(std::cerr);
-        std::cerr << std::endl;
+    horizontalAngleDebugPrint("mappings only");
+    for (auto& extraPoint : additionalPointsFromAngles) {
+        considerXYZForScreenBound(extraPoint);
     }
+    horizontalAngleDebugPrint("full");
     if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
         std::cerr << "findScreen(): Error: Field of view > 180 degrees: found "
                   << 180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY()) << std::endl;
@@ -231,12 +245,27 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, 
     // Find the highest-magnitude Y value of all points when they are
     // projected into the plane of the screen.
     double& maxY = screen.maxY;
-    maxY = std::abs(mapping[0].xyz.projectOntoPlane(A, B, C, D).y);
-    for (size_t i = 1; i < mapping.size(); i++) {
-        double Y = std::abs(mapping[i].xyz.projectOntoPlane(A, B, C, D).y);
+    auto computeYMagnitude = [&](XYZ const& xyz) { return std::abs(xyz.projectOntoPlane(A, B, C, D).y); };
+    auto considerXYZForMaxYMagnitude = [&](XYZ const& xyz) {
+        double Y = computeYMagnitude(xyz);
         if (Y > maxY) {
             maxY = Y;
         }
+    };
+    /// initial value
+    maxY = computeYMagnitude(mapping[0].xyz);
+
+    /// Go through all mappings
+    for (const auto& i : mapping) {
+        considerXYZForMaxYMagnitude(i.xyz);
+    }
+    if (verbose) {
+        std::cerr << "Maximum-magnitude Y projection after just mappings: " << maxY << std::endl;
+    }
+
+    /// Go through all points from extra angles
+    for (auto& extraPoint : additionalPointsFromAngles) {
+        considerXYZForMaxYMagnitude(extraPoint);
     }
     if (verbose) {
         std::cerr << "Maximum-magnitude Y projection: " << maxY << std::endl;
