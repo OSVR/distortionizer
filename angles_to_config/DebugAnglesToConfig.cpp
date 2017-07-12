@@ -343,7 +343,7 @@ int main(int argc, char* argv[]) {
             default:
                 Usage(argv[0]);
             }
-    }
+        }
     }
     if (realParams != 0) {
         Usage(argv[0]);
