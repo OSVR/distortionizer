@@ -194,3 +194,52 @@ using MeshDescriptionRow = std::array< //!< 2-vector of from, to coordinates
 typedef std::vector< //!< Vector of mappings
     MeshDescriptionRow>
     MeshDescription;
+
+template <typename T> class InclusiveBounds {
+  public:
+    using value_type = T;
+    InclusiveBounds() = default;
+    InclusiveBounds(value_type minVal, value_type maxVal) : valid_(true), minVal_(minVal), maxVal_(maxVal) {
+        if (maxVal_ < minVal_) {
+            using std::swap;
+            swap(minVal_, maxVal_);
+        }
+    }
+    explicit operator bool() const { return valid_; }
+    bool contains(value_type val) const { return (!valid_) || (val >= minVal_ && val <= maxVal_); }
+    bool outside(value_type val) const { return valid_ && (val < minVal_ || val > maxVal_); }
+
+    value_type getMin() const { return minVal_; }
+    value_type getMax() const { return maxVal_; }
+
+  private:
+    bool valid_ = false;
+    value_type minVal_;
+    value_type maxVal_;
+};
+template <typename T> inline std::ostream& operator<<(std::ostream& os, InclusiveBounds<T> const& bounds) {
+    std::ostringstream oss;
+    oss << "[";
+    if (bounds) {
+        const auto oldFlags = oss.flags();
+        const auto streamFlags = os.flags();
+        oss.flags(streamFlags);
+        oss.precision(os.precision());
+        oss << bounds.getMin();
+        oss.flags(oldFlags);
+        oss << ", ";
+        oss.precision(os.precision());
+        oss.flags(streamFlags);
+        oss << bounds.getMax();
+        oss.flags(oldFlags);
+    } else {
+        oss << "unbounded";
+    }
+    oss << "]";
+    os << oss.str();
+    return os;
+}
+
+using InclusiveBoundsd = InclusiveBounds<double>;
+using InclusiveBoundsf = InclusiveBounds<float>;
+

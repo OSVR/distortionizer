@@ -34,11 +34,16 @@
 // Standard includes
 #include <vector>
 
+struct OutputOptions {
+    InclusiveBoundsd u1;
+};
+
 struct SingleEyeOutput {
 
     ScreenDescription screen;
     std::vector<MeshDescription> meshes;
 };
+
 class AnglesToConfigSingleEyeProcess {
   public:
     AnglesToConfigSingleEyeProcess(Config const& c);
@@ -52,7 +57,7 @@ class AnglesToConfigSingleEyeProcess {
     /// Call after computeBounds()
     void normalizeMappings();
     /// Call after normalizeMappings() to compute and retrieve final output.
-    int computeScreenAndMeshes(SingleEyeOutput& outResults) const;
+    int computeScreenAndMeshes(SingleEyeOutput& outResults, OutputOptions const& outOpts = OutputOptions{}) const;
 
     /// Creates a copy of this object but with the mappings and bounds reflected horizontally.
     AnglesToConfigSingleEyeProcess reflectedHorizontally() const;

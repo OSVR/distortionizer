@@ -264,6 +264,13 @@ int outputClientMeshData(std::ostream& os, SingleEyeOutput const& left, SingleEy
     os << "}" << std::endl;   // Closes outer object
     return 0;
 }
+inline InclusiveBoundsd parseBounds(Json::Value const& trimRange) {
+    InclusiveBoundsd ret;
+    if (trimRange.isArray() && (trimRange.size() == 2) && trimRange[0].isDouble() && trimRange[1].isDouble()) {
+        ret = InclusiveBoundsd{json_cast<double>(trimRange[0]), json_cast<double>(trimRange[1])};
+    }
+    return ret;
+}
 
 int main(int argc, char* argv[]) {
     std::cerr << "Using config file " << argv[1] << std::endl;
@@ -281,6 +288,7 @@ int main(int argc, char* argv[]) {
 
     auto& input = root["input"];
     AnglesToConfigSingleEyeProcess leftEyeProcess(conf);
+    auto& trimming = root["trimming"];
     auto haveLeft = attemptSingleEyeProcessing(input["left"], leftEyeProcess);
 
     AnglesToConfigSingleEyeProcess rightEyeProcess(conf);
@@ -299,9 +307,22 @@ int main(int argc, char* argv[]) {
         std::cerr << "Note: Data provided for both eyes." << std::endl;
     }
 
+    OutputOptions leftOutOpts{};
+    OutputOptions rightOutOpts{};
+    {
+        auto& leftEyeU1 = trimming["outputRange"]["u1"]["left"];
+        auto bounds = parseBounds(trimming["outputRange"]["u1"]["left"]);
+        if (bounds) {
+            leftOutOpts.u1 = bounds;
+            std::cerr << "Trimming left eye u1 to range " << leftOutOpts.u1 << std::endl;
+            /// mirror to right eye
+            rightOutOpts.u1 = InclusiveBoundsd(1. - bounds.getMax(), 1. - bounds.getMin());
+        }
+    }
+
     SingleEyeOutput leftOutput;
     {
-        auto success = leftEyeProcess.computeScreenAndMeshes(leftOutput);
+        auto success = leftEyeProcess.computeScreenAndMeshes(leftOutput, leftOutOpts);
         if (0 != success) {
             std::cerr << "Error: Failure in computeScreenAndMeshes for left eye, code " << success << std::endl;
             return success;
@@ -310,7 +331,7 @@ int main(int argc, char* argv[]) {
 
     SingleEyeOutput rightOutput;
     {
-        auto success = rightEyeProcess.computeScreenAndMeshes(rightOutput);
+        auto success = rightEyeProcess.computeScreenAndMeshes(rightOutput, rightOutOpts);
         if (0 != success) {
             std::cerr << "Error: Failure in computeScreenAndMeshes for right eye, code " << success << std::endl;
             return success;

@@ -108,7 +108,8 @@ void AnglesToConfigSingleEyeProcess::normalizeMappings() {
     prepareFullMapping();
 }
 
-int AnglesToConfigSingleEyeProcess::computeScreenAndMeshes(SingleEyeOutput& outResults) const {
+int AnglesToConfigSingleEyeProcess::computeScreenAndMeshes(SingleEyeOutput& outResults,
+                                                           OutputOptions const& outOpts) const {
     if (!::findScreen(getFullMapping(), outResults.screen, additionalAnglePoints_, config_.verbose)) {
         std::cerr << "Error: Could not find screen" << std::endl;
         return 3;
@@ -124,6 +125,10 @@ int AnglesToConfigSingleEyeProcess::computeScreenAndMeshes(SingleEyeOutput& outR
             std::cerr << "Error: Mesh size " << mesh.size() << " does not match mapping size" << mapping.size()
                       << std::endl;
             return 4;
+        }
+        if (outOpts.u1) {
+            mesh.erase(std::remove_if(mesh.begin(), mesh.end(),
+                                      [&](MeshDescriptionRow const& a) { return outOpts.u1.outside(a[0][0]); }));
         }
         outResults.meshes.push_back(std::move(mesh));
     }

@@ -1,6 +1,22 @@
 {
     "$schema": "http://json-schema.org/schema#",
     "definitions": {
+        "bounds": {
+            "description": "Inclusive bounds specified as [min, max]",
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": [
+                {
+                    "type": "number",
+                    "title": "Min"
+                },
+                {
+                    "type": "number",
+                    "title": "Max"
+                }
+            ]
+        },
         "eyeInput": {
             "description": "Input for one eye",
             "type": "object",
@@ -65,6 +81,30 @@
                 "bottom": { "type": "number" }
             },
             "required": [ "bottom", "top", "right", "left" ]
+        },
+        "trimming": {
+            "type": "object",
+            "title": "Parameters to trim the set of points.",
+            "properties": {
+                "outputRange": {
+                    "type": "object",
+                    "properties": {
+                        "u1": {
+                            "title": "Skip any points (at the output stage) whose u1 value lies outside this range",
+                            "description": "The left eye is flipped to provide the right eye bounds.",
+                            "type": "object",
+                            "properties": {
+                                "left": {
+                                    "allOf": [
+                                        { "$ref": "#/definitions/bounds" },
+                                        { "title": "Bounds for the left eye" }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         },
         "verbose": {
             "title": "Verbose output",
