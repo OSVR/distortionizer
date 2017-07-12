@@ -17,6 +17,24 @@
                 }
             ]
         },
+        "xyBounds": {
+            "description": "Inclusive bounds specified as [min, max] for x and/or y components",
+            "type": "object",
+            "properties": {
+                "x": {
+                    "allOf": [
+                        { "$ref": "#/definitions/bounds" },
+                        { "title": "X bounds" }
+                    ]
+                },
+                "y": {
+                    "allOf": [
+                        { "$ref": "#/definitions/bounds" },
+                        { "title": "Y bounds" }
+                    ]
+                }
+            }
+        },
         "eyeInput": {
             "description": "Input for one eye",
             "type": "object",
@@ -101,6 +119,30 @@
                                     ]
                                 }
                             }
+                        }
+                    }
+                },
+                "screenPointRange": {
+                    "title": "Trim input points whose screen-space X value is outside this range.",
+                    "type": "object",
+                    "properties": {
+                        "left": {
+                            "allOf": [
+                                { "title": "Bounds for the left eye" },
+                                { "$ref": "#/definitions/xyBounds" }
+                            ]
+                        }
+                    }
+                },
+                "fieldAngleRange": {
+                    "title": "Trim input points whose field-angles (in degrees) lie outside this range.",
+                    "type": "object",
+                    "properties": {
+                        "left": {
+                            "allOf": [
+                                { "title": "Bounds for the left eye" },
+                                { "$ref": "#/definitions/xyBounds" }
+                            ]
                         }
                     }
                 }

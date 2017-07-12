@@ -272,6 +272,32 @@ inline InclusiveBoundsd parseBounds(Json::Value const& trimRange) {
     return ret;
 }
 
+inline XYInclusiveBoundsd parseXYBounds(Json::Value const& trimRangeXY) {
+    XYInclusiveBoundsd ret;
+    ret.x = parseBounds(trimRangeXY["x"]);
+    ret.y = parseBounds(trimRangeXY["y"]);
+    return ret;
+}
+
+inline void parseTrimmingForEye(Json::Value const& trimming, const char eyeName[],
+                                AnglesToConfigSingleEyeProcess& process) {
+    {
+        auto bounds = parseXYBounds(trimming["screenPointRange"][eyeName]);
+        if (bounds) {
+            std::cerr << "Trimming " << eyeName << " eye screen point components: " << bounds << std::endl;
+            process.setScreenSpaceTrimBounds(bounds);
+        }
+    }
+
+    {
+        auto bounds = parseXYBounds(trimming["fieldAngleRange"][eyeName]);
+        if (bounds) {
+            std::cerr << "Trimming " << eyeName << " eye input degrees X longitude/Y latitude components: " << bounds
+                      << std::endl;
+            process.setInputAngleBounds(bounds);
+        }
+    }
+}
 int main(int argc, char* argv[]) {
     std::cerr << "Using config file " << argv[1] << std::endl;
     Json::Value root;
@@ -288,10 +314,14 @@ int main(int argc, char* argv[]) {
 
     auto& input = root["input"];
     AnglesToConfigSingleEyeProcess leftEyeProcess(conf);
+    AnglesToConfigSingleEyeProcess rightEyeProcess(conf);
+
     auto& trimming = root["trimming"];
+    parseTrimmingForEye(trimming, "left", leftEyeProcess);
+    parseTrimmingForEye(trimming, "right", rightEyeProcess);
+
     auto haveLeft = attemptSingleEyeProcessing(input["left"], leftEyeProcess);
 
-    AnglesToConfigSingleEyeProcess rightEyeProcess(conf);
     auto haveRight = attemptSingleEyeProcessing(input["right"], rightEyeProcess);
     if (!haveLeft && !haveRight) {
         std::cerr << "Error: must have valid input data for at least one eye, and none provided." << std::endl;

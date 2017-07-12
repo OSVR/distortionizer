@@ -47,6 +47,12 @@ struct SingleEyeOutput {
 class AnglesToConfigSingleEyeProcess {
   public:
     AnglesToConfigSingleEyeProcess(Config const& c);
+    /// @name Set input trimming bounds
+    /// @{
+    void setScreenSpaceTrimBounds(XYInclusiveBoundsd const& bounds);
+    void setInputAngleBounds(XYInclusiveBoundsd const& bounds);
+    /// @}
+
     /// Call this as many times as you have input mappings (1 for mono, 3 for RGB)
     int supplyInputMapping(std::vector<Mapping>&& mapping);
     /// Optional: call at most once with additional angles (in degrees, and same type as the input mapping angles) that
@@ -69,6 +75,8 @@ class AnglesToConfigSingleEyeProcess {
     enum class Status { Empty, HasSomeMapping, HasBoundsComputed, HasMappingsNormalized };
 
     Status status_ = Status::Empty;
+    XYInclusiveBoundsd screenTrim_;
+    XYInclusiveBoundsd angleBounds_;
     std::vector<std::vector<Mapping>> mappings_;
     XYZList additionalAnglePoints_;
     RectBoundsd screenBounds_;

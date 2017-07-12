@@ -243,3 +243,29 @@ template <typename T> inline std::ostream& operator<<(std::ostream& os, Inclusiv
 using InclusiveBoundsd = InclusiveBounds<double>;
 using InclusiveBoundsf = InclusiveBounds<float>;
 
+template <typename T> struct XYInclusiveBounds {
+    // Do we have any bounds?
+    explicit operator bool() const { return static_cast<bool>(x) || static_cast<bool>(y); }
+    InclusiveBounds<T> x;
+    InclusiveBounds<T> y;
+};
+
+template <typename T> inline std::ostream& operator<<(std::ostream& os, XYInclusiveBounds<T> const& xyBounds) {
+    if (!xyBounds) {
+        os << "unbounded";
+        return os;
+    }
+    if (xyBounds.x) {
+        os << "x: " << xyBounds.x;
+    }
+    if (xyBounds.x && xyBounds.y) {
+        os << ", ";
+    }
+    if (xyBounds.y) {
+        os << "y: " << xyBounds.y;
+    }
+    return os;
+}
+
+using XYInclusiveBoundsd = XYInclusiveBounds<double>;
+using XYInclusiveBoundsf = XYInclusiveBounds<float>;

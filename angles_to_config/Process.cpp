@@ -35,11 +35,64 @@
 
 AnglesToConfigSingleEyeProcess::AnglesToConfigSingleEyeProcess(Config const& c) : config_(c) {}
 
+void AnglesToConfigSingleEyeProcess::setScreenSpaceTrimBounds(XYInclusiveBoundsd const& bounds) {
+    assert(status_ == Status::Empty && "Should only call this function on an empty object");
+    screenTrim_ = bounds;
+}
+
+void AnglesToConfigSingleEyeProcess::setInputAngleBounds(XYInclusiveBoundsd const& bounds) {
+    assert(status_ == Status::Empty && "Should only call this function on an empty object");
+    angleBounds_ = bounds;
+}
+
+template <typename F>
+inline bool trimMappingToBounds(std::vector<Mapping>& mapping, InclusiveBoundsd bounds, F&& memberGetter) {
+    if (!bounds) {
+        return false;
+    }
+    mapping.erase(std::remove_if(mapping.begin(), mapping.end(),
+                                 [&](Mapping const& m) { return bounds.outside(memberGetter(m)); }));
+    return true;
+}
+template <typename F1, typename F2>
+inline bool trimMappingToBounds(std::vector<Mapping>& mapping, XYInclusiveBoundsd bounds, F1&& memberGetterX,
+                                F2&& memberGetterY) {
+
+    bool ret = false;
+    if (!bounds) {
+        return ret;
+    }
+    if (trimMappingToBounds(mapping, bounds.x, std::forward<F1>(memberGetterX))) {
+        ret = true;
+    }
+    if (trimMappingToBounds(mapping, bounds.y, std::forward<F2>(memberGetterY))) {
+        ret = true;
+    }
+    return ret;
+}
 int AnglesToConfigSingleEyeProcess::supplyInputMapping(std::vector<Mapping>&& mapping) {
 
     assert(
         (status_ == Status::Empty || status_ == Status::HasSomeMapping) &&
         "Should only call this function on an empty object or one with only calls to supplyInputMapping() completed");
+    if (config_.verbose) {
+        std::cerr << "supplyInputMapping provided with an input mapping of size " << mapping.size() << std::endl;
+    }
+    bool trimmed = false;
+    if (trimMappingToBounds(mapping, screenTrim_, [](Mapping const& m) { return m.xyLatLong.x; },
+                            [](Mapping const& m) { return m.xyLatLong.y; })) {
+        trimmed = true;
+    }
+
+    /// At this point, we're still in degrees (conversion happens with convert_to_normalized_and_meters)
+    if (trimMappingToBounds(mapping, angleBounds_, [](Mapping const& m) { return m.xyLatLong.longitude; },
+                            [](Mapping const& m) { return m.xyLatLong.latitude; })) {
+        trimmed = true;
+    }
+
+    if (config_.verbose && trimmed) {
+        std::cerr << "Size after input trimming: " << mapping.size() << std::endl;
+    }
     mappings_.emplace_back(std::move(mapping));
     status_ = Status::HasSomeMapping;
     if (!config_.verifyAngles) {
