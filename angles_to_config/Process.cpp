@@ -123,7 +123,21 @@ int AnglesToConfigSingleEyeProcess::supplyInputMapping(std::vector<Mapping>&& ma
 void AnglesToConfigSingleEyeProcess::supplyAdditionalAngles(std::vector<LongLat> const& additionalAngles) {
     additionalAnglePoints_ = convertAdditionalAngles(additionalAngles, config_.depth, config_.useFieldAngles);
 }
-
+// for x positive to the right, y positive up.
+inline void extendBounds(RectBoundsd& bounds, double x, double y) {
+    if (x > bounds.right) {
+        bounds.right = x;
+    }
+    if (x < bounds.left) {
+        bounds.left = x;
+    }
+    if (y > bounds.top) {
+        bounds.top = y;
+    }
+    if (y < bounds.bottom) {
+        bounds.bottom = y;
+    }
+}
 void AnglesToConfigSingleEyeProcess::computeBounds() {
     assert(status_ == Status::HasSomeMapping &&
            "Should only call this function after one or more calls to supplyInputMapping()");
@@ -135,6 +149,11 @@ void AnglesToConfigSingleEyeProcess::computeBounds() {
         // make a bound on all of them.
         screenBounds_.left = screenBounds_.right = mappings_[0][0].xyLatLong.x;
         screenBounds_.top = screenBounds_.bottom = mappings_[0][0].xyLatLong.y;
+        for (auto const& mapping : mappings_) {
+            for (auto& meas : mapping) {
+                extendBounds(screenBounds_, meas.xyLatLong.x, meas.xyLatLong.y);
+            }
+        }
     } else {
         screenBounds_ = config_.suppliedScreenBounds;
     }
