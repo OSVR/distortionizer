@@ -58,16 +58,20 @@ std::vector<Mapping> read_from_infile(std::istream& in) {
 
 std::vector<LongLat> readAdditionalAngles(std::istream& in) {
     std::vector<LongLat> ret;
-
-    while (!in.eof()) {
-        // Read the data in from the file.
-        LongLat elt;
-        in >> elt.longitude() >> elt.latitude();
-        ret.push_back(elt);
-    }
-    if (!ret.empty()) {
-        // There will have been one extra added, when running into EOF.
-        ret.pop_back();
+    try {
+        while (in.good()) {
+            // Read the data in from the file.
+            LongLat elt;
+            in >> elt.longitude() >> elt.latitude();
+            ret.push_back(elt);
+        }
+        if (!ret.empty()) {
+            // There will have been one extra added, when running into EOF.
+            ret.pop_back();
+        }
+    } catch (std::bad_alloc const&) {
+        std::cerr << "Out of memory loading additional angles file - skipping." << std::endl;
+        return std::vector<LongLat>{};
     }
 
     return ret;
