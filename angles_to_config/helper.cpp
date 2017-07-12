@@ -28,6 +28,7 @@
 #include "types.h"
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 
 // Standard includes
 #include <cmath>
@@ -76,6 +77,8 @@ std::vector<LongLat> readAdditionalAngles(std::istream& in) {
 
     return ret;
 }
+using Plane = Eigen::Hyperplane<double, 3>;
+
 /// takes in angles (long/lat or field angles) in degrees, returns
 inline XYZ longLatToWorldSpace(LongLat longLat, bool useFieldAngles, double depth) {
     using std::sin;
@@ -85,6 +88,8 @@ inline XYZ longLatToWorldSpace(LongLat longLat, bool useFieldAngles, double dept
     Eigen::Vector2d::Map(longLat.data()) *= MY_PI / 180.;
     XYZ ret;
     if (useFieldAngles) {
+        const Plane p =
+            Plane::Through(Eigen::Vector3d(0, 0, -depth), Eigen::Vector3d(1, 0, -depth), Eigen::Vector3d(0, 1, -depth));
         // These are expressed as angles with respect to a screen that is
         // straight ahead, independent in X and Y.  The -Z axis is straight
         // ahead.  Positive rotation in longitude points towards +X,
@@ -147,6 +152,12 @@ bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMe
     }
 
     return true;
+}
+static inline Eigen::Vector3d toEigen(XYZ const& p) { return Eigen::Vector3d(p.x, p.y, p.z); }
+static inline XYZ toXYZ(Eigen::Vector3d const& p) { return XYZ{p.x(), p.y(), p.z()}; }
+
+static inline Eigen::Vector3d projectOntoPlane(Plane const& plane, XYZ const& p) {
+    return plane.projection(toEigen(p));
 }
 
 bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
@@ -247,6 +258,7 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
     if (verbose) {
         std::cerr << "Plane of the screen A,B,C, D: " << A << "," << B << "," << C << ", " << D << std::endl;
     }
+    const Plane screenPlane(Eigen::Vector3d(A, B, C), D);
 
     //====================================================================
     // Figure out the Y screen-space extents.
@@ -256,7 +268,11 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
     // Find the highest-magnitude Y value of all points when they are
     // projected into the plane of the screen.
     double& maxY = screen.maxY;
+#if 0
     auto computeYMagnitude = [&](XYZ const& xyz) { return std::abs(xyz.projectOntoPlane(A, B, C, D).y); };
+#else
+    auto computeYMagnitude = [&](XYZ const& xyz) { return std::abs(projectOntoPlane(screenPlane, xyz).y()); };
+#endif
     auto considerXYZForMaxYMagnitude = [&](XYZ const& xyz) {
         double Y = computeYMagnitude(xyz);
         if (Y > maxY) {
@@ -295,11 +311,29 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
     XYZ rightProj = screenRight;
     leftProj.y = 0;
     rightProj.y = 0;
+    const Eigen::Vector3d leftProjVec = toEigen(leftProj);
+    const Eigen::Vector3d rightProjVec = toEigen(rightProj);
+#ifdef ASSUME_CENTER_OF_SCREEN
     double screenWidth = leftProj.distanceFrom(rightProj);
+    double hFOVRadians = 2 * std::atan((screenWidth / 2) / std::abs(D));
+#else
+    // get these at unit distance (if not there already)
+    // which makes them rather like unit-distance left and right clipping planes
+    double leftEdge = leftProj.x / (-leftProj.z);
+    double rightEdge = rightProj.x / (-rightProj.z);
+    // this isn't actually terribly useful here...
+    double screenWidth = -leftEdge + rightEdge;
+    auto leftHalfFOV = std::atan(-leftEdge);
+    auto rightHalfFOV = std::atan(rightEdge);
+    if (verbose) {
+        std::cerr << "Left half-FOV: " << radToDegree(leftHalfFOV) << std::endl;
+        std::cerr << "Right half-FOV: " << radToDegree(rightHalfFOV) << std::endl;
+    }
+    auto hFOVRadians = leftHalfFOV + rightHalfFOV;
+#endif
     if (verbose) {
         std::cerr << "Screen width: " << screenWidth << std::endl;
     }
-    double hFOVRadians = 2 * std::atan((screenWidth / 2) / std::abs(D));
     double hFOVDegrees = radToDegree(hFOVRadians);
     if (verbose) {
         std::cerr << "Horizontal field of view (degrees): " << hFOVDegrees << std::endl;
@@ -352,22 +386,28 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
         std::cerr << "Overlap percent: " << overlapPercent << std::endl;
     }
 
-    //====================================================================
-    // Figure out the center of projection for the screen.  This is the
-    // location where a line from the origin perpendicular to the screen
-    // pierces the screen.
-    // Then figure out the normalized coordinates of this point in screen
-    // space, which is the fraction of the way from the left to the right
-    // of the screen.  It is always (by construction above) in the center
-    // of the screen in Y.
-    // Also, by construction it is at a distance D along the (A,B,C) unit
-    // vector from the origin.
+//====================================================================
+// Figure out the center of projection for the screen.  This is the
+// location where a line from the origin perpendicular to the screen
+// pierces the screen.
+// Then figure out the normalized coordinates of this point in screen
+// space, which is the fraction of the way from the left to the right
+// of the screen.  It is always (by construction above) in the center
+// of the screen in Y.
+// Also, by construction it is at a distance D along the (A,B,C) unit
+// vector from the origin.
+#if 0
     double yCOP = 0.5;
     XYZ projection;
     projection.x = -D * A;
     projection.y = -D * B;
     projection.z = -D * C;
     double xCOP = leftProj.distanceFrom(projection) / leftProj.distanceFrom(rightProj);
+#else
+    Eigen::Vector3d copOnPlane = screenPlane.projection(Eigen::Vector3d::Zero());
+    double xCOP = (copOnPlane.x() - leftProjVec.x()) / screenWidth;
+    double yCOP = 0.5;
+#endif
     if (verbose) {
         std::cerr << "Center of projection x,y: " << xCOP << ", " << yCOP << std::endl;
     }
