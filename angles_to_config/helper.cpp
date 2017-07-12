@@ -223,6 +223,9 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
     //   x = -dz
     //   y = 0
     //   z = dx
+
+    /// @todo Note this will always give us the same plane if we feed in field angles, since field angles are
+    /// transformed into xyz by projecting onto a straight-ahead screen
     double dx = screenRight.x - screenLeft.x;
     double dz = screenRight.z - screenLeft.z;
     double& A = screen.A;

@@ -160,7 +160,9 @@ using XYZList = std::vector<XYZ>;
 /// Mapping entry, along with its associated 3D coordinate
 class Mapping {
   public:
+    /// eye/camera space
     XYLatLong xyLatLong;
+    /// Screen/world space
     XYZ xyz;
 
     Mapping(XYLatLong const& ll, XYZ const& x) : xyLatLong(ll), xyz(x) {}
