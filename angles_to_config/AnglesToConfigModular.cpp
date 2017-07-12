@@ -81,10 +81,9 @@ void basicConfigParsing(Json::Value const& root, Config& conf) {
     conf.depth = getWithDefault(root, "depth", conf.depth);
     {
         auto& screen = root["screen"];
+
         auto gotBounds = getBounds(screen, conf.suppliedScreenBounds);
-        if (gotBounds) {
-            conf.computeScreenBounds = false;
-        }
+        conf.computeScreenBounds = !gotBounds;
     }
     {
         auto& inputType = root["inputType"];
