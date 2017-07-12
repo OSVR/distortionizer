@@ -35,6 +35,10 @@
 #include <map>
 #include <string>
 
+template <typename T> inline T radToDegree(T radians) {
+    return static_cast<T>(static_cast<double>(radians) * 180.0 / MY_PI);
+}
+
 std::vector<Mapping> read_from_infile(std::istream& in) {
     std::vector<Mapping> mapping;
 
@@ -165,14 +169,14 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
 
     screenLeft = screenRight = mapping[0].xyz;
     if (verbose) {
-        std::cerr << "First point rotation about Y (degrees): " << screenLeft.rotationAboutY() * 180 / MY_PI
+        std::cerr << "First point rotation about Y (degrees): " << radToDegree(screenLeft.rotationAboutY())
                   << std::endl;
     }
     /// Debug print functor.
     auto horizontalAngleDebugPrint = [&](const char* when) {
         if (verbose) {
             std::cerr << "[" << when << "] Horizontal angular range: "
-                      << 180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY()) << std::endl;
+                      << radToDegree(screenLeft.rotationAboutY() - screenRight.rotationAboutY()) << std::endl;
             std::cerr << "Screen left: ";
             screenLeft.debugPrint(std::cerr);
             std::cerr << std::endl;
@@ -201,7 +205,7 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
     horizontalAngleDebugPrint("full");
     if (screenLeft.rotationAboutY() - screenRight.rotationAboutY() >= MY_PI) {
         std::cerr << "findScreen(): Error: Field of view > 180 degrees: found "
-                  << 180 / MY_PI * (screenLeft.rotationAboutY() - screenRight.rotationAboutY()) << std::endl;
+                  << radToDegree(screenLeft.rotationAboutY() - screenRight.rotationAboutY()) << std::endl;
         return false;
     }
 
@@ -289,7 +293,7 @@ bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
         std::cerr << "Screen width: " << screenWidth << std::endl;
     }
     double hFOVRadians = 2 * std::atan((screenWidth / 2) / std::abs(D));
-    double hFOVDegrees = hFOVRadians * 180 / MY_PI;
+    double hFOVDegrees = radToDegree(hFOVRadians);
     if (verbose) {
         std::cerr << "Horizontal field of view (degrees): " << hFOVDegrees << std::endl;
     }
