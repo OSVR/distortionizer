@@ -322,11 +322,7 @@ bool findScreen(ScreenDescription& outScreen, const std::vector<Mapping>& mappin
     // Find the highest-magnitude Y value of all points when they are
     // projected into the plane of the screen.
     double& maxY = outScreen.maxY;
-#if 0
     auto computeYMagnitude = [&](XYZ const& xyz) { return std::abs(xyz.projectOntoPlane(A, B, C, D).y); };
-#else
-    auto computeYMagnitude = [&](XYZ const& xyz) { return std::abs(screenPlane.projection(toEigen(xyz)).y()); };
-#endif
     auto considerXYZForMaxYMagnitude = [&](XYZ const& xyz) {
         double Y = computeYMagnitude(xyz);
         if (Y > maxY) {
@@ -365,26 +361,8 @@ bool findScreen(ScreenDescription& outScreen, const std::vector<Mapping>& mappin
     XYZ rightProj = screenRight;
     leftProj.y = 0;
     rightProj.y = 0;
-    const Eigen::Vector3d leftProjVec = toEigen(leftProj);
-    const Eigen::Vector3d rightProjVec = toEigen(rightProj);
-#ifdef ASSUME_CENTER_OF_SCREEN
     double screenWidth = leftProj.distanceFrom(rightProj);
     double hFOVRadians = 2 * std::atan((screenWidth / 2) / std::abs(D));
-#else
-    // get these at unit distance (if not there already)
-    // which makes them rather like unit-distance left and right clipping planes
-    double leftEdge = leftProj.x / (-leftProj.z);
-    double rightEdge = rightProj.x / (-rightProj.z);
-    // this isn't actually terribly useful here...
-    double screenWidth = -leftEdge + rightEdge;
-    auto leftHalfFOV = std::atan(-leftEdge);
-    auto rightHalfFOV = std::atan(rightEdge);
-    if (verbose) {
-        std::cerr << "Left half-FOV: " << radToDegree(leftHalfFOV) << std::endl;
-        std::cerr << "Right half-FOV: " << radToDegree(rightHalfFOV) << std::endl;
-    }
-    auto hFOVRadians = leftHalfFOV + rightHalfFOV;
-#endif
     if (verbose) {
         std::cerr << "Screen width: " << screenWidth << std::endl;
     }
@@ -450,18 +428,12 @@ bool findScreen(ScreenDescription& outScreen, const std::vector<Mapping>& mappin
 // of the screen in Y.
 // Also, by construction it is at a distance D along the (A,B,C) unit
 // vector from the origin.
-#if 0
     double yCOP = 0.5;
     XYZ projection;
     projection.x = -D * A;
     projection.y = -D * B;
     projection.z = -D * C;
     double xCOP = leftProj.distanceFrom(projection) / leftProj.distanceFrom(rightProj);
-#else
-    Eigen::Vector3d copOnPlane = screenPlane.projection(Eigen::Vector3d::Zero());
-    double xCOP = (copOnPlane.x() - leftProjVec.x()) / screenWidth;
-    double yCOP = 0.5;
-#endif
     if (verbose) {
         std::cerr << "Center of projection x,y: " << xCOP << ", " << yCOP << std::endl;
     }
