@@ -25,8 +25,8 @@
 
 // Internal Includes
 #include "helper.h"
-#include "types.h"
 #include "EigenStdArrayInterop.h"
+#include "types.h"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -418,16 +418,16 @@ bool findScreen(ScreenDescription& outScreen, const std::vector<Mapping>& mappin
         std::cerr << "Overlap percent: " << overlapPercent << std::endl;
     }
 
-//====================================================================
-// Figure out the center of projection for the screen.  This is the
-// location where a line from the origin perpendicular to the screen
-// pierces the screen.
-// Then figure out the normalized coordinates of this point in screen
-// space, which is the fraction of the way from the left to the right
-// of the screen.  It is always (by construction above) in the center
-// of the screen in Y.
-// Also, by construction it is at a distance D along the (A,B,C) unit
-// vector from the origin.
+    //====================================================================
+    // Figure out the center of projection for the screen.  This is the
+    // location where a line from the origin perpendicular to the screen
+    // pierces the screen.
+    // Then figure out the normalized coordinates of this point in screen
+    // space, which is the fraction of the way from the left to the right
+    // of the screen.  It is always (by construction above) in the center
+    // of the screen in Y.
+    // Also, by construction it is at a distance D along the (A,B,C) unit
+    // vector from the origin.
     double yCOP = 0.5;
     XYZ projection;
     projection.x = -D * A;
