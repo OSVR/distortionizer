@@ -312,12 +312,6 @@ struct ProjectionDescription {
     /// Center of Projection
     Point2d cop = {0.5, 0.5};
 };
-/// Output from find_screen that is only needed by the mesh computation.
-struct ScreenDetails {
-    Plane screenPlane;               //!< Ax + By + Cz + D = 0 screen plane
-    Point3d screenLeft, screenRight; //!< Left-most and right-most points on screen
-    double maxY;                     //!< Maximum absolute value of Y for points on screen
-};
 
 using MeshDescriptionRow = std::array< //!< 2-vector of from, to coordinates
     std::array<double, 2>,             //!< 2-vector of unit coordinates (x,y)

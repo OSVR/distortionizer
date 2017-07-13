@@ -811,10 +811,7 @@ bool findScreen(ProjectionDescription& outProjection, ScreenDetails& outScreen,
 
     //====================================================================
     // Fill in the screen parameters.
-    ei::map(outScreen.screenLeft) = horizExtrema.getLeft();
-    ei::map(outScreen.screenRight) = horizExtrema.getRight();
-    outScreen.screenPlane = screenPlane;
-    outScreen.maxY = maxY;
+    outScreen = ScreenDetails(screenPlane, horizExtrema.getLeft(), horizExtrema.getRight(), maxY);
     outProjection.hFOVDegrees = radToDegree(horizData.hFOVradians);
     outProjection.vFOVDegrees = radToDegree(vFOVRadians);
     outProjection.overlapPercent = findOverlapPercent(screenPlane, horizData.hFOVradians, verbose);
@@ -912,12 +909,6 @@ MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const
         return ret;
     }
 
-    // Negative of negative maxY is maxY
-    Eigen::Array2d outOffset = Eigen::Array2d(-leftProjX, screen.maxY);
-    double xOutScale = 1. / (rightProjX - leftProjX);
-    double yOutScale = 1. / (2. * screen.maxY);
-    Eigen::Array2d outScale = Eigen::Array2d(xOutScale, yOutScale);
-
     for (const auto& meas : data.measurements) {
 
         // Input (screen) point coordinates are already normalized.
@@ -927,10 +918,8 @@ MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const
         // corner at (0,0) and the upper right at (1,1).  Because we oversized the
         // screen, these will all be in this range.  Otherwise, they might not be.
         /// @todo How/where did we oversize the screen? (Y axis?)
-        Eigen::Vector3d onScreen = screen.screenPlane.projection(ei::map(meas.pointFromView));
-
         Point2d out;
-        ei::mapArray(out) = (onScreen.head<2>().array() + outOffset) * outScale;
+        ei::mapArray(out) = screen.projectAndNormalize(meas.pointFromView);
 
         // Add a new entry onto the mesh
         ret.push_back(MeshDescriptionRow{meas.screen, out});
@@ -1125,4 +1114,24 @@ XYZList reflectPoints(XYZList const& input) {
         ret.push_back(reflect(pt));
     }
     return ret;
+}
+
+ScreenDetails::ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left, Eigen::Vector3d const& right,
+                             double maxYMagnitude)
+    : valid(true), screenPlane(scrPlane), screenLeft(left), screenRight(right), maxY(maxYMagnitude) {
+
+    auto leftProjX = screenLeft[0];
+    auto rightProjX = screenRight[0];
+
+    // Negative of negative maxY is maxY
+    offset = Eigen::Array2d(-leftProjX, maxY);
+
+    double xOutScale = 1. / (rightProjX - leftProjX);
+    double yOutScale = 1. / (2. * maxY);
+    scale = Eigen::Array2d(xOutScale, yOutScale);
+}
+
+Eigen::Array2d ScreenDetails::projectAndNormalize(Point3d const& angleViewPoint) const {
+    Eigen::Vector3d onScreenPlane = screenPlane.projection(ei::map(angleViewPoint));
+    return (onScreenPlane.head<2>().array() + offset) * scale;
 }
