@@ -33,6 +33,10 @@
 /// Returns empty mapping if it fails to read anything.
 std::vector<Mapping> read_from_infile(std::istream& in);
 
+/// Reads the four-column whitespace-delimited mapping file.
+/// Returns empty vector if it fails to read anything.
+InputMeasurements readInputMeasurements(std::string const& inputSource, std::istream& in);
+
 /// Reads a two-column whitespace-delimited file of additional angles
 /// Returns empty if it fails to read anything.
 std::vector<LongLat> readAdditionalAngles(std::istream& in);
@@ -54,16 +58,25 @@ XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, do
 bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
                                       double bottom, double right, double top, bool useFieldAngles = false);
 
-bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen,
+NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters, double depth,
+                                                        RectBoundsd rect, bool useFieldAngles = false);
+
+bool findScreen(ScreenDescription& outScreen, const std::vector<Mapping>& mapping,
                 XYZList const& additionalPointsFromAngles, bool verbose = false);
 
 /// Compatibility wrapping.
-inline bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& screen, bool verbose = false) {
-    return findScreen(mapping, screen, XYZList(), verbose);
+inline bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& outScreen, bool verbose = false) {
+    return findScreen(outScreen, mapping, XYZList(), verbose);
 }
+
+bool findScreen(ProjectionDescription& outProjection, ScreenDetails& outScreen,
+                std::vector<NormalizedMeasurements> const& dataSets, XYZList const& additionalPointsFromAngles,
+                bool verbose = false);
 
 bool findMesh(const std::vector<Mapping>& mapping, ScreenDescription const& screen, MeshDescription& mesh,
               bool verbose = false);
+
+MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const& screen, bool verbose = false);
 
 /// Reflect a point around X=0
 XYZ reflect(XYZ input);
@@ -90,3 +103,46 @@ std::vector<Mapping> reflect_normalized_mapping(std::vector<Mapping> const& mapp
 
 /// Reflect a list of points around X=0
 XYZList reflectPoints(XYZList const& input);
+
+template <typename ValueType, typename Comparator> class GenericExtremaFinder {
+  public:
+    using comparator_type = Comparator;
+    using value_type = ValueType;
+    GenericExtremaFinder() : compare_() {}
+    GenericExtremaFinder(comparator_type&& compare) : compare_(std::move(compare)) {}
+    GenericExtremaFinder(comparator_type const& compare) : compare_(compare) {}
+
+    value_type const& getMin() const {
+        assert(valid_ && "Only makes sense to get min value if you've actually processed any elements!");
+        return minVal_;
+    }
+    value_type const& getMax() const {
+        assert(valid_ && "Only makes sense to get max value if you've actually processed any elements!");
+        return maxVal_;
+    }
+    void process(value_type const& val) {
+        if (!valid_) {
+            minVal_ = val;
+            maxVal_ = val;
+            valid_ = true;
+            return;
+        }
+
+        if (compare_(val, minVal_)) {
+            /// new is less than min
+            minVal_ = val;
+        }
+
+        if (compare_(maxVal_, val)) {
+            /// max is less than new
+            maxVal_ = val;
+        }
+    }
+
+  private:
+    comparator_type compare_;
+    bool valid_ = false;
+
+    value_type minVal_;
+    value_type maxVal_;
+};

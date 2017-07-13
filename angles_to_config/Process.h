@@ -39,8 +39,7 @@ struct OutputOptions {
 };
 
 struct SingleEyeOutput {
-
-    ScreenDescription screen;
+    ProjectionDescription projection;
     std::vector<MeshDescription> meshes;
 };
 
@@ -54,9 +53,11 @@ class AnglesToConfigSingleEyeProcess {
     /// @}
 
     /// Call this as many times as you have input mappings (1 for mono, 3 for RGB)
-    int supplyInputMapping(std::vector<Mapping>&& mapping);
-    /// Optional: call at most once with additional angles (in degrees, and same type as the input mapping angles) that
-    /// should be considered visible even though there isn't a mapping to screen space known for them.
+    int supplyInputMeasurements(InputMeasurements&& meas);
+
+    /// Optional: call at most once with additional angles (in degrees, and same type [field angles/lat-long] as the
+    /// input mapping angles) that should be considered visible even though there isn't a mapping to screen space known
+    /// for them.
     void supplyAdditionalAngles(std::vector<LongLat> const& additionalAngles);
     /// Call this after finishing all calls to supplyInputMapping() - even if the config contains a supplied bounds.
     void computeBounds();
@@ -69,19 +70,16 @@ class AnglesToConfigSingleEyeProcess {
     AnglesToConfigSingleEyeProcess reflectedHorizontally() const;
 
   private:
-    std::vector<Mapping> const& getFullMapping() const;
-    void prepareFullMapping();
     Config config_;
     enum class Status { Empty, HasSomeMapping, HasBoundsComputed, HasMappingsNormalized };
 
     Status status_ = Status::Empty;
     XYInclusiveBoundsd screenTrim_;
     XYInclusiveBoundsd angleBounds_;
-    std::vector<std::vector<Mapping>> mappings_;
+    std::vector<InputMeasurements> inputMeasurementChannels_;
+    std::vector<NormalizedMeasurements> normalizedMeasurementChannels_;
     XYZList additionalAnglePoints_;
     RectBoundsd screenBounds_;
-    /// only populated when more than one element in mappings_
-    std::vector<Mapping> fullMapping_;
 };
 
 #endif // INCLUDED_Process_h_GUID_B979F1F0_7103_458A_77CB_BF5B10B5C3A0

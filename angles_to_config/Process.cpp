@@ -45,59 +45,66 @@ void AnglesToConfigSingleEyeProcess::setInputAngleBounds(XYInclusiveBoundsd cons
     angleBounds_ = bounds;
 }
 
-template <typename F>
-inline bool trimMappingToBounds(std::vector<Mapping>& mapping, InclusiveBoundsd bounds, F&& memberGetter) {
+template <typename ValueType, typename F>
+inline bool trimVectorToBounds(std::vector<ValueType>& vec, InclusiveBoundsd bounds, F&& memberGetter) {
     if (!bounds) {
         return false;
     }
-    mapping.erase(std::remove_if(mapping.begin(), mapping.end(),
-                                 [&](Mapping const& m) { return bounds.outside(memberGetter(m)); }));
+    vec.erase(
+        std::remove_if(vec.begin(), vec.end(), [&](ValueType const& m) { return bounds.outside(memberGetter(m)); }));
     return true;
 }
-template <typename F1, typename F2>
-inline bool trimMappingToBounds(std::vector<Mapping>& mapping, XYInclusiveBoundsd bounds, F1&& memberGetterX,
-                                F2&& memberGetterY) {
+template <typename ValueType, typename F1, typename F2>
+inline bool trimVectorToBounds(std::vector<ValueType>& vec, XYInclusiveBoundsd bounds, F1&& memberGetterX,
+                               F2&& memberGetterY) {
 
     bool ret = false;
     if (!bounds) {
         return ret;
     }
-    if (trimMappingToBounds(mapping, bounds.x, std::forward<F1>(memberGetterX))) {
+    if (trimVectorToBounds(vec, bounds.x, std::forward<F1>(memberGetterX))) {
         ret = true;
     }
-    if (trimMappingToBounds(mapping, bounds.y, std::forward<F2>(memberGetterY))) {
+    if (trimVectorToBounds(vec, bounds.y, std::forward<F2>(memberGetterY))) {
         ret = true;
     }
     return ret;
 }
-int AnglesToConfigSingleEyeProcess::supplyInputMapping(std::vector<Mapping>&& mapping) {
 
-    assert(
-        (status_ == Status::Empty || status_ == Status::HasSomeMapping) &&
-        "Should only call this function on an empty object or one with only calls to supplyInputMapping() completed");
+int AnglesToConfigSingleEyeProcess::supplyInputMeasurements(InputMeasurements&& meas) {
+    assert((status_ == Status::Empty || status_ == Status::HasSomeMapping) && "Should only call this function on an "
+                                                                              "empty object or one with only calls to "
+                                                                              "supplyInputMeasurements() completed");
     if (config_.verbose) {
-        std::cerr << "supplyInputMapping provided with an input mapping of size " << mapping.size() << std::endl;
+        std::cerr << "supplyInputMeasurements provided with an input measurement collection of size " << meas.size()
+                  << std::endl;
     }
     bool trimmed = false;
-    if (trimMappingToBounds(mapping, screenTrim_, [](Mapping const& m) { return m.xyLatLong.x; },
-                            [](Mapping const& m) { return m.xyLatLong.y; })) {
+    if (trimVectorToBounds(meas.measurements, screenTrim_,
+                           /// get x coordinate of screen
+                           [](InputMeasurement const& m) { return m.screen[0]; },
+                           /// get y coordinate of screen
+                           [](InputMeasurement const& m) { return m.screen[1]; })) {
         trimmed = true;
     }
 
     /// At this point, we're still in degrees (conversion happens with convert_to_normalized_and_meters)
-    if (trimMappingToBounds(mapping, angleBounds_, [](Mapping const& m) { return m.xyLatLong.longitude; },
-                            [](Mapping const& m) { return m.xyLatLong.latitude; })) {
+    if (trimVectorToBounds(meas.measurements, angleBounds_,
+                           [](InputMeasurement const& m) { return m.viewAnglesDegrees.longitude(); },
+                           [](InputMeasurement const& m) { return m.viewAnglesDegrees.latitude(); })) {
         trimmed = true;
     }
 
     if (config_.verbose && trimmed) {
-        std::cerr << "Size after input trimming: " << mapping.size() << std::endl;
+        std::cerr << "Size after input trimming: " << meas.size() << std::endl;
     }
-    mappings_.emplace_back(std::move(mapping));
+    inputMeasurementChannels_.emplace_back(std::move(meas));
     status_ = Status::HasSomeMapping;
     if (!config_.verifyAngles) {
         return 0;
     }
+/// @todo
+#if 0
     auto& latestMapping = mappings_.back();
     auto m = mappings_.size();
 
@@ -109,7 +116,7 @@ int AnglesToConfigSingleEyeProcess::supplyInputMapping(std::vector<Mapping>&& ma
     // from the simulation (caused by multiple ray bounces or other
     // singularities in the simulation).
     int ret = remove_invalid_points_based_on_angle(latestMapping, config_.xx, config_.xy, config_.yx, config_.yy,
-                                                   config_.maxAngleDiffDegrees);
+        config_.maxAngleDiffDegrees);
     if (ret < 0) {
         std::cerr << "Error verifying angles for mesh " << m << std::endl;
         return 60;
@@ -117,6 +124,8 @@ int AnglesToConfigSingleEyeProcess::supplyInputMapping(std::vector<Mapping>&& ma
     if (config_.verbose) {
         std::cerr << "Removed " << ret << " points from mesh " << m << std::endl;
     }
+#endif
+    std::cerr << "WARNING: Cannot remove invalid points based on angle yet for new data types" << std::endl;
     return 0;
 }
 
@@ -138,6 +147,8 @@ inline void extendBounds(RectBoundsd& bounds, double x, double y) {
         bounds.bottom = y;
     }
 }
+// for x positive to the right, y positive up.
+inline void extendBounds(RectBoundsd& bounds, Point2d const& pt) { extendBounds(bounds, pt[0], pt[1]); }
 void AnglesToConfigSingleEyeProcess::computeBounds() {
     assert(status_ == Status::HasSomeMapping &&
            "Should only call this function after one or more calls to supplyInputMapping()");
@@ -147,11 +158,11 @@ void AnglesToConfigSingleEyeProcess::computeBounds() {
         // If we've been asked to auto-range the screen coordinates, compute
         // them here.  Look at all of the points from all of the colors and
         // make a bound on all of them.
-        screenBounds_.left = screenBounds_.right = mappings_[0][0].xyLatLong.x;
-        screenBounds_.top = screenBounds_.bottom = mappings_[0][0].xyLatLong.y;
-        for (auto const& mapping : mappings_) {
-            for (auto& meas : mapping) {
-                extendBounds(screenBounds_, meas.xyLatLong.x, meas.xyLatLong.y);
+        screenBounds_.left = screenBounds_.right = inputMeasurementChannels_.front().measurements.front().screen[0];
+        screenBounds_.top = screenBounds_.bottom = inputMeasurementChannels_.front().measurements.front().screen[1];
+        for (auto const& chan : inputMeasurementChannels_) {
+            for (auto const& meas : chan.measurements) {
+                extendBounds(screenBounds_, meas.screen);
             }
         }
     } else {
@@ -167,86 +178,91 @@ void AnglesToConfigSingleEyeProcess::computeBounds() {
 void AnglesToConfigSingleEyeProcess::normalizeMappings() {
     assert(status_ == Status::HasBoundsComputed && "Should only call this function after calling computeBounds()");
     status_ = Status::HasMappingsNormalized;
-    for (auto& mapping : mappings_) {
+    for (auto const& chan : inputMeasurementChannels_) {
         //====================================================================
         // Convert the input values into normalized coordinates and into 3D
         // locations.
-        convert_to_normalized_and_meters(mapping, config_.toMeters, config_.depth, screenBounds_.left,
-                                         screenBounds_.bottom, screenBounds_.right, screenBounds_.top,
-                                         config_.useFieldAngles);
+        normalizedMeasurementChannels_.push_back(convert_to_normalized_and_meters(
+            chan, config_.toMeters, config_.depth, screenBounds_, config_.useFieldAngles));
     }
-
-    /// Prepare additional data structure for "full mapping"
-    prepareFullMapping();
 }
 
 int AnglesToConfigSingleEyeProcess::computeScreenAndMeshes(SingleEyeOutput& outResults,
                                                            OutputOptions const& outOpts) const {
-    if (!::findScreen(getFullMapping(), outResults.screen, additionalAnglePoints_, config_.verbose)) {
+    ScreenDetails screenDetails;
+    if (!::findScreen(outResults.projection, screenDetails, normalizedMeasurementChannels_, additionalAnglePoints_,
+                      config_.verbose)) {
         std::cerr << "Error: Could not find screen" << std::endl;
         return 3;
     }
-    for (auto& mapping : mappings_) {
-        MeshDescription mesh;
-        if (!findMesh(mapping, outResults.screen, mesh, config_.verbose)) {
-
+    for (auto& normalizedMeasChan : normalizedMeasurementChannels_) {
+        MeshDescription mesh = findMesh(normalizedMeasChan, screenDetails, config_.verbose);
+        if (mesh.empty()) {
             std::cerr << "Error: Could not find mesh" << std::endl;
             return 30;
         }
-        if (mesh.size() != mapping.size()) {
-            std::cerr << "Error: Mesh size " << mesh.size() << " does not match mapping size" << mapping.size()
-                      << std::endl;
+        if (mesh.size() != normalizedMeasChan.size()) {
+            std::cerr << "Error: Mesh size " << mesh.size() << " does not match mapping size"
+                      << normalizedMeasChan.size() << std::endl;
             return 4;
         }
         if (outOpts.u1) {
-            mesh.erase(std::remove_if(mesh.begin(), mesh.end(),
-                                      [&](MeshDescriptionRow const& a) { return outOpts.u1.outside(a[0][0]); }));
+            trimVectorToBounds(mesh, outOpts.u1, [](MeshDescriptionRow const& row) {
+                // 0 is for the first uv pair
+                // then 0 is for u.
+                return row[0][0];
+            });
         }
         outResults.meshes.push_back(std::move(mesh));
     }
 
     return 0;
 }
+inline static InputMeasurements reflect(InputMeasurements const& in) {
+    InputMeasurements ret;
+    ret.inputSource = in.inputSource + "[reflected]";
+    for (auto& meas : in.measurements) {
+        InputMeasurement reflected = meas;
 
+        /// negate x
+        /// @todo subtract x from right?
+        reflected.screen[0] *= 1;
+
+        /// negate x/longitude
+        reflected.viewAnglesDegrees.longitude() *= -1;
+        ret.measurements.push_back(reflected);
+    }
+    return ret;
+}
+
+inline static NormalizedMeasurements reflect(NormalizedMeasurements const& in) {
+    NormalizedMeasurements ret;
+    ret.inputSource = in.inputSource + "[reflected]";
+    for (auto& meas : in.measurements) {
+        NormalizedMeasurement reflected = meas;
+
+        /// subtract x from 1
+        reflected.screen[0] = 1. - reflected.screen[0];
+        /// negate x
+        reflected.pointFromView[0] *= -1;
+
+        ret.measurements.push_back(reflected);
+    }
+    return ret;
+}
 AnglesToConfigSingleEyeProcess AnglesToConfigSingleEyeProcess::reflectedHorizontally() const {
     AnglesToConfigSingleEyeProcess ret(config_);
     ret.status_ = status_;
+    for (auto& chan : inputMeasurementChannels_) {
+        ret.inputMeasurementChannels_.push_back(reflect(chan));
+    }
 
-    /// pick the right reflection function based on whether or not we've normalized the mapping.
-    auto myReflect = &reflect_mapping;
-    if (status_ == Status::HasMappingsNormalized) {
-        myReflect = &reflect_normalized_mapping;
+    for (auto& chan : normalizedMeasurementChannels_) {
+        ret.normalizedMeasurementChannels_.push_back(reflect(chan));
     }
-    for (auto& mapping : mappings_) {
-        ret.mappings_.push_back(myReflect(mapping));
-    }
+
     ret.additionalAnglePoints_ = reflectPoints(additionalAnglePoints_);
     ret.screenBounds_ = screenBounds_.reflectedHorizontally();
 
-    ret.fullMapping_ = myReflect(fullMapping_);
-
     return ret;
-}
-void AnglesToConfigSingleEyeProcess::prepareFullMapping() {
-    /// if we only have one mapping, then it's the full mapping
-    if (mappings_.size() < 2) {
-        return;
-    }
-
-    /// Otherwise, we need to combine the mappings.
-    if (fullMapping_.empty()) {
-        for (auto const& mapping : mappings_) {
-            fullMapping_.insert(fullMapping_.end(), mapping.begin(), mapping.end());
-        }
-    }
-}
-
-std::vector<Mapping> const& AnglesToConfigSingleEyeProcess::getFullMapping() const {
-    /// if we only have one mapping, then it's the full mapping
-    if (mappings_.size() == 1) {
-        return mappings_[0];
-    }
-
-    /// Otherwise, we need to return the combined mappings.
-    return fullMapping_;
 }

@@ -108,14 +108,14 @@ bool supplySingleFileData(std::string const& fn, AnglesToConfigSingleEyeProcess&
         std::cerr << "Error: Could not open file " << fn << std::endl;
         return false;
     }
-    auto mapping = read_from_infile(inFile);
-    if (mapping.empty()) {
+    auto measurements = readInputMeasurements(fn, inFile);
+    if (measurements.empty()) {
         std::cerr << "Error: Failure to read records from " << fn << std::endl;
         return false;
     }
-    auto success = process.supplyInputMapping(std::move(mapping));
+    auto success = process.supplyInputMeasurements(std::move(measurements));
     if (0 != success) {
-        std::cerr << "Error: supplyInputMapping failed, return value: " << success << std::endl;
+        std::cerr << "Error: supplyInputMeasurements failed, return value: " << success << std::endl;
         return false;
     }
     return true;
@@ -205,21 +205,21 @@ int outputClientMeshData(std::ostream& os, SingleEyeOutput const& left, SingleEy
     os << R"(  "hmd": {)" << std::endl;
 
     os << R"(   "field_of_view": {)" << std::endl;
-    os << R"(    "monocular_horizontal": )" << right.screen.hFOVDegrees << "," << std::endl;
-    os << R"(    "monocular_vertical": )" << right.screen.vFOVDegrees << "," << std::endl;
-    os << R"(    "overlap_percent": )" << right.screen.overlapPercent << "," << std::endl;
+    os << R"(    "monocular_horizontal": )" << right.projection.hFOVDegrees << "," << std::endl;
+    os << R"(    "monocular_vertical": )" << right.projection.vFOVDegrees << "," << std::endl;
+    os << R"(    "overlap_percent": )" << right.projection.overlapPercent << "," << std::endl;
     os << R"(    "pitch_tilt": 0)" << std::endl;
     os << "   }," << std::endl; // field_of_view
 
     os << R"(   "eyes": [)" << std::endl;
     os << "    {" << std::endl;
-    os << R"(     "center_proj_x": )" << left.screen.xCOP << "," << std::endl;
-    os << R"(     "center_proj_y": )" << left.screen.yCOP << "," << std::endl;
+    os << R"(     "center_proj_x": )" << left.projection.cop[0] << "," << std::endl;
+    os << R"(     "center_proj_y": )" << left.projection.cop[1] << "," << std::endl;
     os << R"(     "rotate_180": 0)" << std::endl;
     os << "    }," << std::endl;
     os << "    {" << std::endl;
-    os << R"(     "center_proj_x": )" << right.screen.xCOP << "," << std::endl;
-    os << R"(     "center_proj_y": )" << right.screen.yCOP << "," << std::endl;
+    os << R"(     "center_proj_x": )" << right.projection.cop[0] << "," << std::endl;
+    os << R"(     "center_proj_y": )" << right.projection.cop[1] << "," << std::endl;
     os << R"(     "rotate_180": 0)" << std::endl;
     os << "    }" << std::endl;
     os << "   ]," << std::endl; // eyes
