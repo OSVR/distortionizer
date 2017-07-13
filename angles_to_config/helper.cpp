@@ -920,7 +920,7 @@ bool findMesh(const std::vector<Mapping>& mapping, ScreenDescription const& scre
     return true;
 }
 
-MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const& screen, bool /*verbose*/) {
+MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const& screen, bool verbose) {
     MeshDescription ret;
     if (data.empty()) {
         std::cerr << "findMesh(): Error: No points in mapping!" << std::endl;
@@ -936,17 +936,20 @@ MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const
     // checks the assumption that the screen has some width in the X
     // coordinate (not rotated 90 degrees) and uses only the X value to
     // scale X.
-    Eigen::Vector3d leftProj(screen.screenLeft[0], 0, screen.screenLeft[2]);
-    Eigen::Vector3d rightProj(screen.screenRight[0], 0, screen.screenRight[2]);
-    if (leftProj.x() == rightProj.x()) {
+    auto leftProjX = screen.screenLeft[0];
+    auto rightProjX = screen.screenRight[0];
+    if (verbose) {
+        std::cerr << "leftProjX: " << leftProjX << std::endl;
+    }
+    if (leftProjX == rightProjX) {
         std::cerr << "Error computing mesh: screen has no X extent" << std::endl;
         return ret;
     }
 
     // Negative of negative maxY is maxY
-    Eigen::Array2d outOffset = Eigen::Array2d(-leftProj.x(), screen.maxY);
-    double xOutScale = 1 / (rightProj.x() - leftProj.x());
-    double yOutScale = 1 / (2 * screen.maxY);
+    Eigen::Array2d outOffset = Eigen::Array2d(-leftProjX, screen.maxY);
+    double xOutScale = 1. / (rightProjX - leftProjX);
+    double yOutScale = 1. / (2. * screen.maxY);
     Eigen::Array2d outScale = Eigen::Array2d(xOutScale, yOutScale);
 
     for (const auto& meas : data.measurements) {
@@ -957,6 +960,7 @@ MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const
         // the normalized coordinates in the coordinate system with the lower left
         // corner at (0,0) and the upper right at (1,1).  Because we oversized the
         // screen, these will all be in this range.  Otherwise, they might not be.
+        /// @todo How/where did we oversize the screen? (Y axis?)
         Eigen::Vector3d onScreen = screen.screenPlane.projection(ei::map(meas.pointFromView));
 
         Point2d out;
