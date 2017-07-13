@@ -848,6 +848,7 @@ bool findScreen(ProjectionDescription& outProjection, ScreenDetails& outScreen,
     ei::map(outScreen.screenLeft) = horizExtrema.getLeft();
     ei::map(outScreen.screenRight) = horizExtrema.getRight();
     outScreen.screenPlane = screenPlane;
+    outScreen.maxY = maxY;
     outProjection.hFOVDegrees = radToDegree(horizData.hFOVradians);
     outProjection.vFOVDegrees = radToDegree(vFOVRadians);
     outProjection.overlapPercent = findOverlapPercent(screenPlane, horizData.hFOVradians, verbose);
