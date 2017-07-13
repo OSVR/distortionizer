@@ -527,9 +527,17 @@ template <typename Comparator> class ViewExtrema : public GenericExtremaFinder<V
     }
 };
 struct HorizontalExtremaComparator {
+#if 1
+    /// This ought to be equivalent, but faster (and marginally more accurate) than the alternative.
     bool operator()(Vec3dAndOrigin const& lhs, Vec3dAndOrigin const& rhs) const {
         return tanAboutY(lhs.vec) < tanAboutY(rhs.vec);
     }
+#else
+    bool operator()(Vec3dAndOrigin const& lhs, Vec3dAndOrigin const& rhs) const {
+        return rotationAboutY(lhs.vec) < rotationAboutY(rhs.vec);
+    }
+
+#endif
 };
 class ScreenHorizontalExtrema : public ViewExtrema<HorizontalExtremaComparator> {
   public:
