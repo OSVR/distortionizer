@@ -631,39 +631,6 @@ static Plane computeScreenPlane(ScreenHorizontalExtrema const& horizExtrema, boo
     return screenPlane;
 }
 
-#if 0
-static double computeMaximumYMagnitude(std::vector<NormalizedMeasurements> const& dataSets,
-                                       XYZList const& additionalPointsFromAngles, bool verbose,
-                                       Plane const& screenPlane) {
-    //====================================================================
-    // Figure out the Y screen-space extents.
-    // The Y screen-space extents are symmetric and correspond to the lines parallel
-    //  to the screen X axis that are within the plane of the X line specifying the
-    //  axis extents at the largest magnitude angle up or down from the horizontal.
-    // Find the highest-magnitude Y value of all points when they are
-    // projected into the plane of the screen.
-    double maxY = computeYMagnitude(screenPlane, ei::map(data.measurements.front().pointFromView));
-    for (auto& meas : data.measurements) {
-        auto yMag = computeYMagnitude(screenPlane, ei::map(meas.pointFromView));
-        if (yMag > maxY) {
-            maxY = yMag;
-        }
-    }
-    if (verbose) {
-        std::cerr << "Maximum-magnitude Y projection after just mappings: " << maxY << std::endl;
-    }
-    for (auto& extraPoint : additionalPointsFromAngles) {
-        auto yMag = computeYMagnitude(screenPlane, extraPoint);
-        if (yMag > maxY) {
-            maxY = yMag;
-        }
-    }
-    if (verbose) {
-        std::cerr << "Maximum-magnitude Y projection: " << maxY << std::endl;
-    }
-    return maxY;
-}
-#else
 static double computeMaximumYMagnitude(std::vector<NormalizedMeasurements> const& dataSets,
                                        XYZList const& additionalPointsFromAngles, bool verbose,
                                        Plane const& screenPlane) {
@@ -682,7 +649,6 @@ static double computeMaximumYMagnitude(std::vector<NormalizedMeasurements> const
     extrema.debugAnglePrint(verbose, "full");
     return extrema.getMaxMagnitude();
 }
-#endif
 
 struct HorizontalOutputs {
     /// left clipping plane at unit distance
@@ -758,7 +724,7 @@ double computeVFOV(Plane const& screenPlane, double maxY, bool verbose) {
     // Figure out the monocular vertical field of view for the screen.
     // The FOV is twice the arctangent of half of the Y
     // distance divided by the distance to the screen.
-    const auto vFOVRadians = 2 * std::atan(maxY / std::abs(PlaneD::get(screenPlane)));
+    const auto vFOVRadians = 2 * std::atan(maxY / std::abs(screenPlane.offset()));
     if (verbose) {
         auto vFOVDegrees = radToDegree(vFOVRadians);
         std::cerr << "Vertical field of view (degrees): " << vFOVDegrees << std::endl;
