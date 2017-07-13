@@ -26,6 +26,7 @@ add_subdirectory(../vendor vendorlibs)
 
 #-----------------------------------------------------------------------------
 add_library(AnglesToConfig-core STATIC
+    EigenStdArrayInterop.h
     GenerateOutput.cpp
     GenerateOutput.h
     helper.cpp

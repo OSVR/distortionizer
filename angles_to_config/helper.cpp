@@ -26,6 +26,7 @@
 // Internal Includes
 #include "helper.h"
 #include "types.h"
+#include "EigenStdArrayInterop.h"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -106,7 +107,7 @@ inline XYZ longLatToWorldSpace(LongLat longLat, bool useFieldAngles, double dept
     using std::cos;
     using std::tan;
     // Convert the input latitude and longitude from degrees to radians.
-    Eigen::Vector2d::Map(longLat.data()) *= MY_PI / 180.;
+    ei::map(longLat.longLat) *= MY_PI / 180.;
     XYZ ret;
     if (useFieldAngles) {
         const Plane p =

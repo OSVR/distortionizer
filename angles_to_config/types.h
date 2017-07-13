@@ -54,29 +54,6 @@ using RectBoundsd = RectBounds<double>;
 
 using Point2d = std::array<double, 2>;
 using Point3d = std::array<double, 3>;
-namespace ei {
-/// Function to map std::array as an Eigen vector type
-template <typename Scalar, size_t Dim>
-inline Eigen::Map<Eigen::Matrix<Scalar, Dim, 1> > map(std::array<Scalar, Dim>& v) {
-    return Eigen::Matrix<Scalar, Dim, 1>::Map(v.data());
-}
-/// Function to map constant std::array as an Eigen vector type
-template <typename Scalar, size_t Dim>
-inline Eigen::Map<Eigen::Matrix<Scalar, Dim, 1> const> map(std::array<Scalar, Dim> const& v) {
-    return Eigen::Matrix<Scalar, Dim, 1>::Map(v.data());
-}
-
-/// Function to map std::array as an Eigen array-vector type
-template <typename Scalar, size_t Dim>
-inline Eigen::Map<Eigen::Array<Scalar, Dim, 1> > mapArray(std::array<Scalar, Dim>& v) {
-    return Eigen::Array<Scalar, Dim, 1>::Map(v.data());
-}
-/// Function to map constant std::array as an Eigen array-vector type
-template <typename Scalar, size_t Dim>
-inline Eigen::Map<Eigen::Array<Scalar, Dim, 1> const> mapArray(std::array<Scalar, Dim> const& v) {
-    return Eigen::Array<Scalar, Dim, 1>::Map(v.data());
-}
-} // namespace ei
 
 /// Gentle wrapper around Point2d assigning longitude and latitude meaning (respectively) to the elements.
 struct LongLat {
@@ -90,21 +67,9 @@ struct LongLat {
     double& latitude() { return longLat[1]; }
     /// angle in y (read-only)
     double latitude() const { return longLat[1]; }
-
-    /// Access underlying array for things like Eigen::Map
-    double* data() { return longLat.data(); }
-    /// Access underlying array for things like Eigen::Map (read-only)
-    const double* data() const { return longLat.data(); }
-#if 0
-    /// Access as Eigen data structure.
-    Eigen::Map<Eigen::Vector2d> ei() { return Eigen::Vector2d::Map(data()); }
-    /// Access as Eigen data structure (constant)
-    Eigen::Map<Eigen::Vector2d const> ei() const { return Eigen::Vector2d::Map(data()); }
-#endif
 };
 
 struct Config {
-    bool useRightEye = false;
     bool computeScreenBounds = true;
     RectBoundsd suppliedScreenBounds;
     bool useFieldAngles = true;
@@ -134,11 +99,17 @@ class XYLatLong {
     XYLatLong() { x = y = latitude = longitude = 0; }
 };
 
+/// Convenient storage for the input source (typically file name) and line number associated with some measurement or
+/// (more typically) a derived quantity.
 struct DataOrigin {
     std::string inputSource;
     std::size_t lineNumber;
+
+    /// Is the origin of this data known? (or default-constructed aka unknown?)
     bool known() const { return !inputSource.empty(); }
 };
+
+/// Stream insertion operator for DataOrigin
 inline std::ostream& operator<<(std::ostream& os, DataOrigin const& orig) {
     if (orig.known()) {
         std::ostringstream oss;
@@ -155,55 +126,63 @@ struct InputMeasurement {
     /// In arbitrary units
     Point2d screen;
 
-#if 0
-    using ScreenEigenType = Eigen::Vector2d;
-    Eigen::Map<ScreenEigenType> screenEi() { return ScreenEigenType::Map(screen.data()); }
-    Eigen::Map<ScreenEigenType const> screenEi() const { return ScreenEigenType::Map(screen.data()); }
-#endif
-
-    /// in degrees
+    /// in degrees (either field angles or longitude/latitude, depending on config option)
     LongLat viewAnglesDegrees;
-#if 0
-    using LongLatEigenType = Eigen::Vector2d;
-    Eigen::Map<LongLatEigenType> viewAnglesEi() { return LongLatEigenType::Map(viewAnglesDegrees.data()); }
-    Eigen::Map<LongLatEigenType const> screenEi() const { return LongLatEigenType::Map(viewAnglesDegrees.data()); }
-#endif
 
-    std::size_t lineNumber;
+    /// Line number in loaded file
+    std::size_t lineNumber = 0;
 
+    /// Provide the parent container, get a single object usable to refer to the source of this measurement.
     DataOrigin getOrigin(InputMeasurements const& parent) const;
 };
 
 struct InputMeasurements {
+    /// Filename that these measurements were loaded from.
     std::string inputSource;
+    /// Collection of measurements as they were loaded.
     std::vector<InputMeasurement> measurements;
+
+    /// Is the measurement collection empty?
     bool empty() const { return measurements.empty(); }
+    /// How many measurements do we have?
     std::size_t size() const { return measurements.size(); }
 };
 
 inline DataOrigin InputMeasurement::getOrigin(InputMeasurements const& parent) const {
+    // Out of line to allow declaration of InputMeasurements.
     return DataOrigin{parent.inputSource, lineNumber};
 }
 
 struct NormalizedMeasurements;
 struct NormalizedMeasurement {
-    /// Normalized screen units, in [0, 1]
+    /// Normalized screen units, in [0, 1] in each dimension.
     Point2d screen;
 
-    /// In arbitrary units in 3d space, based on the view angles from the corresponding input measurement.
+    /// In arbitrary units in 3D space (in eye space: eye at 0, 0, 0, looking along -z), based on the view angles from
+    /// the corresponding input measurement.
     Point3d pointFromView;
+
+    /// Line number in loaded file
     std::size_t lineNumber;
+
+    /// Provide the parent container, get a single object usable to refer to the source of this measurement.
     DataOrigin getOrigin(NormalizedMeasurements const& parent) const;
 };
 
 struct NormalizedMeasurements {
+    /// Filename that these measurements were loaded from.
     std::string inputSource;
+    /// Collection of measurements that have been normalized and transformed.
     std::vector<NormalizedMeasurement> measurements;
+
+    /// Is the measurement collection empty?
     bool empty() const { return measurements.empty(); }
+    /// How many measurements do we have?
     std::size_t size() const { return measurements.size(); }
 };
 
 inline DataOrigin NormalizedMeasurement::getOrigin(NormalizedMeasurements const& parent) const {
+    // Out of line to allow declaration of NormalizedMeasurements.
     return DataOrigin{parent.inputSource, lineNumber};
 }
 
@@ -295,6 +274,7 @@ struct ScreenDescription {
 
 using Plane = Eigen::Hyperplane<double, 3>;
 
+// Invoke like PlaneA::get(myPlane) to access the A component of your plane.
 struct PlaneA;
 struct PlaneB;
 struct PlaneC;
@@ -313,21 +293,8 @@ template <typename Derived> struct PlaneAccessProxy {
   public:
     /// Const accessor for this coefficient of the plane equation.
     static double get(Plane const& p) { return p.coeffs()[PlaneCoefficientIndexTrait<Derived>()]; }
-#if 0
-        /// Reference accessor for this coefficient of the plane equation.
-        static double& get(Plane& p) { return p.coeffs()[PlaneCoefficientIndexTrait<Derived>()]; }
-#endif
 };
 } // namespace detail
-#if 0
-  /// Get a coefficient of a plane by name (using the PlaneA, PlaneB, PlaneC, PlaneD tag types)
-template <typename PlaneComponent> inline double get(Plane const& p) {
-    return p.coeffs()[detail::PlaneCoefficientIndexTrait<PlaneComponent>()];
-}
-template <typename PlaneComponent> inline double& get(Plane& p) {
-    return p.coeffs()[detail::PlaneCoefficientIndexTrait<PlaneComponent>()];
-}
-#endif
 
 struct PlaneA : detail::PlaneAccessProxy<PlaneA> {};
 struct PlaneB : detail::PlaneAccessProxy<PlaneB> {};
@@ -336,9 +303,6 @@ struct PlaneD : detail::PlaneAccessProxy<PlaneD> {};
 
 inline Eigen::Vector3d toEigen(XYZ const& p) { return Eigen::Vector3d(p.x, p.y, p.z); }
 inline XYZ toXYZ(Eigen::Vector3d const& p) { return XYZ{p.x(), p.y(), p.z()}; }
-#if 0
-inline Eigen::Vector3d projectOntoPlane(Plane const& plane, XYZ const& p) { return plane.projection(toEigen(p)); }
-#endif
 
 /// Output from find_screen that is used to generate the configuration
 struct ProjectionDescription {
