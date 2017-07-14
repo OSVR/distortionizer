@@ -679,7 +679,8 @@ static inline double projectToYPlaneAndZDivide(Eigen::Vector3d const& vec) {
 static HorizontalOutputs computeHFOV(ScreenHorizontalExtrema const& xExtrema, Plane const& screenPlane, bool verbose) {
 
     HorizontalOutputs ret;
-#if 1
+#define USE_REAL_COP
+#ifdef USE_REAL_COP
     ret.left = projectToYPlaneAndZDivide(xExtrema.getLeft());
     ret.right = projectToYPlaneAndZDivide(xExtrema.getRight());
     {
@@ -698,13 +699,10 @@ static HorizontalOutputs computeHFOV(ScreenHorizontalExtrema const& xExtrema, Pl
     auto left = projectToYPlaneAndZDivide(xExtrema.getLeft());
     auto right = projectToYPlaneAndZDivide(xExtrema.getRight());
     auto maxX = std::max(std::abs(left), std::abs(right));
-#if 0
-    if (std::abs(rotationAboutY(xExtrema.getLeft())) > std::abs(rotationAboutY(xExtrema.getRight()))) {
-        // left is the extreme point.
-    }
-#endif
+
     ret.left = -maxX;
     ret.right = maxX;
+    assert(xExtrema.getLeft().z() == -1 && "Code below assumes that screen is at -1");
     ret.leftPoint = Eigen::Vector3d(-maxX, 0, -1);
     ret.rightPoint = Eigen::Vector3d(maxX, 0, -1);
 #endif
@@ -856,7 +854,7 @@ bool findScreen(ProjectionDescription& outProjection, ScreenDetails& outScreen,
     if (verbose) {
         std::cerr << "Screen origin: " << outScreen.screenOrigin.transpose() << std::endl;
         std::cerr << "Screen x basis: " << outScreen.screenXBasis.transpose() << std::endl;
-        Point3d zero = { 0., 0., 0. };
+        Point3d zero = {0., 0., 0.};
         Eigen::Array2d testCOP = outScreen.projectAndNormalize(zero, true);
         std::cerr << "Screen normalized CoP:" << testCOP.transpose() << std::endl;
     }
@@ -1152,9 +1150,7 @@ XYZList reflectPoints(XYZList const& input) {
 
 ScreenDetails::ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left, Eigen::Vector3d const& right,
                              double maxYMagnitude)
-    : valid(true),
-      screenPlane(scrPlane),
-      screenYBasis(Eigen::Vector3d::UnitY()) {
+    : valid(true), screenPlane(scrPlane), screenYBasis(Eigen::Vector3d::UnitY()) {
 
     // Scale and offset to apply to the points projected onto the plane
     // to convert their values into normalized screen coordinates.  This
@@ -1177,7 +1173,8 @@ ScreenDetails::ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left,
 Eigen::Array2d ScreenDetails::projectAndNormalize(Point3d const& angleViewPoint, bool verbose) const {
     Eigen::Vector3d onScreenPlane = screenPlane.projection(ei::map(angleViewPoint));
     Eigen::Vector3d onScreenPlaneAtOrigin = onScreenPlane - screenOrigin;
-    Eigen::Array2d unscaled = Eigen::Array2d(onScreenPlaneAtOrigin.dot(screenXBasis), onScreenPlaneAtOrigin.dot(screenYBasis));
+    Eigen::Array2d unscaled =
+        Eigen::Array2d(onScreenPlaneAtOrigin.dot(screenXBasis), onScreenPlaneAtOrigin.dot(screenYBasis));
 
     if (verbose) {
         std::cerr << "Origin: " << screenOrigin.transpose() << std::endl;
