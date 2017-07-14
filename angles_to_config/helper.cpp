@@ -856,6 +856,9 @@ bool findScreen(ProjectionDescription& outProjection, ScreenDetails& outScreen,
     if (verbose) {
         std::cerr << "Screen origin: " << outScreen.screenOrigin.transpose() << std::endl;
         std::cerr << "Screen x basis: " << outScreen.screenXBasis.transpose() << std::endl;
+        Point3d zero = { 0., 0., 0. };
+        Eigen::Array2d testCOP = outScreen.projectAndNormalize(zero, true);
+        std::cerr << "Screen normalized CoP:" << testCOP.transpose() << std::endl;
     }
 
     outProjection.hFOVDegrees = radToDegree(horizData.hFOVradians);
@@ -1151,9 +1154,6 @@ ScreenDetails::ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left,
                              double maxYMagnitude)
     : valid(true),
       screenPlane(scrPlane),
-#if 0
-     screenLeft(left), screenRight(right), maxY(maxYMagnitude),
-#endif
       screenYBasis(Eigen::Vector3d::UnitY()) {
 
     // Scale and offset to apply to the points projected onto the plane
@@ -1169,26 +1169,23 @@ ScreenDetails::ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left,
         return;
     }
     screenOrigin = left - Eigen::Vector3d(0, maxYMagnitude, 0);
-    Eigen::Vector3d screenHorizExtent = left - right;
+    Eigen::Vector3d screenHorizExtent = right - left;
     screenXBasis = screenHorizExtent.stableNormalized();
     scale = Eigen::Array2d(1. / screenHorizExtent.norm(), 1. / (2. * maxYMagnitude));
-#if 0
-    auto leftProjX = screenLeft[0];
-    auto rightProjX = screenRight[0];
-    // Negative of negative maxY is maxY
-    offset = Eigen::Array2d(-leftProjX, maxY);
-
-    double xOutScale = 1. / (rightProjX - leftProjX);
-    double yOutScale = 1. / (2. * maxY);
-    scale = Eigen::Array2d(xOutScale, yOutScale);
-#endif
 }
 
-Eigen::Array2d ScreenDetails::projectAndNormalize(Point3d const& angleViewPoint) const {
+Eigen::Array2d ScreenDetails::projectAndNormalize(Point3d const& angleViewPoint, bool verbose) const {
     Eigen::Vector3d onScreenPlane = screenPlane.projection(ei::map(angleViewPoint));
     Eigen::Vector3d onScreenPlaneAtOrigin = onScreenPlane - screenOrigin;
-    Eigen::Array2d ret =
-        Eigen::Array2d((onScreenPlaneAtOrigin.dot(screenXBasis)), onScreenPlaneAtOrigin.dot(screenYBasis)) * scale;
-    // return (onScreenPlane.head<2>().array() + offset) * scale;
+    Eigen::Array2d unscaled = Eigen::Array2d(onScreenPlaneAtOrigin.dot(screenXBasis), onScreenPlaneAtOrigin.dot(screenYBasis));
+
+    if (verbose) {
+        std::cerr << "Origin: " << screenOrigin.transpose() << std::endl;
+        std::cerr << "Point: " << ei::map(angleViewPoint).transpose() << std::endl;
+        std::cerr << "onScreenPlane: " << onScreenPlane.transpose() << std::endl;
+        std::cerr << "onScreenPlaneAtOrigin: " << onScreenPlaneAtOrigin.transpose() << std::endl;
+        std::cerr << "unscaled: " << unscaled.transpose() << std::endl;
+    }
+    Eigen::Array2d ret = unscaled * scale;
     return ret;
 }
