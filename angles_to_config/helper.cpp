@@ -849,6 +849,10 @@ bool findScreen(ProjectionDescription& outProjection, ScreenDetails& outScreen,
     //====================================================================
     // Fill in the screen parameters.
     outScreen = ScreenDetails(screenPlane, horizData.leftPoint, horizData.rightPoint, maxY);
+    if (!outScreen.valid) {
+        std::cerr << "Screen details are not valid!" << std::endl;
+        return false;
+    }
     if (verbose) {
         std::cerr << "Screen origin: " << outScreen.screenOrigin.transpose() << std::endl;
         std::cerr << "Screen x basis: " << outScreen.screenXBasis.transpose() << std::endl;
