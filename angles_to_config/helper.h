@@ -72,14 +72,22 @@ inline bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& o
 /// Output from find_screen that is only needed by the mesh computation.
 struct ScreenDetails {
     ScreenDetails() = default;
-    ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left, Eigen::Vector3d const& right, double maxYMagnitude);
+    ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left, Eigen::Vector3d const& right,
+                  double maxYMagnitude);
     bool valid = false;
 
-    Plane screenPlane;               //!< Ax + By + Cz + D = 0 screen plane
+    Plane screenPlane; //!< Ax + By + Cz + D = 0 screen plane
+#if 0
     Eigen::Vector3d screenLeft, screenRight; //!< Left-most and right-most points on screen
-    double maxY;                     //!< Maximum absolute value of Y for points on screen
+    double maxY;                             //!< Maximum absolute value of Y for points on screen
+#endif
 
+    Eigen::Vector3d screenOrigin;
+    Eigen::Vector3d screenYBasis;
+    Eigen::Vector3d screenXBasis;
+#if 0
     Eigen::Array2d offset;
+#endif
     Eigen::Array2d scale;
     Eigen::Array2d projectAndNormalize(Point3d const& angleViewPoint) const;
 };

@@ -656,6 +656,11 @@ struct HorizontalOutputs {
     /// right clipping plane at unit distance
     double right;
 
+    /// minimum x value point, projected to screen plane and y plane.
+    Eigen::Vector3d leftPoint;
+    /// maximum x value point, projected to screen plane and y plane.
+    Eigen::Vector3d rightPoint;
+
     /// @name Parameters used by the v1 schema model
     /// @{
     /// horizontal FOV in radians
@@ -672,9 +677,37 @@ static inline double projectToYPlaneAndZDivide(Eigen::Vector3d const& vec) {
 }
 
 static HorizontalOutputs computeHFOV(ScreenHorizontalExtrema const& xExtrema, Plane const& screenPlane, bool verbose) {
+
     HorizontalOutputs ret;
+#if 1
     ret.left = projectToYPlaneAndZDivide(xExtrema.getLeft());
     ret.right = projectToYPlaneAndZDivide(xExtrema.getRight());
+    {
+        Eigen::Vector3d pt = screenPlane.projection(xExtrema.getLeft());
+        pt.y() = 0;
+        ret.leftPoint = pt;
+    }
+    {
+        Eigen::Vector3d pt = screenPlane.projection(xExtrema.getRight());
+        pt.y() = 0;
+        ret.rightPoint = pt;
+    }
+
+#else
+    /// @todo temporary override to force COP=0.5
+    auto left = projectToYPlaneAndZDivide(xExtrema.getLeft());
+    auto right = projectToYPlaneAndZDivide(xExtrema.getRight());
+    auto maxX = std::max(std::abs(left), std::abs(right));
+#if 0
+    if (std::abs(rotationAboutY(xExtrema.getLeft())) > std::abs(rotationAboutY(xExtrema.getRight()))) {
+        // left is the extreme point.
+    }
+#endif
+    ret.left = -maxX;
+    ret.right = maxX;
+    ret.leftPoint = Eigen::Vector3d(-maxX, 0, -1);
+    ret.rightPoint = Eigen::Vector3d(maxX, 0, -1);
+#endif
     if (verbose) {
         std::cerr << "Left clip: " << ret.left << std::endl;
         std::cerr << "Right clip: " << ret.right << std::endl;
@@ -702,17 +735,21 @@ static HorizontalOutputs computeHFOV(ScreenHorizontalExtrema const& xExtrema, Pl
         double hFOVDegrees = radToDegree(ret.hFOVradians);
         std::cerr << "Horizontal field of view (degrees): " << hFOVDegrees << std::endl;
     }
-    //====================================================================
-    // Figure out the center of projection for the screen.  This is the
-    // location where a line from the origin perpendicular to the screen
-    // pierces the screen.
-    // Then figure out the normalized coordinates of this point in screen
-    // space, which is the fraction of the way from the left to the right
-    // of the screen.  It is always (by construction above) in the center
-    // of the screen in Y.
-    // Also, by construction it is at a distance D along the (A,B,C) unit
-    // vector from the origin.
+//====================================================================
+// Figure out the center of projection for the screen.  This is the
+// location where a line from the origin perpendicular to the screen
+// pierces the screen.
+// Then figure out the normalized coordinates of this point in screen
+// space, which is the fraction of the way from the left to the right
+// of the screen.  It is always (by construction above) in the center
+// of the screen in Y.
+// Also, by construction it is at a distance D along the (A,B,C) unit
+// vector from the origin.
+#if 0
+    double xCOPOnPlane = projectToYPlaneAndZDivide(screenPlane.projection(Eigen::Vector3d::Zero()));
+#else
     double xCOPOnPlane = screenPlane.projection(Eigen::Vector3d::Zero()).x();
+#endif
     ret.xCOP = (xCOPOnPlane - ret.left) / screenWidth;
 
     return ret;
@@ -811,7 +848,12 @@ bool findScreen(ProjectionDescription& outProjection, ScreenDetails& outScreen,
 
     //====================================================================
     // Fill in the screen parameters.
-    outScreen = ScreenDetails(screenPlane, horizExtrema.getLeft(), horizExtrema.getRight(), maxY);
+    outScreen = ScreenDetails(screenPlane, horizData.leftPoint, horizData.rightPoint, maxY);
+    if (verbose) {
+        std::cerr << "Screen origin: " << outScreen.screenOrigin.transpose() << std::endl;
+        std::cerr << "Screen x basis: " << outScreen.screenXBasis.transpose() << std::endl;
+    }
+
     outProjection.hFOVDegrees = radToDegree(horizData.hFOVradians);
     outProjection.vFOVDegrees = radToDegree(vFOVRadians);
     outProjection.overlapPercent = findOverlapPercent(screenPlane, horizData.hFOVradians, verbose);
@@ -893,21 +935,6 @@ MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const
     //====================================================================
     // Map each incoming mesh coordinate into the corresponding output
     // coordinate, storing them into the output mesh.
-
-    // Scale and offset to apply to the points projected onto the plane
-    // to convert their values into normalized screen coordinates.  This
-    // checks the assumption that the screen has some width in the X
-    // coordinate (not rotated 90 degrees) and uses only the X value to
-    // scale X.
-    auto leftProjX = screen.screenLeft[0];
-    auto rightProjX = screen.screenRight[0];
-    if (verbose) {
-        std::cerr << "leftProjX: " << leftProjX << std::endl;
-    }
-    if (leftProjX == rightProjX) {
-        std::cerr << "Error computing mesh: screen has no X extent" << std::endl;
-        return ret;
-    }
 
     for (const auto& meas : data.measurements) {
 
@@ -1118,20 +1145,46 @@ XYZList reflectPoints(XYZList const& input) {
 
 ScreenDetails::ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left, Eigen::Vector3d const& right,
                              double maxYMagnitude)
-    : valid(true), screenPlane(scrPlane), screenLeft(left), screenRight(right), maxY(maxYMagnitude) {
+    : valid(true),
+      screenPlane(scrPlane),
+#if 0
+     screenLeft(left), screenRight(right), maxY(maxYMagnitude),
+#endif
+      screenYBasis(Eigen::Vector3d::UnitY()) {
 
+    // Scale and offset to apply to the points projected onto the plane
+    // to convert their values into normalized screen coordinates.  This
+    // checks the assumption that the screen has some width in the X
+    // coordinate (not rotated 90 degrees) and uses only the X value to
+    // scale X.
+    auto leftProjX = left[0];
+    auto rightProjX = right[0];
+    if (leftProjX == rightProjX) {
+        std::cerr << "Error computing mesh: screen has no X extent" << std::endl;
+        valid = false;
+        return;
+    }
+    screenOrigin = left - Eigen::Vector3d(0, maxYMagnitude, 0);
+    Eigen::Vector3d screenHorizExtent = left - right;
+    screenXBasis = screenHorizExtent.stableNormalized();
+    scale = Eigen::Array2d(1. / screenHorizExtent.norm(), 1. / (2. * maxYMagnitude));
+#if 0
     auto leftProjX = screenLeft[0];
     auto rightProjX = screenRight[0];
-
     // Negative of negative maxY is maxY
     offset = Eigen::Array2d(-leftProjX, maxY);
 
     double xOutScale = 1. / (rightProjX - leftProjX);
     double yOutScale = 1. / (2. * maxY);
     scale = Eigen::Array2d(xOutScale, yOutScale);
+#endif
 }
 
 Eigen::Array2d ScreenDetails::projectAndNormalize(Point3d const& angleViewPoint) const {
     Eigen::Vector3d onScreenPlane = screenPlane.projection(ei::map(angleViewPoint));
-    return (onScreenPlane.head<2>().array() + offset) * scale;
+    Eigen::Vector3d onScreenPlaneAtOrigin = onScreenPlane - screenOrigin;
+    Eigen::Array2d ret =
+        Eigen::Array2d((onScreenPlaneAtOrigin.dot(screenXBasis)), onScreenPlaneAtOrigin.dot(screenYBasis)) * scale;
+    // return (onScreenPlane.head<2>().array() + offset) * scale;
+    return ret;
 }
