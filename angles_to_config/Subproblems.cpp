@@ -80,20 +80,6 @@ static double angleSquaredDistance(LongLat const& a, LongLat const& b) {
     return (ei::map(a.longLat) - ei::map(b.longLat)).squaredNorm();
 }
 
-struct InputMeasurementDistance {
-    InputMeasurementDistance(std::size_t i, InputMeasurement const& measurement, InputMeasurement const& refMeas)
-        : index(i),
-          meas(measurement),
-          sqDistance(angleSquaredDistance(measurement.viewAnglesDegrees, refMeas.viewAnglesDegrees)) {}
-    std::size_t index;
-    InputMeasurement meas;
-    double sqDistance;
-};
-
-static inline bool operator<(InputMeasurementDistance const& a, InputMeasurementDistance const& b) {
-    return a.sqDistance < b.sqDistance;
-}
-
 static inline double getNeighborError(InputMeasurement const& a, InputMeasurement const& b, Point2d const& xxxy,
                                       Point2d const& yxyy, bool verbose = false) {
     // Map the difference in angle space between the point and
@@ -106,12 +92,13 @@ static inline double getNeighborError(InputMeasurement const& a, InputMeasuremen
     Eigen::Vector2d screenVec = ei::map(a.screen) - ei::map(b.screen);
 
     if (verbose) {
-        std::cerr << "angleVec:        " << angleVec.transpose() << " normalized: " << angleVec.normalized().transpose()
+        std::cerr << "\nangleVec:        " << angleVec.transpose() << " normalized: " << angleVec.normalized().transpose()
                   << std::endl;
         std::cerr << "screenMappedVec: " << screenMappedVec.transpose()
                   << " normalized: " << screenMappedVec.normalized().transpose() << std::endl;
         std::cerr << "screenVec:       " << screenVec.transpose()
                   << " normalized: " << screenVec.normalized().transpose() << std::endl;
+        std::cerr << "dot product: " << screenMappedVec.normalized().dot(screenVec.normalized()) << std::endl;
     }
     // Normalize the two vectors
     // Find the dot product between the two vectors.
@@ -129,7 +116,8 @@ static size_t neighbor_errors(InputMeasurements const& input, size_t index, Poin
     // Sort all points other than the one we're looking for
     // based on distance from the one we are looking for.
     // Start by just making an unsorted vector with them.
-    using InputMeasurementDistances = std::vector<InputMeasurementDistance>;
+    using InputMeasurementDistanceIndex = std::pair<double, std::size_t>;
+    using InputMeasurementDistances = std::vector<InputMeasurementDistanceIndex>;
     auto refMeas = input.measurements[index];
     InputMeasurementDistances dists;
     const auto n = input.size();
@@ -138,7 +126,9 @@ static size_t neighbor_errors(InputMeasurements const& input, size_t index, Poin
         if (i == index) {
             continue;
         }
-        dists.emplace_back(i, input.measurements[i], refMeas);
+        auto dist = InputMeasurementDistanceIndex{
+            angleSquaredDistance(input.measurements[i].viewAnglesDegrees, refMeas.viewAnglesDegrees), i};
+        dists.push_back(dist);
     }
 
     // Now, we use nth_element to find exactly the 8th element and as a side effect sort those smaller elements ahead of
@@ -157,8 +147,8 @@ static size_t neighbor_errors(InputMeasurements const& input, size_t index, Poin
 
     // Check the first 8 points on the list (if there are that many)
     // and count up how many violate the angle condition.
-    auto ret = std::count_if(dists.begin(), endIter, [&](InputMeasurementDistance const& elt) {
-        return getNeighborError(elt.meas, refMeas, xxxy, yxyy, verbose) < minDotProduct;
+    auto ret = std::count_if(dists.begin(), endIter, [&](InputMeasurementDistanceIndex const& elt) {
+        return getNeighborError(input.measurements[elt.second], refMeas, xxxy, yxyy, verbose) < minDotProduct;
     });
     return ret;
 }
