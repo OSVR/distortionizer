@@ -25,7 +25,6 @@
 #ifndef INCLUDED_EigenStdArrayInterop_h_GUID_86D6CCCF_AE53_4DBA_1E69_400EF6110109
 #define INCLUDED_EigenStdArrayInterop_h_GUID_86D6CCCF_AE53_4DBA_1E69_400EF6110109
 
-
 // Internal Includes
 // - none
 
@@ -60,4 +59,3 @@ inline Eigen::Map<Eigen::Array<Scalar, Dim, 1> const> mapArray(std::array<Scalar
 } // namespace ei
 
 #endif // INCLUDED_EigenStdArrayInterop_h_GUID_86D6CCCF_AE53_4DBA_1E69_400EF6110109
-

@@ -170,6 +170,38 @@
                 }
             },
             "minItems": 1
+        },
+        "angleVerification": {
+            "type": "object",
+            "title": "Angle verification/trimming",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "xx": {
+                    "type": "number",
+                    "default": 1
+                },
+                "xy": {
+                    "type": "number",
+                    "default": 0
+                },
+                "yx": {
+                    "type": "number",
+                    "default": 0
+                },
+                "yy": {
+                    "type": "number",
+                    "default": 1
+                },
+                "maxAngleDiffDegrees": {
+                    "type": "number",
+                    "default": 80
+                }
+
+            }
         }
+
     }
 }

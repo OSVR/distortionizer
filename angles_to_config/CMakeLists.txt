@@ -33,6 +33,8 @@ add_library(AnglesToConfig-core STATIC
     helper.h
     Process.cpp
     Process.h
+    Subproblems.cpp
+    Subproblems.h
     types.h)
 
 target_link_libraries(AnglesToConfig-core PUBLIC distort-eigen-vendored)

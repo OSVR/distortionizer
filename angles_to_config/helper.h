@@ -29,17 +29,14 @@
 #include <iostream>
 #include <vector>
 
+/// Shared utility function.
+/// takes in angles (long/lat or field angles) in degrees, returns
+/// XYZ point.
+XYZ longLatToWorldSpace(LongLat longLat, bool useFieldAngles, double depth);
+
 /// Reads the four-column whitespace-delimited mapping file.
 /// Returns empty mapping if it fails to read anything.
 std::vector<Mapping> read_from_infile(std::istream& in);
-
-/// Reads the four-column whitespace-delimited mapping file.
-/// Returns empty vector if it fails to read anything.
-InputMeasurements readInputMeasurements(std::string const& inputSource, std::istream& in);
-
-/// Reads a two-column whitespace-delimited file of additional angles
-/// Returns empty if it fails to read anything.
-std::vector<LongLat> readAdditionalAngles(std::istream& in);
 
 /// This removes invalid points from the mesh if the angle
 /// between the vector from a point to its neighbor in lat/long
@@ -52,14 +49,9 @@ std::vector<LongLat> readAdditionalAngles(std::istream& in);
 /// removed from the mesh otherwise.
 int remove_invalid_points_based_on_angle(std::vector<Mapping>& mapping, double xx, double xy, double yx, double yy,
                                          double maxAngleDegrees);
-/// Converts angles (in degrees) to eye-space 3d points.
-XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, double depth, bool useFieldAngles);
 
 bool convert_to_normalized_and_meters(std::vector<Mapping>& mapping, double toMeters, double depth, double left,
                                       double bottom, double right, double top, bool useFieldAngles = false);
-
-NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters, double depth,
-                                                        RectBoundsd rect, bool useFieldAngles = false);
 
 bool findScreen(ScreenDescription& outScreen, const std::vector<Mapping>& mapping,
                 XYZList const& additionalPointsFromAngles, bool verbose = false);
@@ -69,29 +61,8 @@ inline bool findScreen(const std::vector<Mapping>& mapping, ScreenDescription& o
     return findScreen(outScreen, mapping, XYZList(), verbose);
 }
 
-/// Output from find_screen that is only needed by the mesh computation.
-struct ScreenDetails {
-    ScreenDetails() = default;
-    ScreenDetails(Plane const& scrPlane, Eigen::Vector3d const& left, Eigen::Vector3d const& right,
-                  double maxYMagnitude);
-    bool valid = false;
-
-    Plane screenPlane; //!< Ax + By + Cz + D = 0 screen plane
-    Eigen::Vector3d screenOrigin;
-    Eigen::Vector3d screenYBasis;
-    Eigen::Vector3d screenXBasis;
-    Eigen::Array2d scale;
-    Eigen::Array2d projectAndNormalize(Point3d const& angleViewPoint, bool verbose = false) const;
-};
-
-bool findScreen(ProjectionDescription& outProjection, ScreenDetails& outScreen,
-                std::vector<NormalizedMeasurements> const& dataSets, XYZList const& additionalPointsFromAngles,
-                bool verbose = false);
-
 bool findMesh(const std::vector<Mapping>& mapping, ScreenDescription const& screen, MeshDescription& mesh,
               bool verbose = false);
-
-MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const& screen, bool verbose = false);
 
 /// Reflect a point around X=0
 XYZ reflect(XYZ input);
@@ -118,46 +89,3 @@ std::vector<Mapping> reflect_normalized_mapping(std::vector<Mapping> const& mapp
 
 /// Reflect a list of points around X=0
 XYZList reflectPoints(XYZList const& input);
-
-template <typename ValueType, typename Comparator> class GenericExtremaFinder {
-  public:
-    using comparator_type = Comparator;
-    using value_type = ValueType;
-    GenericExtremaFinder() : compare_() {}
-    GenericExtremaFinder(comparator_type&& compare) : compare_(std::move(compare)) {}
-    GenericExtremaFinder(comparator_type const& compare) : compare_(compare) {}
-
-    value_type const& getMin() const {
-        assert(valid_ && "Only makes sense to get min value if you've actually processed any elements!");
-        return minVal_;
-    }
-    value_type const& getMax() const {
-        assert(valid_ && "Only makes sense to get max value if you've actually processed any elements!");
-        return maxVal_;
-    }
-    void process(value_type const& val) {
-        if (!valid_) {
-            minVal_ = val;
-            maxVal_ = val;
-            valid_ = true;
-            return;
-        }
-
-        if (compare_(val, minVal_)) {
-            /// new is less than min
-            minVal_ = val;
-        }
-
-        if (compare_(maxVal_, val)) {
-            /// max is less than new
-            maxVal_ = val;
-        }
-    }
-
-  private:
-    comparator_type compare_;
-    bool valid_ = false;
-
-    value_type minVal_;
-    value_type maxVal_;
-};

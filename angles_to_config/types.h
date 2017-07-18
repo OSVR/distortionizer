@@ -42,6 +42,14 @@
 // Global constants and variables
 #define MY_PI (4.0 * std::atan(1.0))
 
+template <typename T> inline T radToDegree(T radians) {
+    return static_cast<T>(static_cast<double>(radians) * 180.0 / MY_PI);
+}
+
+template <typename T> inline T degreeToRad(T degrees) {
+    return static_cast<T>(static_cast<double>(degrees) / 180.0 * MY_PI);
+}
+
 template <typename T> struct RectBounds {
     using value_type = T;
     value_type left;

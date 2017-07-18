@@ -26,7 +26,7 @@
 #include "GenerateOutput.h"
 #include "JsonUtils.h"
 #include "Process.h"
-#include "helper.h"
+#include "Subproblems.h"
 
 // Library/third-party includes
 #include <json/reader.h>
@@ -76,7 +76,18 @@ bool getBounds(Json::Value const& obj, RectBoundsd& outVal) {
     outVal = ret;
     return true;
 }
-
+void angleVerificationParsing(Json::Value const& avRoot, Config& conf) {
+    conf.verifyAngles = false;
+    if (!avRoot.isObject()) {
+        return;
+    }
+    conf.xx = getWithDefault<double>(avRoot, "xx", 1.);
+    conf.xy = getWithDefault<double>(avRoot, "xy", 0.);
+    conf.yx = getWithDefault<double>(avRoot, "yx", 0.);
+    conf.yy = getWithDefault<double>(avRoot, "yy", 1.);
+    conf.maxAngleDiffDegrees = getWithDefault<double>(avRoot, "maxAngleDiffDegrees", 80.);
+    conf.verifyAngles = getWithDefault(avRoot, "enabled", false);
+}
 void basicConfigParsing(Json::Value const& root, Config& conf) {
     conf.depth = getWithDefault(root, "depth", conf.depth);
     {
@@ -98,7 +109,9 @@ void basicConfigParsing(Json::Value const& root, Config& conf) {
             }
         }
     }
-    /// @todo verify angles
+
+    angleVerificationParsing(root["angleVerification"], conf);
+
     conf.verbose = getWithDefault(root, "verbose", conf.verbose);
 }
 

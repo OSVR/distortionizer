@@ -24,7 +24,8 @@
 
 // Internal Includes
 #include "Process.h"
-#include "helper.h"
+#include "Subproblems.h"
+#include "helper.h" // for a reflection function
 
 // Library/third-party includes
 // - none
@@ -98,34 +99,29 @@ int AnglesToConfigSingleEyeProcess::supplyInputMeasurements(InputMeasurements&& 
     if (config_.verbose && trimmed) {
         std::cerr << "Size after input trimming: " << meas.size() << std::endl;
     }
+    if (config_.verifyAngles) {
+
+        //====================================================================
+        // If we've been asked to verify the angles on the meshes, do so now.
+        // This makes sure that the direction between neighbors in angle space
+        // is consistent with their direction in screen space, removing points
+        // that don't satisfy the criterion.  This removes inconsistent points
+        // from the simulation (caused by multiple ray bounces or other
+        // singularities in the simulation).
+        int ret = remove_invalid_points_based_on_angle(meas, config_.maxAngleDiffDegrees, {config_.xx, config_.xy},
+                                                       {config_.yx, config_.yy});
+        if (ret < 0) {
+            std::cerr << "Error verifying angles for mesh " << (inputMeasurementChannels_.size() + 1) << std::endl;
+            return 60;
+        }
+        if (config_.verbose) {
+            std::cerr << "Removed " << ret << " points from mesh " << (inputMeasurementChannels_.size() + 1)
+                      << std::endl;
+        }
+    }
+
     inputMeasurementChannels_.emplace_back(std::move(meas));
     status_ = Status::HasSomeMapping;
-    if (!config_.verifyAngles) {
-        return 0;
-    }
-/// @todo
-#if 0
-    auto& latestMapping = mappings_.back();
-    auto m = mappings_.size();
-
-    //====================================================================
-    // If we've been asked to verify the angles on the meshes, do so now.
-    // This makes sure that the direction between neighbors in angle space
-    // is consistent with their direction in screen space, removing points
-    // that don't satisfy the criterion.  This removes inconsistent points
-    // from the simulation (caused by multiple ray bounces or other
-    // singularities in the simulation).
-    int ret = remove_invalid_points_based_on_angle(latestMapping, config_.xx, config_.xy, config_.yx, config_.yy,
-        config_.maxAngleDiffDegrees);
-    if (ret < 0) {
-        std::cerr << "Error verifying angles for mesh " << m << std::endl;
-        return 60;
-    }
-    if (config_.verbose) {
-        std::cerr << "Removed " << ret << " points from mesh " << m << std::endl;
-    }
-#endif
-    std::cerr << "WARNING: Cannot remove invalid points based on angle yet for new data types" << std::endl;
     return 0;
 }
 
