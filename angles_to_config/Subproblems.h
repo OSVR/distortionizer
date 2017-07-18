@@ -55,7 +55,7 @@ std::vector<LongLat> readAdditionalAngles(std::istream& in);
 ///
 /// @return -1 on error, the number of points that were removed from the mesh otherwise.
 int remove_invalid_points_based_on_angle(InputMeasurements& input, double maxAngleDegrees,
-                                         Point2d const& xxxy = {1., 0.}, Point2d const& yxyy = {0., 1});
+                                         Point2d const& xxxy = {1., 0.}, Point2d const& yxyy = {0., 1}, bool verbose = false);
 
 NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters, double depth,
                                                         RectBoundsd rect, bool useFieldAngles = false);

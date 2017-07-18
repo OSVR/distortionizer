@@ -109,7 +109,7 @@ int AnglesToConfigSingleEyeProcess::supplyInputMeasurements(InputMeasurements&& 
         // from the simulation (caused by multiple ray bounces or other
         // singularities in the simulation).
         int ret = remove_invalid_points_based_on_angle(meas, config_.maxAngleDiffDegrees, {config_.xx, config_.xy},
-                                                       {config_.yx, config_.yy});
+                                                       {config_.yx, config_.yy}, config_.verbose);
         if (ret < 0) {
             std::cerr << "Error verifying angles for mesh " << (inputMeasurementChannels_.size() + 1) << std::endl;
             return 60;

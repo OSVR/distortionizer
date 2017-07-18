@@ -92,8 +92,8 @@ static inline double getNeighborError(InputMeasurement const& a, InputMeasuremen
     Eigen::Vector2d screenVec = ei::map(a.screen) - ei::map(b.screen);
 
     if (verbose) {
-        std::cerr << "\nangleVec:        " << angleVec.transpose() << " normalized: " << angleVec.normalized().transpose()
-                  << std::endl;
+        std::cerr << "\nangleVec:        " << angleVec.transpose()
+                  << " normalized: " << angleVec.normalized().transpose() << std::endl;
         std::cerr << "screenMappedVec: " << screenMappedVec.transpose()
                   << " normalized: " << screenMappedVec.normalized().transpose() << std::endl;
         std::cerr << "screenVec:       " << screenVec.transpose()
@@ -163,11 +163,15 @@ static size_t find_index_of_angle_worst_offender(InputMeasurements const& input,
                                                  Point2d const& yxyy, double minDotProduct, bool verbose = false) {
     size_t worstIndex = 0;
     size_t worstCount = 0;
-    // auto worstIt = std::max_element(input.measurements.begin(), input.measurements.end(), [&](InputMeasurement
-    // const&))
+
     const auto n = input.size();
     for (size_t i = 0; i < n; ++i) {
-        size_t count = neighbor_errors(input, i, xxxy, yxyy, minDotProduct, verbose && (i == 0));
+#if 1
+        const bool childVerbose = false;
+#else
+        const bool childVerbose = verbose && (i == 0);
+#endif
+        size_t count = neighbor_errors(input, i, xxxy, yxyy, minDotProduct, childVerbose);
         if (count > worstCount) {
             worstCount = count;
             worstIndex = i;
@@ -176,11 +180,15 @@ static size_t find_index_of_angle_worst_offender(InputMeasurements const& input,
     if (worstCount == 0) {
         return n;
     }
+    if (verbose) {
+        std::cerr << "Worst remaining angles: " << input.measurements[worstIndex].getOrigin(input) << " with "
+                  << worstCount << " invalid neighbor angles." << std::endl;
+    }
     return worstIndex;
 }
 
 int remove_invalid_points_based_on_angle(InputMeasurements& input, double maxAngleDegrees, Point2d const& xxxy,
-                                         Point2d const& yxyy) {
+                                         Point2d const& yxyy, bool verbose) {
 
     int ret = 0; // No points yet removed from the mesh.
 
@@ -195,9 +203,8 @@ int remove_invalid_points_based_on_angle(InputMeasurements& input, double maxAng
     // too many points from the vector.
     bool foundOutlier;
     do {
-        std::cerr << "Searching for worst outlier, iteration " << (ret + 1) << std::endl;
         foundOutlier = false;
-        size_t off = find_index_of_angle_worst_offender(input, xxxy, yxyy, minDotProduct, (ret == 0));
+        size_t off = find_index_of_angle_worst_offender(input, xxxy, yxyy, minDotProduct, verbose);
         if (off < input.size()) {
             input.measurements.erase(input.measurements.begin() + off);
             foundOutlier = true;
