@@ -35,21 +35,72 @@
 #include <cmath>
 #include <iomanip>
 #include <map>
+#include <sstream>
 #include <string>
 
+namespace {
+enum class LineParseResult { Success, LongitudeError, LatitudeError, ScreenXError, ScreenYError };
+static inline const char* to_string(LineParseResult result) {
+    switch (result) {
+    case LineParseResult::Success:
+        return "success (no error)";
+    case LineParseResult::LongitudeError:
+        return "longitude (x angle, first column) error";
+    case LineParseResult::LatitudeError:
+        return "latitude (y angle, second column) error";
+    case LineParseResult::ScreenXError:
+        return "screen x position (third column) error";
+    case LineParseResult::ScreenYError:
+        return "screen y position (fourth column) error";
+    default:
+        assert(0 && "Should never happen!");
+        return "Unknown result! Should be impossible!";
+    }
+}
+
+static inline LineParseResult parseInputMappingLine(std::string const& line, Mapping& map) {
+    std::istringstream lineStream(line);
+    // Read the mapping info from the input file.
+    if (!(lineStream >> map.xyLatLong.longitude)) {
+        return LineParseResult::LongitudeError;
+    }
+    if (!(lineStream >> map.xyLatLong.latitude)) {
+        return LineParseResult::LatitudeError;
+    }
+    if (!(lineStream >> map.xyLatLong.x)) {
+        return LineParseResult::ScreenXError;
+    }
+    if (!(lineStream >> map.xyLatLong.y)) {
+        return LineParseResult::ScreenYError;
+    }
+    return LineParseResult::Success;
+}
+} // namespace
 std::vector<Mapping> read_from_infile(std::istream& in) {
     std::vector<Mapping> mapping;
 
-    while (!in.eof()) {
+    std::string line;
+    std::getline(in, line);
+    // termination condition is reading a line failed the stream,
+    // and iteration is reading another line.
+    for (; !in.eof() && in.good(); std::getline(in, line)) {
         // Read the mapping info from the input file.
         Mapping map;
-        in >> map.xyLatLong.longitude >> map.xyLatLong.latitude >> map.xyLatLong.x >> map.xyLatLong.y;
-        mapping.push_back(map);
+        auto parseResult = parseInputMappingLine(line, map);
+        if (LineParseResult::Success == parseResult) {
+            // if we didn't fail sometime here...
+            mapping.push_back(map);
+        } else {
+            std::cerr << "Failed to parse line with a \"" << to_string(parseResult) << "\": '" << line << "'"
+                      << std::endl;
+        }
     }
+#if 0
     if (!mapping.empty()) {
         // There will have been one extra added, when running into EOF.
         mapping.pop_back();
     }
+#endif
 
     return mapping;
 }
