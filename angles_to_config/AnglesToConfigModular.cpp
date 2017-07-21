@@ -311,7 +311,53 @@ inline void parseTrimmingForEye(Json::Value const& trimming, const char eyeName[
         }
     }
 }
+
+static const char defaultProgramName[] = "AnglesToConfigModular";
+
+static const char* programName = defaultProgramName;
+#ifdef _WIN32
+static const auto waitByDefault = true;
+#else
+static const auto waitByDefault = false;
+#endif
+
+static int usage(int returnCode, bool wait = waitByDefault) {
+    std::cerr
+        << "Usage:\n"
+        << programName
+        << " <a2cconfigfile.json> [outputclientmeshfilename.json]\n"
+           "\t A JSON file specifying the inputs and options for the angles-to-config process\n"
+           "\t must be passed as the first argument.\n"
+           "\t If no output filename is provided, the client mesh data will be dumped to standard output,\n"
+           "\t suitable for redirection as in\n\n"
+           "\t\t"
+        << programName
+        << " a2cconfig.json > mydisplay.client.json\n\n"
+           "\t Verbose/status messages are printed to standard error in any case so they won't get intermingled.\n"
+        << std::endl;
+    if (wait) {
+        std::cerr << "Press enter to continue..." << std::endl;
+        std::cin.ignore();
+    }
+    return returnCode;
+}
 int main(int argc, char* argv[]) {
+    if (argv[0][0] != '\0') {
+        /// Set program name file-static variable
+        programName = argv[0];
+    }
+    if (argc == 1 || argc > 3) {
+        std::cerr << "Incorrect number of command line arguments.\n" << std::endl;
+        return usage(-2);
+    }
+    {
+        auto argv1 = std::string(argv[1]);
+        if (argv1 == "-h" || argv1 == "--help" || argv1 == "/?") {
+            /// give them usage without an exit wait.
+            return usage(-1, false);
+        }
+    }
+
     std::cerr << "Using config file " << argv[1] << std::endl;
     Json::Value root;
     {
@@ -334,8 +380,8 @@ int main(int argc, char* argv[]) {
     parseTrimmingForEye(trimming, "right", rightEyeProcess);
 
     auto haveLeft = attemptSingleEyeProcessing(input["left"], leftEyeProcess);
-
     auto haveRight = attemptSingleEyeProcessing(input["right"], rightEyeProcess);
+
     if (!haveLeft && !haveRight) {
         std::cerr << "Error: must have valid input data for at least one eye, and none provided." << std::endl;
         return -1;
@@ -386,8 +432,20 @@ int main(int argc, char* argv[]) {
                   << std::endl;
         return -1;
     }
+    auto useFileOutput = false;
+    std::ofstream outfile;
+    if (argc == 3) {
+        auto fn = std::string(argv[2]);
+        // they passed a filename for output.
+        outfile.open(fn, std::ios::out);
+        if (!outfile || !outfile.good()) {
+            std::cerr << "Couldn't open " << fn << " for writing client mesh output." << std::endl;
+            return -1;
+        }
+        useFileOutput = true;
+    }
     {
-        auto success = outputClientMeshData(std::cout, leftOutput, rightOutput);
+        auto success = outputClientMeshData(useFileOutput ? outfile : std::cout, leftOutput, rightOutput);
         if (0 != success) {
             std::cerr << "Error: failure in outputClientMeshData: " << success << std::endl;
             return success;
