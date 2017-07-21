@@ -130,6 +130,28 @@ namespace util {
         }
         return def;
     }
+    template <typename T, std::size_t N>
+    inline std::array<T, N> getDefaultArray(Json::Value const& root, const char* memName, std::array<T, N> const& def) {
+        std::array<T, N> ret;
+        auto& elt = root[memName];
+        bool success = false;
+        if (elt.isArray() && elt.size() == N) {
+            success = true;
+            for (Json::Value::ArrayIndex i = 0; i < N; ++i) {
+                auto& member = elt[i];
+                if (!json_is<T>(member)) {
+                    success = false;
+                    break;
+                }
+                ret[i] = json_cast<T>(elt[i]);
+            }
+        }
+        if (success) {
+            return ret;
+        }
+        /// Wasn't successful in loading
+        return def;
+    }
 
     template <typename T, std::size_t N, typename F>
     inline std::array<T, N> getIntrusiveDefaultArrayWithValidity(Json::Value& root, const char* elemName,
