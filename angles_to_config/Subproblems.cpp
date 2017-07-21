@@ -747,9 +747,8 @@ MeshDescription findMesh(const NormalizedMeasurements& data, ScreenDetails const
 
         // Project the 3D points back into the plane of the screen and determine
         // the normalized coordinates in the coordinate system with the lower left
-        // corner at (0,0) and the upper right at (1,1).  Because we oversized the
-        // screen, these will all be in this range.  Otherwise, they might not be.
-        /// @todo How/where did we oversize the screen? (Y axis?)
+        // corner at (0,0) and the upper right at (1,1).  Because we oversized (made to fit all points, vs choosing a
+        // rect that fits in the points) the screen, these will all be in this range.  Otherwise, they might not be.
         Point2d out;
         ei::mapArray(out) = screen.projectAndNormalize(meas.pointFromView);
 
