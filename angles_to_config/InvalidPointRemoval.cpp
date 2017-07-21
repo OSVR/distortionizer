@@ -197,11 +197,20 @@ std::size_t InvalidPointRemover::operator()() {
     assert(!done_ && "Can only process once!");
     done_ = true;
 
+    if (verbose_) {
+        std::cerr << "Populating data structures containing each point's nearest neighbors" << std::endl;
+    }
     populateMeasurementNeighborhoods();
 
+    if (verbose_) {
+        std::cerr << "Iteratively finding the 'worst' points/angles and marking them for removal" << std::endl;
+    }
     iterativelyFindAndMarkForRemoval();
 
-    // Now that we've found and recorded which ones we want to remove, actually remove them before returning.
+    if (verbose_) {
+        std::cerr << "Removing entries marked as violating angle verification condition" << std::endl;
+    }
+    /// Now that we've found and recorded which ones we want to remove, actually remove them before returning.
     /// Easiest way to do this is with an .erase(remove_if( idiom, but we don't get indices that way, so this object has
     /// actually been storing source line numbers.
 
@@ -213,6 +222,9 @@ std::size_t InvalidPointRemover::operator()() {
             /// if we find our line number in the list, we're a goner.
             return std::binary_search(removedLineNumbers_.begin(), removedLineNumbers_.end(), meas.lineNumber);
         }));
+    if (verbose_) {
+        std::cerr << "Invalid point remover instance execution complete." << std::endl;
+    }
     return removedLineNumbers_.size();
 }
 
