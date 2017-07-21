@@ -33,6 +33,7 @@
 
 // Standard includes
 #include <iostream>
+#include <tuple>
 
 InputMeasurements readInputMeasurements(std::string const& inputSource, std::istream& in) {
     InputMeasurements ret;
@@ -76,10 +77,6 @@ std::vector<LongLat> readAdditionalAngles(std::istream& in) {
     return ret;
 }
 
-static double angleSquaredDistance(LongLat const& a, LongLat const& b) {
-    return (ei::map(a.longLat) - ei::map(b.longLat)).squaredNorm();
-}
-
 static inline double getNeighborError(InputMeasurement const& a, InputMeasurement const& b, Point2d const& xxxy,
                                       Point2d const& yxyy, bool verbose = false) {
     // Map the difference in angle space between the point and
@@ -111,8 +108,8 @@ static inline double getNeighborError(InputMeasurement const& a, InputMeasuremen
 /// remove_invalid_points_based_on_angle function.
 /// Checks up to 8 nearest neighbors in angle space.
 /// @return How many neighbor angle differences are too large.
-static size_t neighbor_errors(InputMeasurements const& input, size_t index, Point2d const& xxxy, Point2d yxyy,
-                              double minDotProduct, bool verbose) {
+static std::pair<std::size_t, double> neighbor_errors(InputMeasurements const& input, size_t index, Point2d const& xxxy,
+                                                      Point2d yxyy, double minDotProduct, bool verbose) {
     // Sort all points other than the one we're looking for
     // based on distance from the one we are looking for.
     // Start by just making an unsorted vector with them.
@@ -147,10 +144,16 @@ static size_t neighbor_errors(InputMeasurements const& input, size_t index, Poin
 
     // Check the first 8 points on the list (if there are that many)
     // and count up how many violate the angle condition.
-    auto ret = std::count_if(dists.begin(), endIter, [&](InputMeasurementDistanceIndex const& elt) {
-        return getNeighborError(input.measurements[elt.second], refMeas, xxxy, yxyy, verbose) < minDotProduct;
+    double product = 1;
+    std::size_t count = 0;
+    std::for_each(dists.begin(), endIter, [&](InputMeasurementDistanceIndex const& elt) {
+        auto err = getNeighborError(input.measurements[elt.second], refMeas, xxxy, yxyy, verbose);
+        if (err < minDotProduct) {
+            count++;
+            product *= err;
+        }
     });
-    return ret;
+    return std::make_pair(count, product);
 }
 
 /// Looks through the mapping to see if there is a point whose
@@ -163,7 +166,7 @@ static size_t find_index_of_angle_worst_offender(InputMeasurements const& input,
                                                  Point2d const& yxyy, double minDotProduct, bool verbose = false) {
     size_t worstIndex = 0;
     size_t worstCount = 0;
-
+    double worstProduct = minDotProduct * 2; // arbitrarily too large to matter.
     const auto n = input.size();
     for (size_t i = 0; i < n; ++i) {
 #if 1
@@ -171,9 +174,12 @@ static size_t find_index_of_angle_worst_offender(InputMeasurements const& input,
 #else
         const bool childVerbose = verbose && (i == 0);
 #endif
-        size_t count = neighbor_errors(input, i, xxxy, yxyy, minDotProduct, childVerbose);
-        if (count > worstCount) {
+        size_t count;
+        double product;
+        std::tie(count, product) = neighbor_errors(input, i, xxxy, yxyy, minDotProduct, childVerbose);
+        if (count > worstCount || (count != 0 && count == worstCount && product < worstProduct)) {
             worstCount = count;
+            worstProduct = product;
             worstIndex = i;
         }
     }
@@ -181,8 +187,9 @@ static size_t find_index_of_angle_worst_offender(InputMeasurements const& input,
         return n;
     }
     if (verbose) {
-        std::cerr << "Worst remaining angles: " << input.measurements[worstIndex].getOrigin(input) << " with "
-                  << worstCount << " invalid neighbor angles." << std::endl;
+        std::cerr << "Worst remaining: " << input.measurements[worstIndex].getOrigin(input) << " with " << worstCount
+                  << " invalid neighbor angles." << std::endl;
+        std::cerr << "\tproduct: " << worstProduct << std::endl;
     }
     return worstIndex;
 }

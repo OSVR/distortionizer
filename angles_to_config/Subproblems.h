@@ -26,6 +26,7 @@
 #define INCLUDED_Subproblems_h_GUID_07251D99_D976_4FBA_E5CF_5512B0598BE8
 
 // Internal Includes
+#include "EigenStdArrayInterop.h"
 #include "types.h"
 
 // Library/third-party includes
@@ -55,7 +56,8 @@ std::vector<LongLat> readAdditionalAngles(std::istream& in);
 ///
 /// @return -1 on error, the number of points that were removed from the mesh otherwise.
 int remove_invalid_points_based_on_angle(InputMeasurements& input, double maxAngleDegrees,
-                                         Point2d const& xxxy = {1., 0.}, Point2d const& yxyy = {0., 1}, bool verbose = false);
+                                         Point2d const& xxxy = {1., 0.}, Point2d const& yxyy = {0., 1},
+                                         bool verbose = false);
 
 NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters, double depth,
                                                         RectBoundsd rect, bool useFieldAngles = false);
@@ -126,5 +128,9 @@ template <typename ValueType, typename Comparator> class GenericExtremaFinder {
     value_type minVal_;
     value_type maxVal_;
 };
+
+static inline double angleSquaredDistance(LongLat const& a, LongLat const& b) {
+    return (ei::map(a.longLat) - ei::map(b.longLat)).squaredNorm();
+}
 
 #endif // INCLUDED_Subproblems_h_GUID_07251D99_D976_4FBA_E5CF_5512B0598BE8
