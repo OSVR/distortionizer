@@ -751,7 +751,6 @@ static int testAlgorithms() {
         std::cerr << "testAlgorithms(): Destorted mesh size does not match mapping size: " << mesh.size() << std::endl;
         return 1301;
     }
-    // @todo Why do we get coordinates (0,1) for the fifth element, when we expect (1/3, 2/3)?
     for (std::size_t entry = 0; entry < dmesh.size(); entry++) {
         size_t outIndex = 1;
         if (!small(dmesh[entry][outIndex][0] - dExpectedXOut[entry])) {
