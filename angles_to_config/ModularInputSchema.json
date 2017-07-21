@@ -201,6 +201,30 @@
                 }
 
             }
+        },
+        "angleOffset": {
+            "type": "array",
+            "title": "Angle offset",
+            "description": "An offset to be applied in angle space (in degrees) to data read in. This should place 0, 0 as the 'straight ahead' vector",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": [
+                {
+                    "title": "Longitude/x angle offset",
+                    "type": "number",
+                    "default": 0
+                },
+                {
+                    "title": "Latitude/y angle offset",
+                    "type": "number",
+                    "default": 0
+                }
+            ]
+        },
+        "angleTwist": {
+            "title": "2D rotation to apply to incoming angles",
+            "type": "number",
+            "default": 0
         }
 
     }

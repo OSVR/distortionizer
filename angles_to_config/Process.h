@@ -46,6 +46,13 @@ struct SingleEyeOutput {
 class AnglesToConfigSingleEyeProcess {
   public:
     AnglesToConfigSingleEyeProcess(Config const& c);
+
+    /// Set an offset/translation in angle space (degrees) to apply to input data.
+    void setAngleOffset(Point2d const& v);
+
+    /// Set a twist/rotation (in degrees) about the normal to 0, 0 in angle space to apply to input data.
+    void setAngleTwist(double v);
+
     /// @name Set input trimming bounds
     /// @{
     void setScreenSpaceTrimBounds(XYInclusiveBoundsd const& bounds);
@@ -74,6 +81,8 @@ class AnglesToConfigSingleEyeProcess {
     enum class Status { Empty, HasSomeMapping, HasBoundsComputed, HasMappingsNormalized };
 
     Status status_ = Status::Empty;
+    Point2d angleOffset_;
+    double angleTwist_ = 0.;
     XYInclusiveBoundsd screenTrim_;
     XYInclusiveBoundsd angleBounds_;
     std::vector<InputMeasurements> inputMeasurementChannels_;

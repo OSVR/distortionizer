@@ -24,6 +24,7 @@
 
 // Internal Includes
 #include "Process.h"
+#include "EigenStdArrayInterop.h"
 #include "Subproblems.h"
 #include "helper.h" // for a reflection function
 
@@ -34,7 +35,17 @@
 #include <cassert>
 #include <iostream>
 
-AnglesToConfigSingleEyeProcess::AnglesToConfigSingleEyeProcess(Config const& c) : config_(c) {}
+AnglesToConfigSingleEyeProcess::AnglesToConfigSingleEyeProcess(Config const& c) : config_(c), angleOffset_({0, 0}) {}
+
+void AnglesToConfigSingleEyeProcess::setAngleOffset(Point2d const& v) {
+    assert(status_ == Status::Empty && "Should only call this function on an empty object");
+    angleOffset_ = v;
+}
+
+void AnglesToConfigSingleEyeProcess::setAngleTwist(double v) {
+    assert(status_ == Status::Empty && "Should only call this function on an empty object");
+    angleTwist_ = v;
+}
 
 void AnglesToConfigSingleEyeProcess::setScreenSpaceTrimBounds(XYInclusiveBoundsd const& bounds) {
     assert(status_ == Status::Empty && "Should only call this function on an empty object");
@@ -80,6 +91,18 @@ int AnglesToConfigSingleEyeProcess::supplyInputMeasurements(InputMeasurements&& 
         std::cerr << "supplyInputMeasurements provided with an input measurement collection of size " << meas.size()
                   << std::endl;
     }
+
+    Eigen::Vector2d angleOffset = ei::map(angleOffset_);
+    if (Eigen::Vector2d::Zero() != angleOffset || 0 != angleTwist_) {
+        // Transform all the angles.
+        // Combining translation (which is really x/y rotation) and twist (which is really z rotation) into a single
+        // homogeneous transform matrix for simplicity/speed.
+        Eigen::Isometry2d xform = Eigen::Translation2d(angleOffset) * Eigen::Rotation2Dd(degreeToRad(angleTwist_));
+        for (auto& m : meas.measurements) {
+            ei::map(m.viewAnglesDegrees.longLat) = (xform * ei::map(m.viewAnglesDegrees.longLat).homogeneous()).eval();
+        }
+    }
+
     bool trimmed = false;
     if (trimVectorToBounds(meas.measurements, screenTrim_,
                            /// get x coordinate of screen

@@ -378,6 +378,19 @@ int main(int argc, char* argv[]) {
     auto& trimming = root["trimming"];
     parseTrimmingForEye(trimming, "left", leftEyeProcess);
     parseTrimmingForEye(trimming, "right", rightEyeProcess);
+    {
+        auto angleOffset = getDefaultArray(root, "angleOffset", Point2d{0, 0});
+        leftEyeProcess.setAngleOffset(angleOffset);
+        rightEyeProcess.setAngleOffset(angleOffset);
+    }
+    {
+        const auto& twist = root["angleTwist"];
+        if (json_is<double>(twist)) {
+            auto twistDouble = json_cast<double>(twist);
+            leftEyeProcess.setAngleTwist(twistDouble);
+            rightEyeProcess.setAngleTwist(twistDouble);
+        }
+    }
 
     auto haveLeft = attemptSingleEyeProcessing(input["left"], leftEyeProcess);
     auto haveRight = attemptSingleEyeProcessing(input["right"], rightEyeProcess);
