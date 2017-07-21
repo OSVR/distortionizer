@@ -31,6 +31,8 @@ add_library(AnglesToConfig-core STATIC
     GenerateOutput.h
     helper.cpp
     helper.h
+    InvalidPointRemoval.cpp
+    InvalidPointRemoval.h
     Process.cpp
     Process.h
     Subproblems.cpp

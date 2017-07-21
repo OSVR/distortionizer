@@ -25,6 +25,7 @@
 // Internal Includes
 #include "Subproblems.h"
 #include "EigenStdArrayInterop.h"
+#include "InvalidPointRemoval.h"
 #include "helper.h"
 
 // Library/third-party includes
@@ -196,7 +197,8 @@ static size_t find_index_of_angle_worst_offender(InputMeasurements const& input,
 
 int remove_invalid_points_based_on_angle(InputMeasurements& input, double maxAngleDegrees, Point2d const& xxxy,
                                          Point2d const& yxyy, bool verbose) {
-
+//#define USE_OLD_REMOVE_INVALID
+#ifdef USE_OLD_REMOVE_INVALID
     int ret = 0; // No points yet removed from the mesh.
 
     // Find the dot product associated with two unit vectors
@@ -218,7 +220,10 @@ int remove_invalid_points_based_on_angle(InputMeasurements& input, double maxAng
             ret++;
         }
     } while (foundOutlier);
-
+#else
+    detail::InvalidPointRemover remover(input, maxAngleDegrees, xxxy, yxyy, verbose);
+    auto ret = remover();
+#endif
     return ret;
 }
 
