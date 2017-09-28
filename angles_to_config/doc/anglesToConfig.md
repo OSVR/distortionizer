@@ -28,7 +28,7 @@ The _**forward-gaze direction**_ is the direction forward from the eye, as if lo
 * **`-eye right|left`** specifies which eye, and has one parameter (left or right).  The default it right.
 * **`-depth_meters D`** specifies the focal depth of the screen.  Larger distances reduce the impact of changes in IPD.  Note that the distortion is dependent on IPD.  The default is 2m.
 * **`-latlong`** tells that the angles specified are in longitude and latitude, rather than field angles.  Field angles is the default.
-* **`-verify_angles xx xy yx yy max_degrees`** tests each mesh point to ensure that the change between the vectors point to each of its neighbors in angle space, when transformed into screen space, does not differ by more than max_degrees.  The transformation is specified: The vector (xx, xy) points in screen space in the direction of +longitude (left).  The vector (yx, yy) points in screen space in the direction of +latitude (up).
+* **`-verify_angles xx xy yx yy max_degrees`** tests each mesh point to ensure that the change between the vectors point to each of its neighbors in angle space, when transformed into screen space, does not differ by more than max_degrees.  The transformation is specified: The vector (xx, xy) points in screen space in the direction of +longitude (right).  The vector (yx, yy) points in screen space in the direction of +latitude (up).
 * **`-mono infile`** takes the name of a file to read from rather than standard input, producing a monochromatic distortion function.
 * **`-rgb redfile greenfile bluefile`** takes three file name arguments, one each for red, green, and blue.
 
