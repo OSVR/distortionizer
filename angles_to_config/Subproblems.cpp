@@ -333,7 +333,7 @@ class CoplanarLongLatToWorldSpace : public AnglesToWorldSpaceFunctor {
 static Eigen::Vector3d intersectRayFromOriginWithPlane(Plane const& p, Eigen::Vector3d const& dir) {
     Eigen::Vector3d p0 = p.projection(Eigen::Vector3d::Zero());
     double denom = p.normal().dot(dir);
-    if (denom < 1.e-6) {
+    if (std::abs(denom) < 1.e-6) {
         // call them parallel, return origin
         return Eigen::Vector3d::Zero();
     }
