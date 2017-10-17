@@ -430,6 +430,12 @@ NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const&
         // Convert the input latitude and longitude from degrees to radians.
         // Then, compute 3d coordinates of a point.
         auto pointFromView = anglesToWorldSpace(inputMeas.viewAnglesDegrees);
+        if (ei::map(pointFromView) == Eigen::Vector3d::Zero()) {
+            // This was a failure to intersect, skipping!
+            std::cerr << "Warning: failure to intersect ray cast from " << inputMeas.getOrigin(input)
+                      << " with the plane, skipping measurement" << std::endl;
+            continue;
+        }
         ret.measurements.push_back(NormalizedMeasurement{screen, pointFromView, inputMeas.lineNumber});
     }
 
