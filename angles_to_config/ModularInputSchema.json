@@ -71,6 +71,17 @@
                     "type": "string",
                     "title": "File of additional visible angles without screen mapping",
                     "description": "Whitespace-separated two-column data file of additional visible angles"
+                },
+                "screenRotationYDegrees": {
+                    "type": "number",
+                    "title": "Degrees the screen is rotated about the Y axis",
+                    "default": 0
+                },
+                "anglesArePanelRelative": {
+                    "type": "boolean",
+                    "title": "Are angles panel-relative?",
+                    "description": "The alternative is forward-gaze-relative. This only impacts processing when screen rotation is non-zero.",
+                    "default": true
                 }
             }
         }
