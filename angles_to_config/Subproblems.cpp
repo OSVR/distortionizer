@@ -342,6 +342,7 @@ static Eigen::Vector3d intersectRayFromOriginWithPlane(Plane const& p, Eigen::Ve
 }
 class RotatedPanelRelativeFieldAnglesToWorldSpace : public AnglesToWorldSpaceFunctor {
   public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     RotatedPanelRelativeFieldAnglesToWorldSpace(double depth, double screenRotateYRadians, bool screenRelative)
         : depth_(depth), screenRotateYRadians_(screenRotateYRadians), screenRelative_(screenRelative) {
         // construct plane normal.
@@ -392,8 +393,8 @@ AnglesToWorldSpacePtr makeAnglesToWorldSpace(double screenRotateYRadians, bool a
         auto ret = std::make_shared<CoplanarFieldAnglesToWorldSpace>(depth);
         return ret;
     }
-    auto ret = std::make_shared<RotatedPanelRelativeFieldAnglesToWorldSpace>(depth, screenRotateYRadians,
-                                                                             anglesScreenRelative);
+    std::shared_ptr<RotatedPanelRelativeFieldAnglesToWorldSpace> ret(
+        new RotatedPanelRelativeFieldAnglesToWorldSpace(depth, screenRotateYRadians, anglesScreenRelative));
     return ret;
 }
 
