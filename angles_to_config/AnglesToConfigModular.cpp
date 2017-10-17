@@ -173,15 +173,16 @@ bool attemptSingleEyeProcessing(Json::Value const& inputData, AnglesToConfigSing
     if (inputData.isNull()) {
         return false;
     }
-    if (!inputData.isObject() || inputData["mapping"].isNull()) {
+    static const auto MAPPING_NAME = "mapping";
+    if (!inputData.isObject() || inputData[MAPPING_NAME].isNull()) {
         /// OK, so this is the old schema, where the "mapping" level didn't exist.
         /// Deal with it, as a fall back.
-        if (!processMappingElement(inputData["mapping"], process)) {
+        if (!processMappingElement(inputData[MAPPING_NAME], process)) {
             std::cerr << "Failed loading mapping data in fallback-schema path." << std::endl;
             return false;
         }
     } else {
-        if (!processMappingElement(inputData["mapping"], process)) {
+        if (!processMappingElement(inputData[MAPPING_NAME], process)) {
             std::cerr << "Failed loading mapping data." << std::endl;
             return false;
         }
