@@ -77,9 +77,9 @@
                     "title": "Degrees the screen is rotated about the Y axis",
                     "default": 0
                 },
-                "anglesArePanelRelative": {
+                "anglesAreScreenRelative": {
                     "type": "boolean",
-                    "title": "Are angles panel-relative?",
+                    "title": "Are angles screen-relative?",
                     "description": "The alternative is forward-gaze-relative. This only impacts processing when screen rotation is non-zero.",
                     "default": true
                 }

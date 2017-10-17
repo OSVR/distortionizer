@@ -182,6 +182,17 @@ bool attemptSingleEyeProcessing(Json::Value const& inputData, AnglesToConfigSing
             return false;
         }
     } else {
+        /// See if we have anything we must load before loading the data.
+        auto & yRotation = inputData["screenRotationYDegrees"];
+        if (yRotation.isNumeric()) {
+            process.setScreenYRotation(yRotation.asDouble());
+
+            auto & anglesScreenRelative = inputData["anglesAreScreenRelative"];
+            if (anglesScreenRelative.isBool()) {
+                process.setAnglesAreScreenRelative(anglesScreenRelative.asBool());
+            }
+        }
+
         if (!processMappingElement(inputData[MAPPING_NAME], process)) {
             std::cerr << "Failed loading mapping data." << std::endl;
             return false;
