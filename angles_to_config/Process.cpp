@@ -57,6 +57,20 @@ void AnglesToConfigSingleEyeProcess::setInputAngleBounds(XYInclusiveBoundsd cons
     angleBounds_ = bounds;
 }
 
+void AnglesToConfigSingleEyeProcess::setScreenYRotation(double degrees) {
+    assert(status_ == Status::Empty && "Should only call this function on an empty object");
+    if (degrees != 0) {
+        screenRotateYRadians_ = degreeToRad(degrees);
+    } else {
+        screenRotateYRadians_ = 0;
+    }
+}
+
+void AnglesToConfigSingleEyeProcess::setAnglesAreScreenRelative(bool val) {
+    assert(status_ == Status::Empty && "Should only call this function on an empty object");
+    anglesScreenRelative_ = val;
+}
+
 template <typename ValueType, typename F>
 inline bool trimVectorToBounds(std::vector<ValueType>& vec, InclusiveBoundsd bounds, F&& memberGetter) {
     if (!bounds) {
@@ -149,7 +163,8 @@ int AnglesToConfigSingleEyeProcess::supplyInputMeasurements(InputMeasurements&& 
 }
 
 void AnglesToConfigSingleEyeProcess::supplyAdditionalAngles(std::vector<LongLat> const& additionalAngles) {
-    additionalAnglePoints_ = convertAdditionalAngles(additionalAngles, config_.depth, config_.useFieldAngles);
+    additionalAnglePoints_ = convertAdditionalAngles(additionalAngles, config_.depth, screenRotateYRadians_,
+                                                     anglesScreenRelative_, config_.useFieldAngles);
 }
 // for x positive to the right, y positive up.
 inline void extendBounds(RectBoundsd& bounds, double x, double y) {
@@ -201,8 +216,9 @@ void AnglesToConfigSingleEyeProcess::normalizeMappings() {
         //====================================================================
         // Convert the input values into normalized coordinates and into 3D
         // locations.
-        normalizedMeasurementChannels_.push_back(convert_to_normalized_and_meters(
-            chan, config_.toMeters, config_.depth, screenBounds_, config_.useFieldAngles));
+        normalizedMeasurementChannels_.push_back(
+            convert_to_normalized_and_meters(chan, config_.toMeters, config_.depth, screenBounds_,
+                                             screenRotateYRadians_, anglesScreenRelative_, config_.useFieldAngles));
     }
 }
 
@@ -282,6 +298,11 @@ AnglesToConfigSingleEyeProcess AnglesToConfigSingleEyeProcess::reflectedHorizont
 
     ret.additionalAnglePoints_ = reflectPoints(additionalAnglePoints_);
     ret.screenBounds_ = screenBounds_.reflectedHorizontally();
+
+    ret.anglesScreenRelative_ = anglesScreenRelative_;
+    if (screenRotateYRadians_ != 0) {
+        ret.screenRotateYRadians_ = -screenRotateYRadians_;
+    }
 
     return ret;
 }

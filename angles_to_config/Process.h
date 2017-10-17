@@ -59,6 +59,11 @@ class AnglesToConfigSingleEyeProcess {
     void setInputAngleBounds(XYInclusiveBoundsd const& bounds);
     /// @}
 
+    /// Configure the screen that is used when projecting input angles.
+    void setScreenYRotation(double degrees);
+    /// Set configuration option that only has an effect if screen y rotation is nonzero.
+    void setAnglesAreScreenRelative(bool val);
+
     /// Call this as many times as you have input mappings (1 for mono, 3 for RGB)
     int supplyInputMeasurements(InputMeasurements&& meas);
 
@@ -83,6 +88,8 @@ class AnglesToConfigSingleEyeProcess {
     Status status_ = Status::Empty;
     Point2d angleOffset_;
     double angleTwist_ = 0.;
+    double screenRotateYRadians_ = 0.;
+    bool anglesScreenRelative_ = true;
     XYInclusiveBoundsd screenTrim_;
     XYInclusiveBoundsd angleBounds_;
     std::vector<InputMeasurements> inputMeasurementChannels_;
