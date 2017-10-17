@@ -80,7 +80,6 @@ static inline LineParseResult parseInputMeasurementLine(std::string const& line,
 InputMeasurements readInputMeasurements(std::string const& inputSource, std::istream& in) {
     InputMeasurements ret;
     ret.inputSource = inputSource;
-    ;
     std::string line;
     std::getline(in, line);
     // Read first line as initial condition,
