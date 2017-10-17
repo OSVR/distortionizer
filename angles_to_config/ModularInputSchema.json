@@ -65,13 +65,13 @@
                             "required": [ "red", "green", "blue" ]
                         }
                     ]
-                }
+                },
 
-            },
-            "additionalVisibleAngles": {
-                "type": "string",
-                "title": "File of additional visible angles without screen mapping",
-                "description": "Whitespace-separated two-column data file of additional visible angles"
+                "additionalVisibleAngles": {
+                    "type": "string",
+                    "title": "File of additional visible angles without screen mapping",
+                    "description": "Whitespace-separated two-column data file of additional visible angles"
+                }
             }
         }
     },
