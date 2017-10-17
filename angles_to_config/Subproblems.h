@@ -34,6 +34,7 @@
 
 // Standard includes
 #include <cassert>
+#include <memory>
 
 /// Reads the four-column whitespace-delimited mapping file.
 /// Returns empty vector if it fails to read anything.
@@ -58,12 +59,46 @@ std::vector<LongLat> readAdditionalAngles(std::istream& in);
 int remove_invalid_points_based_on_angle(InputMeasurements& input, double maxAngleDegrees,
                                          Point2d const& xxxy = {1., 0.}, Point2d const& yxyy = {0., 1},
                                          bool verbose = false);
+class AnglesToWorldSpaceFunctor {
+  public:
+    /// Convert the angles (in degrees) given into a 3D spatial coordinate.
+    virtual Point3d operator()(LongLat longLat) const = 0;
+    virtual ~AnglesToWorldSpaceFunctor() {}
+};
+
+using AnglesToWorldSpacePtr = std::shared_ptr<AnglesToWorldSpaceFunctor>;
+
+/// Limited factory function: assumes coplanar screens
+AnglesToWorldSpacePtr makeAnglesToWorldSpace(double depth, bool useFieldAngles);
+
+/// Full factory function for functor converting angles to a world space point.
+AnglesToWorldSpacePtr makeAnglesToWorldSpace(double screenRotateYDegrees, bool anglesScreenRelative, double depth,
+                                             bool useFieldAngles);
 
 NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters, double depth,
-                                                        RectBoundsd rect, bool useFieldAngles = false);
+                                                        RectBoundsd screenDims, double screenRotateYRadians,
+                                                        bool anglesScreenRelative, bool useFieldAngles);
+NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters, double depth,
+                                                        RectBoundsd screenDims, bool useFieldAngles = false);
+
+/// This is the actual implementation: takes the angles to world space functor that factors out the variation in that
+/// procedure.
+NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters,
+                                                        RectBoundsd screenDims,
+                                                        AnglesToWorldSpaceFunctor const& anglesToWorldSpace);
 
 /// Converts angles (in degrees) to eye-space 3d points.
 XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, double depth, bool useFieldAngles);
+/// Converts angles (in degrees) to eye-space 3d points.
+XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, double depth, double screenRotateYRadians,
+                                bool anglesScreenRelative, bool useFieldAngles);
+
+/// Converts angles (in degrees) to eye-space 3d points.
+///
+/// This is the actual implementation: takes the angles to world space functor that factors out the variation in that
+/// procedure.
+XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles,
+                                AnglesToWorldSpaceFunctor const& anglesToWorldSpace);
 
 /// Output from find_screen that is only needed by the mesh computation.
 struct ScreenDetails {

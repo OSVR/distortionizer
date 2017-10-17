@@ -278,8 +278,142 @@ int remove_invalid_points_based_on_angle(InputMeasurements& input, double maxAng
     return ret;
 }
 
+class CoplanarFieldAnglesToWorldSpace : public AnglesToWorldSpaceFunctor {
+  public:
+    CoplanarFieldAnglesToWorldSpace(double depth) : depth_(depth) {}
+    ~CoplanarFieldAnglesToWorldSpace() {}
+    Point3d operator()(LongLat longLat) const override {
+        using std::cos;
+        using std::sin;
+        using std::tan;
+        // Convert the input latitude and longitude from degrees to radians.
+        ei::map(longLat.longLat) *= MY_PI / 180.;
+        Point3d ret;
+        const Plane p = Plane::Through(Eigen::Vector3d(0, 0, -depth_), Eigen::Vector3d(1, 0, -depth_),
+                                       Eigen::Vector3d(0, 1, -depth_));
+        // These are expressed as angles with respect to a screen that is
+        // straight ahead, independent in X and Y.  The -Z axis is straight
+        // ahead.  Positive rotation in longitude points towards +X,
+        // positive rotation in latitude points towards +Y.
+        ret = Point3d{depth_ * tan(longLat.longitude()), // X
+                      depth_ * tan(longLat.latitude()),  // Y
+                      -depth_};                          // Z
+
+        return ret;
+    }
+
+  private:
+    double depth_;
+};
+class CoplanarLongLatToWorldSpace : public AnglesToWorldSpaceFunctor {
+  public:
+    CoplanarLongLatToWorldSpace(double depth) : depth_(depth) {}
+    Point3d operator()(LongLat longLat) const {
+        using std::cos;
+        using std::sin;
+        using std::tan;
+        // Convert the input latitude and longitude from degrees to radians.
+        ei::map(longLat.longLat) *= MY_PI / 180.;
+        // Compute the 3D coordinate of the point w.r.t. the eye at the origin.
+        // longitude = 0, latitude = 0 points along the -Z axis in eye space.
+        // Positive rotation in longitude is towards -X and positive rotation in
+        // latitude points towards +Y.
+        double theta = longLat.longitude();
+        double phi = MY_PI / 2. - longLat.latitude();
+        auto ret = Point3d{-depth_ * (-sin(depth_)) * sin(phi), // X
+                           depth_ * std::cos(phi),              // Y
+                           -depth_ * cos(theta) * sin(phi)};    // Z
+        return ret;
+    }
+
+  private:
+    double depth_;
+};
+
+static Eigen::Vector3d intersectRayFromOriginWithPlane(Plane const& p, Eigen::Vector3d const& dir) {
+    Eigen::Vector3d p0 = p.projection(Eigen::Vector3d::Zero());
+    double denom = p.normal().dot(dir);
+    if (denom < 1.e-6) {
+        // call them parallel, return origin
+        return Eigen::Vector3d::Zero();
+    }
+    double d = p0.dot(p.normal()) / denom;
+    return d * dir;
+}
+class RotatedPanelRelativeFieldAnglesToWorldSpace : public AnglesToWorldSpaceFunctor {
+  public:
+    RotatedPanelRelativeFieldAnglesToWorldSpace(double depth, double screenRotateYRadians, bool screenRelative)
+        : depth_(depth), screenRotateYRadians_(screenRotateYRadians), screenRelative_(screenRelative) {
+        // construct plane normal.
+        Eigen::Vector3d normal(std::sin(screenRotateYRadians_), 0, std::cos(screenRotateYRadians_));
+        plane_ = Plane(Eigen::Vector3d::UnitZ(), depth_);
+        Eigen::AngleAxisd rotation(screenRotateYRadians_, Eigen::Vector3d::UnitY());
+        plane_.transform(rotation.matrix(), Eigen::Isometry);
+    }
+    virtual ~RotatedPanelRelativeFieldAnglesToWorldSpace() = default;
+    Point3d operator()(LongLat longLat) const {
+        using std::tan;
+        // Convert the input latitude and longitude from degrees to radians.
+        ei::map(longLat.longLat) *= MY_PI / 180.;
+        if (screenRelative_) {
+            longLat.longitude() -= screenRotateYRadians_;
+        }
+        Eigen::Vector3d ray = Eigen::Vector3d(tan(longLat.longitude()), tan(longLat.latitude()), -1).normalized();
+        Point3d ret;
+        ei::map(ret) = intersectRayFromOriginWithPlane(plane_, ray);
+        return ret;
+    }
+
+  private:
+    double depth_;
+    double screenRotateYRadians_;
+    bool screenRelative_;
+    Plane plane_;
+};
+
+AnglesToWorldSpacePtr makeAnglesToWorldSpace(double depth, bool useFieldAngles) {
+    if (useFieldAngles) {
+        auto ret = std::make_shared<CoplanarFieldAnglesToWorldSpace>(depth);
+        return ret;
+    }
+    auto ret = std::make_shared<CoplanarLongLatToWorldSpace>(depth);
+    return ret;
+}
+
+AnglesToWorldSpacePtr makeAnglesToWorldSpace(double screenRotateYRadians, bool anglesScreenRelative, double depth,
+                                             bool useFieldAngles) {
+    if (!useFieldAngles) {
+        assert(screenRotateYRadians == 0 && "Screen rotate must be 0 if not using field angles!");
+        auto ret = std::make_shared<CoplanarLongLatToWorldSpace>(depth);
+        return ret;
+    }
+    if (screenRotateYRadians == 0) {
+        // just regular field angles (coplanar)
+        auto ret = std::make_shared<CoplanarFieldAnglesToWorldSpace>(depth);
+        return ret;
+    }
+    auto ret = std::make_shared<RotatedPanelRelativeFieldAnglesToWorldSpace>(depth, screenRotateYRadians,
+                                                                             anglesScreenRelative);
+    return ret;
+}
+
+NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters, double depth,
+                                                        RectBoundsd screenDims, double screenRotateYRadians,
+                                                        bool anglesScreenRelative, bool useFieldAngles) {
+    auto functor = makeAnglesToWorldSpace(screenRotateYRadians, anglesScreenRelative, depth, useFieldAngles);
+    auto ret = convert_to_normalized_and_meters(input, toMeters, screenDims, *functor);
+    return ret;
+}
 NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters, double depth,
                                                         RectBoundsd screenDims, bool useFieldAngles) {
+    auto functor = makeAnglesToWorldSpace(depth, useFieldAngles);
+    auto ret = convert_to_normalized_and_meters(input, toMeters, screenDims, *functor);
+    return ret;
+}
+
+NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const& input, double toMeters,
+                                                        RectBoundsd screenDims,
+                                                        AnglesToWorldSpaceFunctor const& anglesToWorldSpace) {
     const auto screenWidth = (screenDims.right - screenDims.left);
     const auto screenHeight = (screenDims.top - screenDims.bottom);
     NormalizedMeasurements ret;
@@ -294,8 +428,7 @@ NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const&
 
         // Convert the input latitude and longitude from degrees to radians.
         // Then, compute 3d coordinates of a point.
-        auto pt = longLatToWorldSpace(inputMeas.viewAnglesDegrees, useFieldAngles, depth);
-        auto pointFromView = Point3d{pt.x, pt.y, pt.z};
+        auto pointFromView = anglesToWorldSpace(inputMeas.viewAnglesDegrees);
         ret.measurements.push_back(NormalizedMeasurement{screen, pointFromView, inputMeas.lineNumber});
     }
 
@@ -317,10 +450,26 @@ NormalizedMeasurements convert_to_normalized_and_meters(InputMeasurements const&
 }
 
 XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, double depth, bool useFieldAngles) {
+    auto functor = makeAnglesToWorldSpace(depth, useFieldAngles);
+    auto ret = convertAdditionalAngles(additionalAngles, *functor);
+    return ret;
+}
+
+XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles, double depth, double screenRotateYRadians,
+                                bool anglesScreenRelative, bool useFieldAngles) {
+    auto functor = makeAnglesToWorldSpace(screenRotateYRadians, anglesScreenRelative, depth, useFieldAngles);
+    auto ret = convertAdditionalAngles(additionalAngles, *functor);
+    return ret;
+}
+
+XYZList convertAdditionalAngles(std::vector<LongLat> const& additionalAngles,
+                                AnglesToWorldSpaceFunctor const& anglesToWorldSpace) {
     XYZList ret;
 
     for (auto& additionalLongLat : additionalAngles) {
-        ret.push_back(longLatToWorldSpace(additionalLongLat, useFieldAngles, depth));
+        auto elt = anglesToWorldSpace(additionalLongLat);
+
+        ret.push_back(XYZ(elt[0], elt[1], elt[2]));
     }
     return ret;
 }
