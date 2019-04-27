@@ -49,6 +49,7 @@ static void writePolynomial(std::ostream &s, std::vector<double> const &poly)
     else { s << ","; }
     s << std::setprecision(4) << poly[i];
   }
+  std::cout << " ]";
 }
 
 /// @brief Evaluate the coefficients with both radius and vector in meters.
@@ -301,13 +302,13 @@ int main(int argc, char *argv[])
   std::cout << "     \"distance_scale_y\": " << distance_scale << "," << std::endl;
   std::cout << "     \"polynomial_coeffs_red\": ";
     writePolynomial(std::cout, polynomial);
-  std::cout << " ]," << std::endl;
+  std::cout << "," << std::endl;
   std::cout << "     \"polynomial_coeffs_green\": ";
   writePolynomial(std::cout, polynomial);
-  std::cout << " ]," << std::endl;
+  std::cout << "," << std::endl;
   std::cout << "     \"polynomial_coeffs_blue\": ";
   writePolynomial(std::cout, polynomial);
-  std::cout << " ]" << std::endl;
+  std::cout << std::endl;
   std::cout << "   }," << std::endl; // distortion
 
   std::cout << "   \"eyes\": [" << std::endl;
