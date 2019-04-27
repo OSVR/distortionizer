@@ -53,3 +53,8 @@ This project: Licensed under the Apache License, Version 2.0.
 This is a stand-alone program that provides a more principled approach to distortion correction than the "adjust until it looks right" method described above.
 
 It reads in the results of measurements of display positions with respect to angles from the eye position when looking through the display and produces either one mesh (for mono) or three (for RGB) distortion maps.
+
+# polynomial_fit
+
+This is a stand-alone program that takes in a polynomial that maps from millimeters on a display to the tangent of the angle that a pixel at that location is visible at.  It computes radial distortion coefficients and a display descriptor including the horizontal and vertical fields of view.
+
