@@ -146,11 +146,13 @@ int main(int argc, char *argv[])
 
   //====================================================================
   // Run our algorithm test to make sure things are working properly.
+  /* @todo Put this back in when the test is implemented
   int ret;
   if ((ret = testAlgorithms()) != 0) {
     std::cerr << "Error testing basic algorithms, code " << ret << std::endl;
     return 100;
   }
+  */
 
   //====================================================================
   // The output screens and polynomial.
@@ -274,6 +276,18 @@ int main(int argc, char *argv[])
   maxEdge = std::max(maxEdge, fabs(bottom));
   maxEdge = std::max(maxEdge, fabs(top));
   */
+
+  // Report the scale factor needed to offset the pixel slope at the
+  // center of the image (where it is presumably the largest) so that we
+  // preserve the full resolution after scaling the texture by the
+  // distortion map.
+  if (g_verbose && polynomial.size() > 2) {
+    // Derivative of the polynomial at 0 depends only on the first-order coefficient
+    std::cout << "Display pixel slope at center: " << polynomial[1] << std::endl;
+    if (polynomial[1] > 0) {
+      std::cout << "renderManagerConfig:renderManagerConfig:renderOversampleFactor needed to compensate: " << 1/polynomial[1] << std::endl;
+    }
+  }
 
   //====================================================================
   // Construct Json screen description.
