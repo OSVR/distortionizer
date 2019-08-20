@@ -29,6 +29,7 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+#include <array>
 #include <stdlib.h> // For exit()
 
 // Local includes
@@ -40,6 +41,28 @@ static double MY_PI = (4.0*atan(1.0));
 
 // Forward declarations
 static int testAlgorithms();
+
+std::vector<std::string> split(const std::string& str, const std::string& delim)
+{
+  std::vector<std::string> tokens;
+  size_t prev = 0, pos = 0;
+  do {
+    pos = str.find(delim, prev);
+    if (pos == std::string::npos) { pos = str.length(); }
+    std::string token = str.substr(prev, pos - prev);
+    if (!token.empty()) { tokens.push_back(token); }
+    prev = pos + delim.length();
+  } while (pos < str.length() && prev < str.length());
+  return tokens;
+}
+
+std::vector<double> parseColorLine(std::vector<std::string> const& words) {
+  std::vector<double> ret;
+  for (size_t i = 1; i < words.size(); i++) {
+    ret.push_back(atof(words[i].c_str()));
+  }
+  return ret;
+}
 
 static void writePolynomial(std::ostream &s, std::vector<double> const &poly)
 {
@@ -85,9 +108,10 @@ void Usage(std::string name)
   std::cerr << "Usage: " << name
     << " [-eye right|left] (default is right)"
     << " [-depth_meters D] (default is 2.0)"
-    << " [-verbose] (default is not)"
-    << " display_size"
-    << " C1 [C3 [C5 [...]]"
+    << " [-verbose] (default is not)" << std::endl
+    << " Then one of the following: " << std::endl
+    << "  display_size C1 [C3 [C5 [...]]" << std::endl
+    << "  config_file_name"
     << std::endl
     << "  This program solves for the polynomial distortion correction that will correct for" << std::endl
     << "the screen-to-angle mapping described in the coefficients.  The first-order term C1" << std::endl
@@ -97,17 +121,28 @@ void Usage(std::string name)
     << "  The output of the mapping is the tangent of the angle towards the visible point" << std::endl
     << "  The size of the display is specified in millimeters and must be the" << std::endl
     << "same for both width and height until the code is generalized." << std::endl
+    << "  If the config file is specified, it has four lines.  The first has the display size in mm." << std::endl
+    << "The second starts with the string 'red' (no apostrophes) and then has red coefficients" << std::endl
+    << "and the next two start with 'green' and 'blue' and have these coefficients."
     << std::endl;
   exit(1);
 }
 
 int main(int argc, char *argv[])
 {
+  //====================================================================
+  // Information about each color channel.
+  class Color {
+  public:
+    std::vector<double> coeffs; //< Coefficients for the input polynomial
+    std::vector<double> polynomial;   //< Output polynomial
+  };
+  std::array<Color, 3> colors;
+
   // Parse the command line
-  std::vector<std::string> inputFileNames;
+  std::string inputFileName;
+  double left, right, bottom, top;  //< Screen corners in coefficient space
   bool useRightEye = true;
-  double left, right, bottom, top;
-  std::vector<double> coeffs;
   double depth = 2.0;
   int realParams = 0;
   for (int i = 1; i < argc; i++) {
@@ -131,15 +166,81 @@ int main(int argc, char *argv[])
       Usage(argv[0]);
     } else switch (++realParams) {
     case 1:
-      right = top = atof(argv[i])/2;
-      left = bottom = -right;
+      {
+        // @todo Generalize to non-square displays
+        double val = atof(argv[i]);
+        if (val > 0) {
+          right = top = atof(argv[i]) / 2;
+          left = bottom = -right;
+        } else {
+          // They have specified a configuration file to be read.
+          inputFileName = argv[i];
+        }
+      }
       break;
     default:
       // We got another coefficient, so put it onto the list after scaling it.
-      coeffs.push_back(atof(argv[i]));
+      if (inputFileName.size() > 0) {
+        std::cerr << "Cannot add coefficients to command line when using config file" << std::endl;
+        return 1;
+      }
+      // Monochrome; all colors are the same.
+      colors[0].coeffs.push_back(atof(argv[i]));
+      colors[1].coeffs.push_back(atof(argv[i]));
+      colors[2].coeffs.push_back(atof(argv[i]));
     }
   }
-  if (realParams < 5) { Usage(argv[0]); }
+  if ((realParams < 5) && (inputFileName.size() == 0)) { Usage(argv[0]); }
+
+  //====================================================================
+  // Parse the input configuration file if we have one specified.
+  if (inputFileName.size() > 0) {
+    std::ifstream s;
+    s.open(inputFileName, std::ifstream::in | std::ifstream::binary);
+    if (!s.good()) {
+      std::cerr << "Could not open " << inputFileName << " for reading" << std::endl;
+      return 2;
+    }
+
+    std::string line;
+    std::vector<std::string> words;
+
+    // Parse the display_size line
+    // @todo Generalize to non-square displays
+    std::getline(s, line);
+    double val = atof(line.c_str());
+    if (val <= 0) {
+      std::cerr << "Bad display size line in " << inputFileName << ": " << line << std::endl;
+      return 3;
+    }
+    right = top = val / 2;
+    left = bottom = -right;
+
+    // Read and parse the red, green, and blue lines
+    std::getline(s, line);
+    words = split(line, " ");
+    if (words[0] != "red") {
+      std::cerr << "Bad red line in " << inputFileName << ": " << line << std::endl;
+      return 4;
+    }
+    colors[0].coeffs = parseColorLine(words);
+
+    std::getline(s, line);
+    words = split(line, " ");
+    if (words[0] != "green") {
+      std::cerr << "Bad green line in " << inputFileName << ": " << line << std::endl;
+      return 5;
+    }
+    colors[1].coeffs = parseColorLine(words);
+
+    std::getline(s, line);
+    words = split(line, " ");
+    if (words[0] != "blue") {
+      std::cerr << "Bad blue line in " << inputFileName << ": " << line << std::endl;
+      return 6;
+    }
+    colors[2].coeffs = parseColorLine(words);
+  }
 
   //====================================================================
   // Ensure that our parameters are not more general than we can handle.
@@ -156,43 +257,48 @@ int main(int argc, char *argv[])
   */
 
   //====================================================================
-  // The output screens and polynomial.
-  ScreenDescription leftScreen, rightScreen;
-  std::vector<double> polynomial;
-
-  //====================================================================
   // Compute left and right screen boundaries that are mirror images
   // of each other.
   // Compute the boundaries of the screen based on the depth and the maximum
   // angles in +/- X and Y projected to that distance.  These need to be
   // projected from the display space into the distance that the screen
   // lies at.
-  double leftAngle = evaluateAngleRadians(left, coeffs);
-  double rightAngle = evaluateAngleRadians(right, coeffs);
-  double topAngle = evaluateAngleRadians(top, coeffs);
-  double bottomAngle = evaluateAngleRadians(bottom, coeffs);
+  ScreenDescription leftScreen, rightScreen;  //< Screen descriptions for each eye
+
+  // Find the maximum angle for each direction across all colors.
+  double maxLeftAngle = 0, maxRightAngle = 0, maxTopAngle = 0, maxBottomAngle = 0;
+  for (size_t i = 0; i < 3; i++) {
+    double leftAngle = evaluateAngleRadians(left, colors[i].coeffs);
+    if (fabs(leftAngle) > fabs(maxLeftAngle)) { maxLeftAngle = leftAngle; }
+    double rightAngle = evaluateAngleRadians(right, colors[i].coeffs);
+    if (fabs(rightAngle) > fabs(maxRightAngle)) { maxRightAngle = rightAngle; }
+    double topAngle = evaluateAngleRadians(top, colors[i].coeffs);
+    if (fabs(topAngle) > fabs(maxTopAngle)) { maxTopAngle = topAngle; }
+    double bottomAngle = evaluateAngleRadians(bottom, colors[i].coeffs);
+    if (fabs(bottomAngle) > fabs(maxBottomAngle)) { maxBottomAngle = bottomAngle; }
+  }
   if (g_verbose) {
-    std::cout << "leftAngle (degrees): " << leftAngle * 180 / MY_PI << std::endl;
-    std::cout << "rightAngle (degrees): " << rightAngle * 180 / MY_PI << std::endl;
-    std::cout << "bottomAngle (degrees): " << bottomAngle * 180 / MY_PI << std::endl;
-    std::cout << "topAngle (degrees): " << topAngle * 180 / MY_PI << std::endl;
+    std::cout << "leftAngle (degrees): " << maxLeftAngle * 180 / MY_PI << std::endl;
+    std::cout << "rightAngle (degrees): " << maxRightAngle * 180 / MY_PI << std::endl;
+    std::cout << "bottomAngle (degrees): " << maxBottomAngle * 180 / MY_PI << std::endl;
+    std::cout << "topAngle (degrees): " << maxTopAngle * 180 / MY_PI << std::endl;
   }
   double leftScreenLeft, leftScreenRight, leftScreenBottom, leftScreenTop;
   double rightScreenLeft, rightScreenRight, rightScreenBottom, rightScreenTop;
-  rightScreenBottom = leftScreenBottom = depth * tan(bottomAngle);
-  rightScreenTop = leftScreenTop = depth * tan(topAngle);
+  rightScreenBottom = leftScreenBottom = depth * tan(maxBottomAngle);
+  rightScreenTop = leftScreenTop = depth * tan(maxTopAngle);
   if (useRightEye) {
-    rightScreenLeft = depth * tan(leftAngle);
-    rightScreenRight = depth * tan(rightAngle);
+    rightScreenLeft = depth * tan(maxLeftAngle);
+    rightScreenRight = depth * tan(maxRightAngle);
 
-    leftScreenLeft = -depth * tan(rightAngle);
-    leftScreenRight = -depth * tan(leftAngle);
+    leftScreenLeft = -depth * tan(maxRightAngle);
+    leftScreenRight = -depth * tan(maxLeftAngle);
   } else {
-    leftScreenLeft = depth * tan(leftAngle);
-    leftScreenRight = depth * tan(rightAngle);
+    leftScreenLeft = depth * tan(maxLeftAngle);
+    leftScreenRight = depth * tan(maxRightAngle);
 
-    rightScreenLeft = -depth * tan(rightAngle);
-    rightScreenRight = -depth * tan(leftAngle);
+    rightScreenLeft = -depth * tan(maxRightAngle);
+    rightScreenRight = -depth * tan(maxLeftAngle);
   }
   if (g_verbose) {
     std::cout << "rightScreenLeft: " << rightScreenLeft << std::endl;
@@ -244,20 +350,23 @@ int main(int argc, char *argv[])
   //   This basically means that we need to scale the polynomial coefficients
   // by this inverse of this factor raised to the power that they are applying
   // so that they will do the conversion for us.
-  double units = (left - right) / (tan(leftAngle) - tan(rightAngle));
+  double units = (left - right) / (tan(maxLeftAngle) - tan(maxRightAngle));
 
   // This means that the coefficients are providing us the correct mapping,
   // but we need to convert them into the appropriate distance scale and put
   // them into the appropriate coefficients.  The appropriate coefficients
   // are the 1st, 3rd, and so forth.  We skip all even coefficients.
-  // Always push back 0 for the 0th-order term.
-  polynomial.push_back(0);
-  for (size_t i = 0; i < coeffs.size(); i++) {
-    // Zero all even terms.  We already zeroed the 0th-order term
-    if (i > 0) { polynomial.push_back(0); }
-    // Scale by the units conversion.
-    polynomial.push_back(coeffs[i] * pow(units,1 + 2 * i));
+  // Always push  back 0 for the 0th-order term.
+  for (size_t c = 0; c < 3; c++) {
+    colors[c].polynomial.push_back(0);
+    for (size_t i = 0; i < colors[c].coeffs.size(); i++) {
+      // Zero all even terms.  We already zeroed the 0th-order term
+      if (i > 0) { colors[c].polynomial.push_back(0); }
+      // Scale by the units conversion.
+      colors[c].polynomial.push_back(colors[c].coeffs[i] * pow(units, 1 + 2 * i));
+    }
   }
+
   // Set the distance units to twice the distance from the center of
   // the display to the farthest direction so that the point at the center
   // of the furthest edge will map to itself.  This is in the tangent
@@ -267,7 +376,7 @@ int main(int argc, char *argv[])
   // distortion calibration inverted the image when reporting its
   // results.  This leaves the resulting polynomial parameters positive
   // while making sure the distance scale is also positive.
-  double distance_scale = fabs(2*tan(rightAngle));
+  double distance_scale = fabs(2*tan(maxRightAngle));
 
   /// @todo Generalize for non-square, non-centered displays.  In that
   // case, we want the farthest edge from the center to map to itself and
@@ -286,11 +395,12 @@ int main(int argc, char *argv[])
   // center of the image (where it is presumably the largest) so that we
   // preserve the full resolution after scaling the texture by the
   // distortion map.
-  if (g_verbose && polynomial.size() > 2) {
+  if (g_verbose && colors[0].polynomial.size() > 2) {
     // Derivative of the polynomial at 0 depends only on the first-order coefficient
-    std::cout << "Display pixel slope at center: " << polynomial[1] << std::endl;
-    if (polynomial[1] > 0) {
-      std::cout << "renderManagerConfig:renderManagerConfig:renderOversampleFactor needed to compensate: " << 1/polynomial[1] << std::endl;
+    std::cout << "Display pixel slope at center: " << colors[0].polynomial[1] << std::endl;
+    if (colors[0].polynomial[1] > 0) {
+      std::cout << "renderManagerConfig:renderManagerConfig:renderOversampleFactor needed to compensate: "
+        << 1/ colors[0].polynomial[1] << std::endl;
     }
   }
 
@@ -320,13 +430,13 @@ int main(int argc, char *argv[])
   std::cout << "     \"distance_scale_x\": " << distance_scale << "," << std::endl;
   std::cout << "     \"distance_scale_y\": " << distance_scale << "," << std::endl;
   std::cout << "     \"polynomial_coeffs_red\": ";
-    writePolynomial(std::cout, polynomial);
+    writePolynomial(std::cout, colors[0].polynomial);
   std::cout << "," << std::endl;
   std::cout << "     \"polynomial_coeffs_green\": ";
-  writePolynomial(std::cout, polynomial);
+  writePolynomial(std::cout, colors[1].polynomial);
   std::cout << "," << std::endl;
   std::cout << "     \"polynomial_coeffs_blue\": ";
-  writePolynomial(std::cout, polynomial);
+  writePolynomial(std::cout, colors[2].polynomial);
   std::cout << std::endl;
   std::cout << "   }," << std::endl; // distortion
 
