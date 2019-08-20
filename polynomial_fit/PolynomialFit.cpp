@@ -93,9 +93,9 @@ void Usage(std::string name)
     << "the screen-to-angle mapping described in the coefficients.  The first-order term C1" << std::endl
     << "must be specified, and other higher odd-numbered terms may also be specified (C3, C5, ...)" << std::endl
     << "The coefficents are from the equation tan(theta) = C1*r + C3*r^3 + C5*r^5 + ..." << std::endl
-    << "  The input r for the mapping is in millimeters." << std::endl
+    << "  The display_size is in millimeters, as is the space the coefficients map to." << std::endl
     << "  The output of the mapping is the tangent of the angle towards the visible point" << std::endl
-    << "  The size of the display is specified in millimeters and must be the." << std::endl
+    << "  The size of the display is specified in millimeters and must be the" << std::endl
     << "same for both width and height until the code is generalized." << std::endl
     << std::endl;
   exit(1);
@@ -143,6 +143,7 @@ int main(int argc, char *argv[])
 
   //====================================================================
   // Ensure that our parameters are not more general than we can handle.
+  /// @todo
 
   //====================================================================
   // Run our algorithm test to make sure things are working properly.
@@ -246,7 +247,7 @@ int main(int argc, char *argv[])
   double units = (left - right) / (tan(leftAngle) - tan(rightAngle));
 
   // This means that the coefficients are providing us the correct mapping,
-  // but we need to convert them into the appropriate distance scale an put
+  // but we need to convert them into the appropriate distance scale and put
   // them into the appropriate coefficients.  The appropriate coefficients
   // are the 1st, 3rd, and so forth.  We skip all even coefficients.
   // Always push back 0 for the 0th-order term.
@@ -262,7 +263,11 @@ int main(int argc, char *argv[])
   // of the furthest edge will map to itself.  This is in the tangent
   // space.
   // (For the square case, this is just twice the right edge.)
-  double distance_scale = 2*tan(rightAngle);
+  // NOTE: We take the absolute value of this result here, in case the
+  // distortion calibration inverted the image when reporting its
+  // results.  This leaves the resulting polynomial parameters positive
+  // while making sure the distance scale is also positive.
+  double distance_scale = fabs(2*tan(rightAngle));
 
   /// @todo Generalize for non-square, non-centered displays.  In that
   // case, we want the farthest edge from the center to map to itself and
