@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
         // @todo Generalize to non-square displays
         double val = atof(argv[i]);
         if (val > 0) {
-          right = top = atof(argv[i]) / 2;
+          right = top = val / 2;
           left = bottom = -right;
         } else {
           // They have specified a configuration file to be read.
@@ -187,16 +187,16 @@ int main(int argc, char *argv[])
         return 1;
       }
       // Monochrome; all colors are the same for both eyes.
-      for (auto eye : eyeColors) {
-        for (auto color : eye) {
-          color.coeffs.push_back(atof(argv[i]));
-          color.coeffs.push_back(atof(argv[i]));
-          color.coeffs.push_back(atof(argv[i]));
+      double val = atof(argv[i]);
+      for (auto &eye : eyeColors) {
+        for (auto &color : eye) {
+          color.coeffs.push_back(val);
         }
       }
     }
   }
-  if ((realParams < 5) && (inputFileName.size() == 0)) { Usage(argv[0]); }
+  if (realParams < 1) { Usage(argv[0]); }
+  if ((realParams < 2) && (inputFileName.size() == 0)) { Usage(argv[0]); }
 
   //====================================================================
   // Parse the input configuration file if we have one specified.
