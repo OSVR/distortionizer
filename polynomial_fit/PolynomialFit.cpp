@@ -11,6 +11,7 @@
 // Copyright 2019 ValityXR.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
@@ -122,8 +123,9 @@ void Usage(std::string name)
     << "  The size of the display is specified in millimeters and must be the" << std::endl
     << "same for both width and height until the code is generalized." << std::endl
     << "  If the config file is specified, it has four lines.  The first has the display size in mm." << std::endl
-    << "The second starts with the string 'red' (no apostrophes) and then has red coefficients" << std::endl
-    << "and the next two start with 'green' and 'blue' and have these coefficients."
+    << "The second starts with the string 'leftred' (no apostrophes) and then has red coefficients" << std::endl
+    << "for the left eye. The next two start with 'leftgreen' and 'leftblue' and have these coefficients." << std::endl
+    << "The next three lines are 'rightred', 'rightgreen', and 'rightblue', with corresponding descriptors."
     << std::endl;
   exit(1);
 }
@@ -131,13 +133,13 @@ void Usage(std::string name)
 int main(int argc, char *argv[])
 {
   //====================================================================
-  // Information about each color channel.
+  // Information about each color channel for each eye.
   class Color {
   public:
     std::vector<double> coeffs; //< Coefficients for the input polynomial
     std::vector<double> polynomial;   //< Output polynomial
   };
-  std::array<Color, 3> colors;
+  std::array< std::array<Color, 3>, 2> eyeColors;
 
   // Parse the command line
   std::string inputFileName;
@@ -184,10 +186,14 @@ int main(int argc, char *argv[])
         std::cerr << "Cannot add coefficients to command line when using config file" << std::endl;
         return 1;
       }
-      // Monochrome; all colors are the same.
-      colors[0].coeffs.push_back(atof(argv[i]));
-      colors[1].coeffs.push_back(atof(argv[i]));
-      colors[2].coeffs.push_back(atof(argv[i]));
+      // Monochrome; all colors are the same for both eyes.
+      for (auto eye : eyeColors) {
+        for (auto color : eye) {
+          color.coeffs.push_back(atof(argv[i]));
+          color.coeffs.push_back(atof(argv[i]));
+          color.coeffs.push_back(atof(argv[i]));
+        }
+      }
     }
   }
   if ((realParams < 5) && (inputFileName.size() == 0)) { Usage(argv[0]); }
@@ -216,30 +222,55 @@ int main(int argc, char *argv[])
     right = top = val / 2;
     left = bottom = -right;
 
-    // Read and parse the red, green, and blue lines
+    // Read and parse the red, green, and blue lines for the left eye
     std::getline(s, line);
     words = split(line, " ");
-    if (words[0] != "red") {
-      std::cerr << "Bad red line in " << inputFileName << ": " << line << std::endl;
+    if (words[0] != "leftred") {
+      std::cerr << "Bad leftred line in " << inputFileName << ": " << line << std::endl;
       return 4;
     }
-    colors[0].coeffs = parseColorLine(words);
+    eyeColors[0][0].coeffs = parseColorLine(words);
 
     std::getline(s, line);
     words = split(line, " ");
-    if (words[0] != "green") {
-      std::cerr << "Bad green line in " << inputFileName << ": " << line << std::endl;
+    if (words[0] != "leftgreen") {
+      std::cerr << "Bad leftgreen line in " << inputFileName << ": " << line << std::endl;
       return 5;
     }
-    colors[1].coeffs = parseColorLine(words);
+    eyeColors[0][1].coeffs = parseColorLine(words);
 
     std::getline(s, line);
     words = split(line, " ");
-    if (words[0] != "blue") {
-      std::cerr << "Bad blue line in " << inputFileName << ": " << line << std::endl;
+    if (words[0] != "leftblue") {
+      std::cerr << "Bad leftblue line in " << inputFileName << ": " << line << std::endl;
       return 6;
     }
-    colors[2].coeffs = parseColorLine(words);
+    eyeColors[0][2].coeffs = parseColorLine(words);
+
+    // Read and parse the red, green, and blue lines for the right eye
+    std::getline(s, line);
+    words = split(line, " ");
+    if (words[0] != "rightred") {
+      std::cerr << "Bad righttred line in " << inputFileName << ": " << line << std::endl;
+      return 4;
+    }
+    eyeColors[1][0].coeffs = parseColorLine(words);
+
+    std::getline(s, line);
+    words = split(line, " ");
+    if (words[0] != "rightgreen") {
+      std::cerr << "Bad rightgreen line in " << inputFileName << ": " << line << std::endl;
+      return 5;
+    }
+    eyeColors[1][1].coeffs = parseColorLine(words);
+
+    std::getline(s, line);
+    words = split(line, " ");
+    if (words[0] != "rightblue") {
+      std::cerr << "Bad rightblue line in " << inputFileName << ": " << line << std::endl;
+      return 6;
+    }
+    eyeColors[1][2].coeffs = parseColorLine(words);
   }
 
   //====================================================================
@@ -265,17 +296,20 @@ int main(int argc, char *argv[])
   // lies at.
   ScreenDescription leftScreen, rightScreen;  //< Screen descriptions for each eye
 
-  // Find the maximum angle for each direction across all colors.
+  // Find the maximum angle for each direction across all colors in all eyes.
   double maxLeftAngle = 0, maxRightAngle = 0, maxTopAngle = 0, maxBottomAngle = 0;
-  for (size_t i = 0; i < 3; i++) {
-    double leftAngle = evaluateAngleRadians(left, colors[i].coeffs);
-    if (fabs(leftAngle) > fabs(maxLeftAngle)) { maxLeftAngle = leftAngle; }
-    double rightAngle = evaluateAngleRadians(right, colors[i].coeffs);
-    if (fabs(rightAngle) > fabs(maxRightAngle)) { maxRightAngle = rightAngle; }
-    double topAngle = evaluateAngleRadians(top, colors[i].coeffs);
-    if (fabs(topAngle) > fabs(maxTopAngle)) { maxTopAngle = topAngle; }
-    double bottomAngle = evaluateAngleRadians(bottom, colors[i].coeffs);
-    if (fabs(bottomAngle) > fabs(maxBottomAngle)) { maxBottomAngle = bottomAngle; }
+
+  for (auto eye : eyeColors) {
+    for (auto color : eye) {
+      double leftAngle = evaluateAngleRadians(left, color.coeffs);
+      if (fabs(leftAngle) > fabs(maxLeftAngle)) { maxLeftAngle = leftAngle; }
+      double rightAngle = evaluateAngleRadians(right, color.coeffs);
+      if (fabs(rightAngle) > fabs(maxRightAngle)) { maxRightAngle = rightAngle; }
+      double topAngle = evaluateAngleRadians(top, color.coeffs);
+      if (fabs(topAngle) > fabs(maxTopAngle)) { maxTopAngle = topAngle; }
+      double bottomAngle = evaluateAngleRadians(bottom, color.coeffs);
+      if (fabs(bottomAngle) > fabs(maxBottomAngle)) { maxBottomAngle = bottomAngle; }
+    }
   }
   if (g_verbose) {
     std::cout << "leftAngle (degrees): " << maxLeftAngle * 180 / MY_PI << std::endl;
@@ -357,13 +391,15 @@ int main(int argc, char *argv[])
   // them into the appropriate coefficients.  The appropriate coefficients
   // are the 1st, 3rd, and so forth.  We skip all even coefficients.
   // Always push  back 0 for the 0th-order term.
-  for (size_t c = 0; c < 3; c++) {
-    colors[c].polynomial.push_back(0);
-    for (size_t i = 0; i < colors[c].coeffs.size(); i++) {
-      // Zero all even terms.  We already zeroed the 0th-order term
-      if (i > 0) { colors[c].polynomial.push_back(0); }
-      // Scale by the units conversion.
-      colors[c].polynomial.push_back(colors[c].coeffs[i] * pow(units, 1 + 2 * i));
+  for (auto &eye : eyeColors) {
+    for (auto &color : eye) {
+      color.polynomial.push_back(0);
+      for (size_t i = 0; i < color.coeffs.size(); i++) {
+        // Zero all even terms.  We already zeroed the 0th-order term
+        if (i > 0) { color.polynomial.push_back(0); }
+        // Scale by the units conversion.
+        color.polynomial.push_back(color.coeffs[i] * pow(units, 1 + 2 * i));
+      }
     }
   }
 
@@ -395,12 +431,12 @@ int main(int argc, char *argv[])
   // center of the image (where it is presumably the largest) so that we
   // preserve the full resolution after scaling the texture by the
   // distortion map.
-  if (g_verbose && colors[0].polynomial.size() > 2) {
+  if (g_verbose && eyeColors[0][0].polynomial.size() > 2) {
     // Derivative of the polynomial at 0 depends only on the first-order coefficient
-    std::cout << "Display pixel slope at center: " << colors[0].polynomial[1] << std::endl;
-    if (colors[0].polynomial[1] > 0) {
+    std::cout << "Display pixel slope at center: " << eyeColors[0][0].polynomial[1] << std::endl;
+    if (eyeColors[0][0].polynomial[1] > 0) {
       std::cout << "renderManagerConfig:renderManagerConfig:renderOversampleFactor needed to compensate: "
-        << 1/ colors[0].polynomial[1] << std::endl;
+        << 1/eyeColors[0][0].polynomial[1] << std::endl;
     }
   }
 
@@ -426,22 +462,21 @@ int main(int argc, char *argv[])
   std::cout << "    \"pitch_tilt\": 0" << std::endl;
   std::cout << "   }," << std::endl; // field_of_view
 
-  std::cout << "   \"distortion\": {" << std::endl;
-  std::cout << "     \"distance_scale_x\": " << distance_scale << "," << std::endl;
-  std::cout << "     \"distance_scale_y\": " << distance_scale << "," << std::endl;
-  std::cout << "     \"polynomial_coeffs_red\": ";
-    writePolynomial(std::cout, colors[0].polynomial);
-  std::cout << "," << std::endl;
-  std::cout << "     \"polynomial_coeffs_green\": ";
-  writePolynomial(std::cout, colors[1].polynomial);
-  std::cout << "," << std::endl;
-  std::cout << "     \"polynomial_coeffs_blue\": ";
-  writePolynomial(std::cout, colors[2].polynomial);
-  std::cout << std::endl;
-  std::cout << "   }," << std::endl; // distortion
-
   std::cout << "   \"eyes\": [" << std::endl;
   std::cout << "    {" << std::endl;
+  std::cout << "     \"distortion\": {" << std::endl;
+  std::cout << "       \"distance_scale_x\": " << distance_scale << "," << std::endl;
+  std::cout << "       \"distance_scale_y\": " << distance_scale << "," << std::endl;
+  std::cout << "       \"polynomial_coeffs_red\": ";
+  writePolynomial(std::cout, eyeColors[0][0].polynomial);
+  std::cout << "," << std::endl;
+  std::cout << "       \"polynomial_coeffs_green\": ";
+  writePolynomial(std::cout, eyeColors[0][1].polynomial);
+  std::cout << "," << std::endl;
+  std::cout << "       \"polynomial_coeffs_blue\": ";
+  writePolynomial(std::cout, eyeColors[0][2].polynomial);
+  std::cout << std::endl;
+  std::cout << "     }," << std::endl; // distortion
   std::cout << "     \"center_proj_x\": "
     << leftScreen.xCOP
     << "," << std::endl;
@@ -451,6 +486,19 @@ int main(int argc, char *argv[])
   std::cout << "     \"rotate_180\": 0" << std::endl;
   std::cout << "    }," << std::endl;
   std::cout << "    {" << std::endl;
+  std::cout << "     \"distortion\": {" << std::endl;
+  std::cout << "       \"distance_scale_x\": " << distance_scale << "," << std::endl;
+  std::cout << "       \"distance_scale_y\": " << distance_scale << "," << std::endl;
+  std::cout << "       \"polynomial_coeffs_red\": ";
+  writePolynomial(std::cout, eyeColors[1][0].polynomial);
+  std::cout << "," << std::endl;
+  std::cout << "       \"polynomial_coeffs_green\": ";
+  writePolynomial(std::cout, eyeColors[1][1].polynomial);
+  std::cout << "," << std::endl;
+  std::cout << "       \"polynomial_coeffs_blue\": ";
+  writePolynomial(std::cout, eyeColors[1][2].polynomial);
+  std::cout << std::endl;
+  std::cout << "     }," << std::endl; // distortion
   std::cout << "     \"center_proj_x\": "
     << rightScreen.xCOP
     << "," << std::endl;
