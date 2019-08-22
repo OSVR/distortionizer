@@ -71,7 +71,7 @@ static void writePolynomial(std::ostream &s, std::vector<double> const &poly)
   for (size_t i = 0; i < poly.size(); i++) {
     if (i == 0) { s << " "; }
     else { s << ","; }
-    s << std::setprecision(4) << poly[i];
+    s << poly[i];
   }
   std::cout << " ]";
 }
@@ -445,6 +445,7 @@ int main(int argc, char *argv[])
   // We do this by hand rather than using JsonCPP because we want
   // to control the printed precision of the numbers to avoid making
   // a huge file.
+  std::cout << std::setprecision(4);
   std::cout << "{" << std::endl;
   std::cout << " \"display\": {" << std::endl;
   std::cout << "  \"hmd\": {" << std::endl;
