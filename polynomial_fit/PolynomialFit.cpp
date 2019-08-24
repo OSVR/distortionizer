@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
 
   // Parse the command line
   std::string inputFileName;
-  double left, right, bottom, top;  //< Screen corners in coefficient space
+  double left = 0, right = 0, bottom = 0, top = 0;  //< Screen corners in coefficient space
   bool useRightEye = true;
   double depth = 2.0;
   int realParams = 0;
@@ -369,23 +369,6 @@ int main(int argc, char *argv[])
   // screen is centered, this will be points on the horizontal and vertical
   // centers of the edges).
 
-  // The coefficients provide a mapping from radial distance in millimeters
-  // away from the center of projection to the tangent of the angle at which
-  // the point will appear.  OSVR wants a polynomial that moves points from
-  // an initial location in a space to an offset location in that same space.
-  //   The tangent space is scaled differently than the pixel space, so we
-  // need to transform the coefficients so that they are not.
-  //   We are free to choose either space (or another one entirely), so long
-  // as the distance metrics match.
-  //   We choose to scale the input space to match the output tangent space
-  // in a manner that will map the furthest input pixel to the furthest tangent,
-  // which means that we need to convert the input units to tangent space by
-  // multiplying them by tangent_range/mm_range.
-  //   This basically means that we need to scale the polynomial coefficients
-  // by this inverse of this factor raised to the power that they are applying
-  // so that they will do the conversion for us.
-  double units = (left - right) / (tan(maxLeftAngle) - tan(maxRightAngle));
-
   // This means that the coefficients are providing us the correct mapping,
   // but we need to convert them into the appropriate distance scale and put
   // them into the appropriate coefficients.  The appropriate coefficients
@@ -395,14 +378,38 @@ int main(int argc, char *argv[])
     for (auto &color : eye) {
       color.polynomial.push_back(0);
       for (size_t i = 0; i < color.coeffs.size(); i++) {
+
         // Zero all even terms.  We already zeroed the 0th-order term
         if (i > 0) { color.polynomial.push_back(0); }
+
         // Scale by the units conversion.
+        // The coefficients provide a mapping from radial distance in millimeters
+        // away from the center of projection to the tangent of the angle at which
+        // the point will appear.  OSVR wants a polynomial that moves points from
+        // an initial location in a space to an offset location in that same space.
+        //   The tangent space is scaled differently than the pixel space, so we
+        // need to transform the coefficients so that they are not.
+        //   We are free to choose either space (or another one entirely), so long
+        // as the distance metrics match.
+        //   We choose to scale the input space to match the output tangent space
+        // in a manner that will map the furthest input pixel to the furthest tangent,
+        // which means that we need to convert the input units to tangent space by
+        // multiplying them by tangent_range/mm_range.
+        //   We use our own angle difference rather than the maximum because our color
+        // may cover only a fraction of the resulting screen.  The one that has the
+        // largest angle will cover the whole screen.
+        //   This basically means that we need to scale the polynomial coefficients
+        // by this inverse of this factor raised to the power that they are applying
+        // so that they will do the conversion for us.
+        double leftAngle = evaluateAngleRadians(left, color.coeffs);
+        double rightAngle = evaluateAngleRadians(right, color.coeffs);
+        double units = (left - right) / (tan(leftAngle) - tan(rightAngle));
         color.polynomial.push_back(color.coeffs[i] * pow(units, 1 + 2 * i));
       }
     }
   }
 
+  // The distance scale must match the units mapped to by the polynomials above.
   // Set the distance units to twice the distance from the center of
   // the display to the farthest direction so that the point at the center
   // of the furthest edge will map to itself.  This is in the tangent
